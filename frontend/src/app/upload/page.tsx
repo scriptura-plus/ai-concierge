@@ -1,19 +1,33 @@
 ﻿"use client";
 import { useState } from "react";
+
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+
   async function onUpload() {
     if (!file) return;
     setMsg("Uploading...");
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) return setMsg(`Error: ${data.error || "upload failed"}`);
-    setBlobUrl(data.url); setMsg("Uploaded ✅");
+
+    const response = await fetch(
+      `/api/upload?filename=${file.name}`,
+      {
+        method: 'POST',
+        body: file,
+      }
+    );
+
+    const newBlob = await response.json();
+
+    if (!response.ok) {
+        setMsg(`Error: ${newBlob.error || "upload failed"}`);
+    } else {
+        setBlobUrl(newBlob.url);
+        setMsg("Uploaded ✅");
+    }
   }
+
   return (
     <main className="min-h-dvh mx-auto max-w-xl p-6 space-y-4">
       <h1 className="text-2xl font-semibold">Upload a TXT/MD file</h1>
