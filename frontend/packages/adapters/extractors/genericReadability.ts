@@ -1,7 +1,7 @@
 import { Extractor, FetchResult, ExtractResult, FetchOpts } from '@core/extractor';
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
-import fetch from 'node-fetch';
+
 
 export class GenericReadabilityExtractor implements Extractor {
   canHandle(url: URL) {

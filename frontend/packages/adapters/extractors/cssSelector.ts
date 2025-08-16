@@ -1,6 +1,6 @@
 import { Extractor, FetchResult, ExtractResult, FetchOpts } from '@core/extractor';
 import * as cheerio from 'cheerio';
-import fetch from 'node-fetch';
+
 
 export class CssSelectorExtractor implements Extractor {
   constructor(private readonly selectors: string[]) {}
