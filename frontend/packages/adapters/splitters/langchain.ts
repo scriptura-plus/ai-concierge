@@ -1,5 +1,6 @@
 import { TextSplitter, TextSplitterOptions, ChunkItem } from '@core/splitter';
-import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+// ИСПРАВЛЕННАЯ СТРОКА:
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 
 export class LangchainTextSplitter implements TextSplitter {
   async split(markdown: string, opts: TextSplitterOptions = {}): Promise<ChunkItem[]> {
