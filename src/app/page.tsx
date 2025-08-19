@@ -16,7 +16,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      // ИСПРАВЛЕНИЕ: Указываем правильный маршрут /api/ask и передаем tenantId
+      // ИСПРАВЛЕНИЕ: Указываем правильный маршрут /api/ask
       const response = await fetch('/api/ask', {
         method: 'POST',
         headers: {
@@ -29,11 +29,9 @@ export default function Home() {
       });
 
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.error || 'Network response was not ok');
       }
-
       setAnswer(data.answer);
 
     } catch (error: any) {
