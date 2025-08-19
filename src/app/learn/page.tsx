@@ -1,113 +1,70 @@
-﻿"use client";
+﻿'use client';
 
-import { useState, type FormEvent, type ChangeEvent } from "react";
-
-const DEFAULT_TENANT = "9dc365fe-0b37-4873-903a-a646bef78db7";
+import { useState } from 'react';
 
 export default function LearnPage() {
-  const [url, setUrl] = useState("");
-  const [tenantId, setTenantId] = useState(DEFAULT_TENANT);
+  const [url, setUrl] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [workerRes, setWorkerRes] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const onChangeUrl = (e: ChangeEvent<HTMLInputElement>) => setUrl(e.target.value);
-  const onChangeTenant = (e: ChangeEvent<HTMLInputElement>) => setTenantId(e.target.value);
+  // Используем ID нашего тестового клиента
+  const tenantId = '9dc365fe-0b37-4873-903a-a646bef78db7';
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMessage('');
     setLoading(true);
-    setError(null);
-    setResult(null);
-    setWorkerRes(null);
+
     try {
-      const res = await fetch("/api/ingest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, tenantId }),
+      // Вызываем /api/ingest, чтобы поставить задание в очередь
+      const response = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: url, tenantId: tenantId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Request failed");
-      setResult(data); // ok, jobId, status, deduped...
-    } catch (err: any) {
-      setError(err?.message ?? "Unknown error");
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Something went wrong');
+      }
+
+      setMessage(`Success! Job queued with ID: ${data.jobId}`);
+
+    } catch (error: any) {
+      setMessage(`Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const runWorker = async () => {
-    setError(null);
-    setWorkerRes(null);
-    try {
-      const res = await fetch("/api/worker", { method: "GET" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Worker failed");
-      setWorkerRes(data); // processed true/false ...
-    } catch (err: any) {
-      setError(err?.message ?? "Unknown error");
-    }
-  };
-
   return (
-    <main className="min-h-screen w-full flex flex-col items-center justify-start p-6 bg-gray-50">
-      <div className="w-full max-w-2xl bg-white p-6 rounded-xl shadow">
-        <h1 className="text-2xl font-bold mb-4 text-gray-900">Learn from URL (Queued)</h1>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
+    <main className="min-h-screen flex-col items-center justify-center p-24 bg-gray-100">
+      <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold mb-4">Learn from URL</h1>
+        <p className="text-sm text-gray-500 mb-4">Using Tenant ID: {tenantId}</p>
+        <form onSubmit={handleSubmit}>
           <input
             type="url"
-            placeholder="https://example.com/article"
             value={url}
-            onChange={onChangeUrl}
-            className="w-full p-3 border rounded-lg text-black"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Tenant ID"
-            value={tenantId}
-            onChange={onChangeTenant}
-            className="w-full p-3 border rounded-lg text-black"
-            required
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://wol.jw.org/ru/wol/d/r1/lp-e/1101989218"
+            className="w-full p-2 border border-gray-300 rounded mb-4 text-black"
           />
           <button
             type="submit"
-            disabled={loading || !url || !tenantId}
-            className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold disabled:bg-gray-400"
+            className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700"
+            disabled={loading || !url}
           >
-            {loading ? "Queuing..." : "Queue ingest job"}
+            {loading ? 'Queuing Job...' : 'Queue Ingest Job'}
           </button>
         </form>
-
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={runWorker}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium"
-          >
-            Run worker now
-          </button>
-        </div>
-
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg">
-            <div className="font-semibold">Error</div>
-            <pre className="whitespace-pre-wrap text-sm">{error}</pre>
-          </div>
-        )}
-
-        {result && (
-          <div className="mt-4 p-3 bg-gray-100 text-black rounded-lg">
-            <div className="font-semibold">Ingest response</div>
-            <pre className="text-sm overflow-auto">{JSON.stringify(result, null, 2)}</pre>
-          </div>
-        )}
-
-        {workerRes && (
-          <div className="mt-4 p-3 bg-green-50 text-green-800 rounded-lg">
-            <div className="font-semibold">Worker response</div>
-            <pre className="text-sm overflow-auto">{JSON.stringify(workerRes, null, 2)}</pre>
+        {message && (
+          <div className="mt-4 p-4 bg-gray-50 rounded">
+            <h3 className="font-bold">Result:</h3>
+            <pre className="text-sm text-black whitespace-pre-wrap">{message}</pre>
           </div>
         )}
       </div>
