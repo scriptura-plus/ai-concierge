@@ -1,36 +1,47 @@
 ﻿'use client';
 
-import { useState, type FormEvent, type ChangeEvent } from 'react';
+import { useState } from 'react';
 
 export default function Home() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  // Используем ID нашего тестового клиента
+  const tenantId = '9dc365fe-0b37-4873-903a-a646bef78db7';
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAnswer('');
     setLoading(true);
 
     try {
-      const response = await fetch('/api', {
+      // ИСПРАВЛЕНИЕ: Указываем правильный маршрут /api/ask и передаем tenantId
+      const response = await fetch('/api/ask', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          question: question,
+          tenantId: tenantId 
+        }),
       });
-      if (!response.ok) throw new Error('Network response was not ok');
+
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Network response was not ok');
+      }
+
       setAnswer(data.answer);
-    } catch (error) {
+
+    } catch (error: any) {
       console.error('There was a problem with the fetch operation:', error);
       setAnswer('Sorry, something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setQuestion(e.target.value);
   };
 
   return (
@@ -41,7 +52,7 @@ export default function Home() {
           <input
             type="text"
             value={question}
-            onChange={handleChange}
+            onChange={(e) => setQuestion(e.target.value)}
             placeholder="Ask me anything about our documents..."
             className="w-full p-3 border border-gray-300 rounded-lg mb-4 text-black focus:ring-2 focus:ring-blue-500"
           />
