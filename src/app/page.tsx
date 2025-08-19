@@ -7,23 +7,28 @@ export default function Home() {
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Используем ID нашего тестового клиента
   const tenantId = '9dc365fe-0b37-4873-903a-a646bef78db7';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion) {
+        setAnswer("Please enter a valid question.");
+        return;
+    }
+
     setAnswer('');
     setLoading(true);
 
     try {
-      // ИСПРАВЛЕНИЕ: Указываем правильный маршрут /api/ask
       const response = await fetch('/api/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          question: question,
+          question: trimmedQuestion, // Отправляем очищенный вопрос
           tenantId: tenantId 
         }),
       });
@@ -33,7 +38,6 @@ export default function Home() {
         throw new Error(data.error || 'Network response was not ok');
       }
       setAnswer(data.answer);
-
     } catch (error: any) {
       console.error('There was a problem with the fetch operation:', error);
       setAnswer('Sorry, something went wrong. Please try again.');
@@ -57,7 +61,7 @@ export default function Home() {
           <button
             type="submit"
             className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400"
-            disabled={loading || !question}
+            disabled={loading || !question.trim()} // Проверяем очищенную строку
           >
             {loading ? 'Thinking...' : 'Ask'}
           </button>
