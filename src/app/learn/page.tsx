@@ -16,8 +16,8 @@ export default function LearnPage() {
     setLoading(true);
 
     try {
-      // Вызываем /api/ingest, чтобы поставить задание в очередь
-      const response = await fetch('/api/ingest', {
+      // ИСПРАВЛЕНИЕ: Вызываем правильный маршрут /api/learn-url
+      const response = await fetch('/api/learn-url', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ export default function LearnPage() {
         throw new Error(data.error || 'Something went wrong');
       }
 
-      setMessage(`Success! Job queued with ID: ${data.jobId}`);
+      setMessage(`Success!\nDocument ID: ${data.documentId}\nChunks Stored: ${data.chunksStored}`);
 
     } catch (error: any) {
       setMessage(`Error: ${error.message}`);
@@ -58,7 +58,7 @@ export default function LearnPage() {
             className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700"
             disabled={loading || !url}
           >
-            {loading ? 'Queuing Job...' : 'Queue Ingest Job'}
+            {loading ? 'Learning...' : 'Learn'}
           </button>
         </form>
         {message && (
