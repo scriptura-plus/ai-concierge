@@ -1,0 +1,13 @@
+# Зависимости
+node_modules
+
+# Vercel
+.vercel
+
+# Файлы окружения
+.env
+.env*.local
+
+# Сборка Next.js
+.next
+out

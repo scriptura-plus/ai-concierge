@@ -1,0 +1,36 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "embed": "node scripts/embed.mjs"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/textsplitters": "^0.1.0",
+    "@mozilla/readability": "^0.6.0",
+    "@supabase/ssr": "^0.3.0",
+    "@supabase/supabase-js": "^2.44.4",
+    "@types/jsdom": "^21.1.7",
+    "@vercel/blob": "^1.1.1",
+    "cheerio": "^1.1.2",
+    "cookie": "^0.6.0",
+    "dotenv": "^16.4.5",
+    "jsdom": "^26.1.0",
+    "next": "14.2.5",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/react": "19.1.10",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8.5.6"
+  }
+}
