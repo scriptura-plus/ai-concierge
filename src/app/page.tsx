@@ -28,7 +28,7 @@ export default function Home() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          question: trimmedQuestion, // Отправляем очищенный вопрос
+          question: trimmedQuestion,
           tenantId: tenantId 
         }),
       });
@@ -49,7 +49,8 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gray-50">
       <div className="w-full max-w-2xl bg-white p-8 rounded-xl shadow-lg">
-        <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">AI Concierge</h1>
+        {/* --- ИЗМЕНЕНИЕ ЗДЕСЬ --- */}
+        <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">AI Concierge TESTING</h1>
         <form onSubmit={handleSubmit}>
           <input
             type="text"
@@ -61,7 +62,7 @@ export default function Home() {
           <button
             type="submit"
             className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400"
-            disabled={loading || !question.trim()} // Проверяем очищенную строку
+            disabled={loading || !question.trim()}
           >
             {loading ? 'Thinking...' : 'Ask'}
           </button>
