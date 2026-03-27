@@ -43,7 +43,7 @@ export default async function ChapterSelectPage({ params }: PageProps) {
           {chapters.map((chapter) => (
             <Link
               key={chapter}
-              href="#"
+              href={`/bible/${selectedBook.id}/${chapter}`}
               className="flex aspect-square items-center justify-center rounded-2xl border border-neutral-200 text-lg font-medium text-neutral-900 transition hover:border-neutral-400"
             >
               {chapter}
