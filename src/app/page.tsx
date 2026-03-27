@@ -1,78 +1,68 @@
-﻿'use client';
+'use client';
 
-import { useState } from 'react';
+const oldTestamentBooks = [
+  'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy',
+  'Joshua', 'Judges', 'Ruth', '1 Samuel', '2 Samuel',
+  '1 Kings', '2 Kings', '1 Chronicles', '2 Chronicles',
+  'Ezra', 'Nehemiah', 'Esther', 'Job', 'Psalms', 'Proverbs',
+  'Ecclesiastes', 'Song of Solomon', 'Isaiah', 'Jeremiah',
+  'Lamentations', 'Ezekiel', 'Daniel', 'Hosea', 'Joel', 'Amos',
+  'Obadiah', 'Jonah', 'Micah', 'Nahum', 'Habakkuk', 'Zephaniah',
+  'Haggai', 'Zechariah', 'Malachi',
+];
+
+const newTestamentBooks = [
+  'Matthew', 'Mark', 'Luke', 'John', 'Acts', 'Romans',
+  '1 Corinthians', '2 Corinthians', 'Galatians', 'Ephesians',
+  'Philippians', 'Colossians', '1 Thessalonians', '2 Thessalonians',
+  '1 Timothy', '2 Timothy', 'Titus', 'Philemon', 'Hebrews',
+  'James', '1 Peter', '2 Peter', '1 John', '2 John', '3 John',
+  'Jude', 'Revelation',
+];
+
+function BookGrid({
+  title,
+  books,
+}: {
+  title: string;
+  books: string[];
+}) {
+  return (
+    <section className="w-full">
+      <h2 className="mb-4 text-xl font-semibold text-gray-800">{title}</h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        {books.map((book) => (
+          <button
+            key={book}
+            type="button"
+            className="rounded-xl border border-gray-200 bg-white px-4 py-4 text-left text-sm font-medium text-gray-800 shadow-sm transition hover:border-gray-400 hover:bg-gray-50"
+          >
+            {book}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function Home() {
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const tenantId = '9dc365fe-0b37-4873-903a-a646bef78db7';
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const trimmedQuestion = question.trim();
-    if (!trimmedQuestion) {
-        setAnswer("Please enter a valid question.");
-        return;
-    }
-
-    setAnswer('');
-    setLoading(true);
-
-    try {
-      const response = await fetch('/api/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          question: trimmedQuestion,
-          tenantId: tenantId 
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Network response was not ok');
-      }
-      setAnswer(data.answer);
-    } catch (error: any) {
-      console.error('There was a problem with the fetch operation:', error);
-      setAnswer('Sorry, something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gray-50">
-      <div className="w-full max-w-2xl bg-white p-8 rounded-xl shadow-lg">
-        {/* --- ИЗМЕНЕНИЕ ЗДЕСЬ --- */}
-        <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">AI Concierge TESTING</h1>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask me anything about our documents..."
-            className="w-full p-3 border border-gray-300 rounded-lg mb-4 text-black focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="w-full p-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400"
-            disabled={loading || !question.trim()}
-          >
-            {loading ? 'Thinking...' : 'Ask'}
-          </button>
-        </form>
-        {answer && (
-          <div className="mt-6 p-4 bg-gray-100 rounded-lg text-black">
-            <h2 className="font-bold">Answer:</h2>
-            <p>{answer}</p>
-          </div>
-        )}
+    <main className="min-h-screen bg-gray-50 px-4 py-6 md:px-8">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-8">
+          <p className="mb-2 text-sm font-medium uppercase tracking-wide text-gray-500">
+            Step 1
+          </p>
+          <h1 className="text-3xl font-bold text-gray-900">Choose a Bible book</h1>
+          <p className="mt-2 text-gray-600">
+            Select a book to begin your verse-based insight study.
+          </p>
+        </header>
+
+        <div className="space-y-10">
+          <BookGrid title="Hebrew-Aramaic Scriptures" books={oldTestamentBooks} />
+          <BookGrid title="Christian Greek Scriptures" books={newTestamentBooks} />
+        </div>
       </div>
     </main>
   );
