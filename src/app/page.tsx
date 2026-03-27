@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { BIBLE_BOOKS } from '@/lib/bible/books'
 
 function BookGrid({
@@ -12,13 +13,13 @@ function BookGrid({
       <h2 className="mb-4 text-xl font-semibold text-gray-800">{title}</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {books.map((book) => (
-          <button
+          <Link
             key={book.id}
-            type="button"
+            href={`/bible/${book.id}`}
             className="rounded-xl border border-gray-200 bg-white px-4 py-4 text-left text-sm font-medium text-gray-800 shadow-sm transition hover:border-gray-400 hover:bg-gray-50"
           >
             {book.title}
-          </button>
+          </Link>
         ))}
       </div>
     </section>
