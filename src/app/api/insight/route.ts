@@ -7,29 +7,27 @@ export async function POST(req: Request) {
     const apiKey = process.env.GOOGLE_API_KEY
 
     if (!apiKey) {
-      return NextResponse.json(
-        { text: 'GOOGLE_API_KEY is missing in Vercel environment variables.' },
-        { status: 500 }
-      )
+      return NextResponse.json({
+        text: 'GOOGLE_API_KEY is missing.',
+      })
     }
 
     const prompt = `
 You are an elite insight generator for biblical texts.
 
-Your task is NOT to provide theological explanations.
-Your task is to generate one deep, surprising, intellectually rich insight based on a verse reference.
+Your task is to generate one short, deep, intellectually rich insight about a Bible verse reference.
 
-STYLE:
-- Encyclopedic but engaging
+Rules:
 - No preaching
+- No theology-heavy tone
 - No clichés
-- No surface-level explanation
-- Feels like a discovery
+- No generic advice
+- Make it feel like a discovery
+- 4 to 6 sentences
+- Clear, modern English
 
-OUTPUT:
-Write exactly one short insight, 4–6 sentences.
-Reference: ${book} ${chapter}:${verse}
-    `.trim()
+Verse reference: ${book} ${chapter}:${verse}
+`.trim()
 
     const response = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
@@ -59,9 +57,8 @@ Reference: ${book} ${chapter}:${verse}
   } catch (error) {
     console.error('Insight API error:', error)
 
-    return NextResponse.json(
-      { text: 'Something went wrong while generating the insight.' },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      text: 'Something went wrong while generating the insight.',
+    })
   }
 }
