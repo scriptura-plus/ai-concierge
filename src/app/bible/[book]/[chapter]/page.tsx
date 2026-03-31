@@ -27,7 +27,13 @@ export default async function VerseSelectPage({ params }: PageProps) {
     notFound()
   }
 
-  const verses = Array.from({ length: 31 }, (_, index) => index + 1)
+  const verseCount = selectedBook.verseCounts[chapterNumber - 1]
+
+  if (!verseCount) {
+    notFound()
+  }
+
+  const verses = Array.from({ length: verseCount }, (_, index) => index + 1)
 
   return (
     <main className="min-h-screen bg-white px-4 py-6">
