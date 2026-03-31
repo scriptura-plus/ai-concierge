@@ -13,7 +13,6 @@ export async function POST(req: Request) {
     }
 
     const prompt = `
-const prompt = `
 You are an elite insight generator for biblical texts.
 
 Your task is to produce ONE sharp, memorable, non-obvious insight based on a Bible verse reference.
@@ -22,7 +21,7 @@ STYLE:
 - Feels like a discovery, not an explanation
 - Modern, clear, intellectually engaging
 - No preaching, no religious tone
-- No abstract философия ради философии
+- No abstract philosophy for its own sake
 - Avoid vague language
 
 STRUCTURE:
