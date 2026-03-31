@@ -11,9 +11,17 @@ type PageProps = {
 }
 
 async function getInsight(book: string, chapter: string, verse: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/insight`, {
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000'
+
+  const res = await fetch(`${baseUrl}/api/insight`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ book, chapter, verse }),
+    cache: 'no-store',
   })
 
   if (!res.ok) {
