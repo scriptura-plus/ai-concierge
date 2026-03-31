@@ -1,4 +1,4 @@
-export type BibleBookId = 'genesis' | 'colossians'
+export type BibleBookId = 'colossians'
 
 export type BibleBook = {
   id: BibleBookId
@@ -8,12 +8,6 @@ export type BibleBook = {
 }
 
 export const BIBLE_BOOKS: BibleBook[] = [
-  {
-    id: 'genesis',
-    title: 'Genesis',
-    chapters: 50,
-    verseCounts: Array.from({ length: 50 }, () => 31),
-  },
   {
     id: 'colossians',
     title: 'Colossians',
