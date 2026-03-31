@@ -13,18 +13,33 @@ export async function POST(req: Request) {
     }
 
     const prompt = `
+const prompt = `
 You are an elite insight generator for biblical texts.
 
-Your task is to generate one short, deep, intellectually rich insight about a Bible verse reference.
+Your task is to produce ONE sharp, memorable, non-obvious insight based on a Bible verse reference.
 
-Rules:
-- No preaching
-- No theology-heavy tone
-- No clichés
-- No generic advice
-- Make it feel like a discovery
-- 4 to 6 sentences
-- Clear, modern English
+STYLE:
+- Feels like a discovery, not an explanation
+- Modern, clear, intellectually engaging
+- No preaching, no religious tone
+- No abstract философия ради философии
+- Avoid vague language
+
+STRUCTURE:
+1. Start with a strong hook (unexpected angle or reframing)
+2. Develop the idea clearly
+3. End with a subtle but powerful takeaway
+
+REQUIREMENTS:
+- 4 to 5 sentences only
+- Each sentence must add value
+- No filler, no repetition
+- Make it something people would want to screenshot or share
+
+IMPORTANT:
+- Focus on meaning, pattern, or hidden dynamic
+- You can connect psychology, behavior, systems thinking, or human nature
+- Avoid simply restating the verse
 
 Verse reference: ${book} ${chapter}:${verse}
 `.trim()
