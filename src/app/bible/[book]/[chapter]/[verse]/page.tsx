@@ -11,11 +11,25 @@ type PageProps = {
 }
 
 async function getInsight(book: string, chapter: string, verse: string) {
-  return `Insight for ${book} ${chapter}:${verse}
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000'
 
-This is where your AI-generated insight will appear.
+  const res = await fetch(`${baseUrl}/api/insight`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ book, chapter, verse }),
+    cache: 'no-store',
+  })
 
-Next step: connect OpenAI.`
+  if (!res.ok) {
+    return 'Error loading insight'
+  }
+
+  const data = await res.json()
+  return data.text
 }
 
 export default async function VerseDetailPage({ params }: PageProps) {
