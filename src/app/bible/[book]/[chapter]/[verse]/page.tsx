@@ -11,11 +11,17 @@ type PageProps = {
   }>
 }
 
+type InsightItem = {
+  title: string
+  text: string
+}
+
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
   const [chapter, setChapter] = useState('')
   const [verse, setVerse] = useState('')
-  const [insight, setInsight] = useState('Loading insight...')
+  const [insightTitle, setInsightTitle] = useState('Loading insight...')
+  const [insightText, setInsightText] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -25,7 +31,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setVerse(resolved.verse)
 
       try {
-        const res = await fetch('/api/insight', {
+        const res = await fetch('/api/insights', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -34,13 +40,24 @@ export default function VerseDetailPage({ params }: PageProps) {
             book: resolved.book,
             chapter: resolved.chapter,
             verse: resolved.verse,
+            count: 12,
           }),
         })
 
         const data = await res.json()
-        setInsight(data.text || 'No insight returned.')
+
+        const firstInsight: InsightItem | undefined = data?.insights?.[0]
+
+        if (firstInsight) {
+          setInsightTitle(firstInsight.title || 'Untitled insight')
+          setInsightText(firstInsight.text || '')
+        } else {
+          setInsightTitle('No insight returned.')
+          setInsightText('')
+        }
       } catch {
-        setInsight('Error loading insight')
+        setInsightTitle('Error loading insight')
+        setInsightText('')
       }
     }
 
@@ -58,12 +75,18 @@ export default function VerseDetailPage({ params }: PageProps) {
         </Link>
 
         <h1 className="mb-4 text-3xl font-semibold text-neutral-900">
-          {book ? `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}` : 'Loading...'}
+          {book
+            ? `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
+            : 'Loading...'}
         </h1>
 
         <div className="rounded-2xl border border-neutral-200 p-4">
-          <p className="text-base leading-7 text-neutral-800 whitespace-pre-line">
-            {insight}
+          <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+            {insightTitle}
+          </h2>
+
+          <p className="whitespace-pre-line text-base leading-7 text-neutral-800">
+            {insightText}
           </p>
         </div>
       </div>
