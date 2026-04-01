@@ -19,6 +19,7 @@ type InsightItem = {
 
 type InsightsApiResponse = {
   reference?: string
+  verseText?: string
   focusWord?: string
   count?: number
   insights?: InsightItem[]
@@ -42,6 +43,9 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [focusWord, setFocusWord] = useState('')
   const [submittedFocusWord, setSubmittedFocusWord] = useState('')
+
+  const [verseText, setVerseText] = useState('')
+  const [translatedVerseTexts, setTranslatedVerseTexts] = useState<Record<string, string>>({})
 
   const [insights, setInsights] = useState<InsightItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -91,12 +95,14 @@ export default function VerseDetailPage({ params }: PageProps) {
       setLoading(true)
       setError('')
       setRawOutput('')
+      setVerseText('')
       setInsights([])
       setCurrentIndex(0)
       setTranslationMode('original')
       setTranslationLoading(false)
       setTranslationError('')
       setTranslatedCards({})
+      setTranslatedVerseTexts({})
       setCopyStatus('idle')
       setShareStatus('')
 
@@ -122,6 +128,8 @@ export default function VerseDetailPage({ params }: PageProps) {
           setRawOutput(data.raw || '')
           return
         }
+
+        setVerseText(data.verseText || '')
 
         const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
 
@@ -149,6 +157,11 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (!currentInsight) return ''
     return `${currentIndex}:${currentInsight.title}:${currentInsight.text}`
   }, [currentIndex, currentInsight])
+
+  const verseTranslationKey = useMemo(() => {
+    if (!verseText) return ''
+    return `${book}:${chapter}:${verse}:${verseText}`
+  }, [book, chapter, verse, verseText])
 
   async function translateCard(targetLanguage: 'ru' | 'es', card: InsightItem, cardKey: string) {
     const existingTranslation = translatedCards[`${targetLanguage}:${cardKey}`]
@@ -183,6 +196,38 @@ export default function VerseDetailPage({ params }: PageProps) {
     return data.card
   }
 
+  async function translateVerseText(targetLanguage: 'ru' | 'es', text: string, key: string) {
+    const existing = translatedVerseTexts[`${targetLanguage}:${key}`]
+    if (existing) return existing
+
+    const res = await fetch('/api/translate-card', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: '',
+        text,
+        targetLanguage,
+      }),
+    })
+
+    const data: TranslateCardApiResponse = await res.json()
+
+    const translatedText = data?.card?.text?.trim()
+
+    if (!res.ok || !translatedText) {
+      throw new Error(data.error || 'Verse translation failed.')
+    }
+
+    setTranslatedVerseTexts((prev) => ({
+      ...prev,
+      [`${targetLanguage}:${key}`]: translatedText,
+    }))
+
+    return translatedText
+  }
+
   async function ensureCurrentCardTranslated(targetLanguage: 'ru' | 'es') {
     if (!currentInsight || !currentCardKey) return
 
@@ -192,7 +237,13 @@ export default function VerseDetailPage({ params }: PageProps) {
     setShareStatus('')
 
     try {
-      await translateCard(targetLanguage, currentInsight, currentCardKey)
+      await Promise.all([
+        translateCard(targetLanguage, currentInsight, currentCardKey),
+        verseText && verseTranslationKey
+          ? translateVerseText(targetLanguage, verseText, verseTranslationKey)
+          : Promise.resolve(),
+      ])
+
       setTranslationMode(targetLanguage)
     } catch (err) {
       setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
@@ -232,16 +283,27 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (!nextInsight) return
 
     const nextCardKey = `${nextIndex}:${nextInsight.title}:${nextInsight.text}`
-    const existingTranslation = translatedCards[`${translationMode}:${nextCardKey}`]
 
-    if (existingTranslation) {
-      return
+    const tasks: Promise<unknown>[] = []
+
+    if (!translatedCards[`${translationMode}:${nextCardKey}`]) {
+      tasks.push(translateCard(translationMode, nextInsight, nextCardKey))
     }
+
+    if (
+      verseText &&
+      verseTranslationKey &&
+      !translatedVerseTexts[`${translationMode}:${verseTranslationKey}`]
+    ) {
+      tasks.push(translateVerseText(translationMode, verseText, verseTranslationKey))
+    }
+
+    if (tasks.length === 0) return
 
     setTranslationLoading(true)
 
     try {
-      await translateCard(translationMode, nextInsight, nextCardKey)
+      await Promise.all(tasks)
     } catch (err) {
       setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
     } finally {
@@ -302,6 +364,14 @@ export default function VerseDetailPage({ params }: PageProps) {
     return translatedCards[`${translationMode}:${currentCardKey}`] || currentInsight
   }, [currentInsight, currentCardKey, translatedCards, translationMode])
 
+  const displayedVerseText = useMemo(() => {
+    if (translationMode === 'original') return verseText
+
+    if (!verseTranslationKey) return verseText
+
+    return translatedVerseTexts[`${translationMode}:${verseTranslationKey}`] || verseText
+  }, [translationMode, verseText, verseTranslationKey, translatedVerseTexts])
+
   const formattedReference = useMemo(() => {
     if (!book || !chapter || !verse) return ''
     return `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
@@ -309,8 +379,11 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
-    return `${formattedReference}\n\n${displayedCard.title}\n\n${displayedCard.text}`
-  }, [displayedCard, formattedReference])
+
+    const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
+
+    return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
+  }, [displayedCard, formattedReference, displayedVerseText])
 
   async function handleCopy() {
     if (!shareText) return
@@ -479,6 +552,14 @@ export default function VerseDetailPage({ params }: PageProps) {
                 {formattedReference}
               </p>
 
+              {displayedVerseText && (
+                <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
+                  <p className="text-[1rem] leading-8 text-stone-700 italic">
+                    {displayedVerseText}
+                  </p>
+                </div>
+              )}
+
               <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
                 {displayedCard.title}
               </h2>
@@ -594,8 +675,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             ref={exportCardRef}
             style={{
               width: 1080,
-              background:
-                'linear-gradient(180deg, #f6ecd6 0%, #efe2bf 100%)',
+              background: 'linear-gradient(180deg, #f6ecd6 0%, #efe2bf 100%)',
               padding: '48px',
               borderRadius: '44px',
               color: '#1c1917',
@@ -605,69 +685,4 @@ export default function VerseDetailPage({ params }: PageProps) {
             <div
               style={{
                 borderRadius: '34px',
-                border: '1px solid rgba(120, 97, 61, 0.14)',
-                background:
-                  'radial-gradient(circle at top, #fbf5e8 0%, #f2e7cf 55%, #ead9b6 100%)',
-                padding: '64px 72px',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
-              }}
-            >
-              <div
-                style={{
-                  textAlign: 'center',
-                  fontSize: '24px',
-                  fontWeight: 700,
-                  letterSpacing: '0.22em',
-                  textTransform: 'uppercase',
-                  color: '#78716c',
-                  marginBottom: '34px',
-                }}
-              >
-                {formattedReference}
-              </div>
-
-              <div
-                style={{
-                  textAlign: 'center',
-                  fontSize: '68px',
-                  lineHeight: 1.08,
-                  fontWeight: 700,
-                  letterSpacing: '-0.03em',
-                  color: '#1c1917',
-                  marginBottom: '42px',
-                }}
-              >
-                {displayedCard.title}
-              </div>
-
-              <div
-                style={{
-                  fontSize: '42px',
-                  lineHeight: 1.75,
-                  color: '#292524',
-                  whiteSpace: 'pre-wrap',
-                }}
-              >
-                {displayedCard.text}
-              </div>
-
-              <div
-                style={{
-                  marginTop: '44px',
-                  textAlign: 'center',
-                  fontSize: '24px',
-                  fontWeight: 600,
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  color: '#78716c',
-                }}
-              >
-                Scriptura+
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
-  )
-}
+                border: '1px solid rgba(120, 97,
