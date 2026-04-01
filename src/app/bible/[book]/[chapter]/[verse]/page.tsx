@@ -22,6 +22,7 @@ type InsightsApiResponse = {
   count?: number
   insights?: InsightItem[]
   error?: string
+  raw?: string
 }
 
 export default function VerseDetailPage({ params }: PageProps) {
@@ -36,6 +37,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [rawOutput, setRawOutput] = useState('')
 
   useEffect(() => {
     async function loadInitial() {
@@ -54,6 +56,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     async function loadInsights() {
       setLoading(true)
       setError('')
+      setRawOutput('')
       setInsights([])
       setCurrentIndex(0)
 
@@ -76,6 +79,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
         if (!res.ok) {
           setError(data.error || 'API request failed.')
+          setRawOutput(data.raw || '')
           return
         }
 
@@ -85,6 +89,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           setInsights(receivedInsights)
         } else {
           setError(data.error || 'No insights returned.')
+          setRawOutput(data.raw || '')
         }
       } catch {
         setError('Error loading insights.')
@@ -178,7 +183,18 @@ export default function VerseDetailPage({ params }: PageProps) {
               <h2 className="mb-3 text-xl font-semibold text-neutral-900">
                 Unable to load
               </h2>
-              <p className="text-base leading-7 text-neutral-800">{error}</p>
+              <p className="mb-4 text-base leading-7 text-neutral-800">{error}</p>
+
+              {rawOutput && (
+                <div className="rounded-xl bg-neutral-50 p-3">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+                    Raw model output
+                  </p>
+                  <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-neutral-700">
+                    {rawOutput}
+                  </pre>
+                </div>
+              )}
             </div>
           ) : currentInsight ? (
             <div>
