@@ -239,25 +239,25 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [currentInsight, currentCardKey, translatedCards, translationMode])
 
   return (
-    <main className="min-h-screen bg-white px-4 py-6">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
       <div className="mx-auto flex w-full max-w-md flex-col">
         <Link
           href={`/bible/${book}/${chapter}`}
-          className="mb-6 text-sm text-neutral-500"
+          className="mb-6 text-sm text-neutral-500 transition hover:text-neutral-700"
         >
           ← Back
         </Link>
 
-        <h1 className="mb-2 text-3xl font-semibold text-neutral-900">
+        <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
           {book
             ? `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
             : 'Loading...'}
         </h1>
 
-        <div className="mb-4 rounded-2xl border border-neutral-200 p-4">
+        <div className="mb-4 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
           <label
             htmlFor="focusWord"
-            className="mb-2 block text-sm font-medium text-neutral-700"
+            className="mb-2 block text-sm font-medium text-stone-700"
           >
             What word or phrase would you like to focus on?
           </label>
@@ -268,53 +268,53 @@ export default function VerseDetailPage({ params }: PageProps) {
             value={focusWord}
             onChange={(e) => setFocusWord(e.target.value)}
             placeholder="Optional: e.g. know, truth, eternal life"
-            className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-base text-neutral-900 outline-none"
+            className="w-full rounded-2xl border border-stone-300/80 bg-[#fffdf7] px-4 py-3 text-base text-stone-900 shadow-inner outline-none placeholder:text-stone-400"
           />
 
           <button
             type="button"
             onClick={handleGenerate}
-            className="mt-3 w-full rounded-xl bg-neutral-900 px-4 py-3 text-base font-medium text-white"
+            className="mt-3 w-full rounded-2xl bg-stone-900 px-4 py-3 text-base font-medium text-stone-50 shadow-[0_10px_20px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
           >
             Generate insights
           </button>
 
           {submittedFocusWord && (
-            <p className="mt-3 text-sm text-neutral-500">
+            <p className="mt-3 text-sm text-stone-500">
               Focus: “{submittedFocusWord}”
             </p>
           )}
         </div>
 
         {!loading && insights.length > 0 && (
-          <p className="mb-4 text-sm text-neutral-500">
+          <p className="mb-4 text-sm font-medium text-stone-500">
             {currentIndex + 1} / {insights.length}
           </p>
         )}
 
-        <div className="rounded-2xl border border-neutral-200 p-4">
+        <div className="rounded-[30px] border border-stone-200/80 bg-[#f7f0e1] p-5 shadow-[0_14px_36px_rgba(95,74,40,0.10)]">
           {loading ? (
             <div>
-              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+              <h2 className="mb-3 text-2xl font-semibold tracking-tight text-stone-900">
                 Loading insight...
               </h2>
-              <p className="text-base leading-7 text-neutral-800">
+              <p className="text-[17px] leading-8 text-stone-700">
                 Please wait while the insight cards are generated.
               </p>
             </div>
           ) : error ? (
             <div>
-              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+              <h2 className="mb-3 text-2xl font-semibold tracking-tight text-stone-900">
                 Unable to load
               </h2>
-              <p className="mb-4 text-base leading-7 text-neutral-800">{error}</p>
+              <p className="mb-4 text-[17px] leading-8 text-stone-700">{error}</p>
 
               {rawOutput && (
-                <div className="rounded-xl bg-neutral-50 p-3">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+                <div className="rounded-2xl border border-stone-200 bg-[#fffaf0] p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
                     Raw model output
                   </p>
-                  <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-neutral-700">
+                  <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
                     {rawOutput}
                   </pre>
                 </div>
@@ -322,20 +322,20 @@ export default function VerseDetailPage({ params }: PageProps) {
             </div>
           ) : displayedCard ? (
             <div>
-              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+              <h2 className="mb-4 text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
                 {displayedCard.title}
               </h2>
 
-              <p className="whitespace-pre-line text-base leading-7 text-neutral-800">
+              <p className="whitespace-pre-line text-[1.12rem] leading-9 text-stone-800">
                 {displayedCard.text}
               </p>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-2.5">
                 <button
                   type="button"
                   onClick={handleTranslateToRussian}
                   disabled={translationLoading}
-                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:opacity-50"
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-50"
                 >
                   {translationLoading && translationMode === 'ru'
                     ? 'Translating...'
@@ -346,7 +346,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                   type="button"
                   onClick={handleTranslateToSpanish}
                   disabled={translationLoading}
-                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:opacity-50"
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-50"
                 >
                   {translationLoading && translationMode === 'es'
                     ? 'Translating...'
@@ -356,34 +356,34 @@ export default function VerseDetailPage({ params }: PageProps) {
                 <button
                   type="button"
                   onClick={handleShowOriginal}
-                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
                   Show original
                 </button>
               </div>
 
               {translationMode === 'ru' && (
-                <p className="mt-3 text-sm text-neutral-500">
+                <p className="mt-4 text-sm text-stone-500">
                   Showing Russian translation
                 </p>
               )}
 
               {translationMode === 'es' && (
-                <p className="mt-3 text-sm text-neutral-500">
+                <p className="mt-4 text-sm text-stone-500">
                   Showing Spanish translation
                 </p>
               )}
 
               {translationError && (
-                <p className="mt-3 text-sm text-red-600">{translationError}</p>
+                <p className="mt-3 text-sm text-red-700">{translationError}</p>
               )}
             </div>
           ) : (
             <div>
-              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+              <h2 className="mb-3 text-2xl font-semibold tracking-tight text-stone-900">
                 No insight
               </h2>
-              <p className="text-base leading-7 text-neutral-800">
+              <p className="text-[17px] leading-8 text-stone-700">
                 No insight is available for this verse yet.
               </p>
             </div>
@@ -394,7 +394,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           <button
             type="button"
             onClick={handleNext}
-            className="mt-4 rounded-2xl bg-neutral-900 px-4 py-3 text-base font-medium text-white"
+            className="mt-5 rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
           >
             Next
           </button>
