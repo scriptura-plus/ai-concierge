@@ -1,6 +1,7 @@
 export type BibleBook = {
   id: string;
   name: string;
+  title: string;
   chapters: number;
   versesPerChapter: number[];
   verseCounts: number[];
@@ -407,6 +408,7 @@ const rawBibleBooks = [
 
 export const bibleBooks: BibleBook[] = rawBibleBooks.map((book) => ({
   ...book,
+  title: book.name,
   verseCounts: [...book.versesPerChapter],
 }));
 
