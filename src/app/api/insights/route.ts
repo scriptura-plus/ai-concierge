@@ -1,240 +1,223 @@
-'use client'
-
-import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-
-type PageProps = {
-  params: Promise<{
-    book: string
-    chapter: string
-    verse: string
-  }>
-}
+import { NextResponse } from "next/server";
 
 type InsightItem = {
-  title: string
-  text: string
+  title: string;
+  text: string;
+};
+
+function buildPrompt(reference: string, focusWord?: string, count = 12) {
+  const focusBlock = focusWord?.trim()
+    ? `
+FOCUS MODE:
+Pay special attention to this word or phrase:
+"${focusWord.trim()}"
+
+If possible, let many of the insights revolve around that focal point from different angles.
+`
+    : `
+FOCUS MODE:
+No specific word or phrase was provided.
+Generate insights based on the verse as a whole.
+`;
+
+  return `
+You are an elite generator of biblical insight cards.
+
+Your task is to produce ${count} distinct, non-obvious, high-value insight cards based on this Bible verse reference:
+
+${reference}
+
+CORE PRINCIPLE:
+This is not commentary.
+This is not summary.
+This is not preaching.
+This is discovery.
+
+AUDIENCE:
+Thoughtful, scripture-literate adult readers who value depth, precision, and fresh angles.
+
+PRIMARY GOAL:
+Generate insights that feel rare, sharp, and worth saving.
+
+QUALITY STANDARD:
+- Avoid obvious observations
+- Avoid generic spiritual language
+- Avoid clichés
+- Avoid repeating the same idea in different words
+- Each card must reveal a different angle, tension, contrast, pattern, or implication
+- Do not produce insights that could fit almost any verse
+
+DIVERSITY RULE:
+Across the full set, vary the type of insight. Draw from different angles such as:
+- a surprising wording detail
+- an inner tension in the verse
+- a hidden contrast
+- context that changes the emotional force
+- a structural or rhetorical feature
+- an unexpected biblical echo
+- a paradox
+- a practical implication that is not immediately obvious
+- a focus on one striking word or phrase
+- an insight based on what the verse does NOT say but the reader might expect
+
+${focusBlock}
+
+STYLE:
+- Clear
+- Modern
+- Intelligent
+- Concise but vivid
+- Memorable without sounding dramatic
+- No religious clichés
+- No vague abstraction
+
+FORMAT FOR EACH CARD:
+- "title": short, sharp, intriguing
+- "text": 4-5 sentences, tightly written, readable, and self-contained
+
+OUTPUT RULES:
+- Return ONLY valid JSON
+- No markdown
+- No code fences
+- No commentary outside JSON
+- Output must be a JSON array
+
+Example:
+[
+  {
+    "title": "The Detail That Slows the Verse Down",
+    "text": "Sentence one. Sentence two. Sentence three. Sentence four."
+  }
+]
+`.trim();
 }
 
-type InsightsApiResponse = {
-  reference?: string
-  focusWord?: string
-  count?: number
-  insights?: InsightItem[]
-  error?: string
+function extractText(data: any): string {
+  return (
+    data?.candidates?.[0]?.content?.parts
+      ?.map((part: any) => part?.text ?? "")
+      .join("") ?? ""
+  );
 }
 
-export default function VerseDetailPage({ params }: PageProps) {
-  const [book, setBook] = useState('')
-  const [chapter, setChapter] = useState('')
-  const [verse, setVerse] = useState('')
+function parseInsights(raw: string): InsightItem[] | null {
+  try {
+    const parsed = JSON.parse(raw);
 
-  const [focusWord, setFocusWord] = useState('')
-  const [submittedFocusWord, setSubmittedFocusWord] = useState('')
-
-  const [insights, setInsights] = useState<InsightItem[]>([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    async function loadInitial() {
-      const resolved = await params
-      setBook(resolved.book)
-      setChapter(resolved.chapter)
-      setVerse(resolved.verse)
+    if (!Array.isArray(parsed)) {
+      return null;
     }
 
-    loadInitial()
-  }, [params])
+    const cleaned = parsed
+      .filter((item) => item && typeof item === "object")
+      .map((item) => ({
+        title: String(item.title ?? "").trim(),
+        text: String(item.text ?? "").trim(),
+      }))
+      .filter((item) => item.title && item.text);
 
-  useEffect(() => {
-    if (!book || !chapter || !verse) return
+    return cleaned.length ? cleaned : null;
+  } catch {
+    return null;
+  }
+}
 
-    async function loadInsights() {
-      setLoading(true)
-      setError('')
-      setInsights([])
-      setCurrentIndex(0)
+function extractJsonArray(raw: string): string | null {
+  const start = raw.indexOf("[");
+  const end = raw.lastIndexOf("]");
 
-      try {
-        const res = await fetch('/api/insights', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  return raw.slice(start, end + 1);
+}
+
+export async function POST(req: Request) {
+  try {
+    const { book, chapter, verse, focusWord, count } = await req.json();
+
+    const apiKey = process.env.GOOGLE_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "GOOGLE_API_KEY is missing." },
+        { status: 500 }
+      );
+    }
+
+    if (!book || !chapter || !verse) {
+      return NextResponse.json(
+        { error: "book, chapter, and verse are required." },
+        { status: 400 }
+      );
+    }
+
+    const reference = `${book} ${chapter}:${verse}`;
+    const safeCount = Math.min(Math.max(Number(count ?? 12), 10), 20);
+
+    const prompt = buildPrompt(reference, focusWord, safeCount);
+
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.9,
+            topP: 0.95,
+            maxOutputTokens: 4000,
+            responseMimeType: "application/json",
           },
-          body: JSON.stringify({
-            book,
-            chapter,
-            verse,
-            focusWord: submittedFocusWord,
-            count: 12,
-          }),
-        })
+        }),
+      }
+    );
 
-        const data: InsightsApiResponse = await res.json()
+    const data = await response.json();
+    const rawText = extractText(data);
 
-        if (!res.ok) {
-          setError(data.error || 'API request failed.')
-          return
-        }
+    let insights = parseInsights(rawText);
 
-        const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
-
-        if (receivedInsights.length > 0) {
-          setInsights(receivedInsights)
-        } else {
-          setError(data.error || 'No insights returned.')
-        }
-      } catch {
-        setError('Error loading insights.')
-      } finally {
-        setLoading(false)
+    if (!insights) {
+      const extracted = extractJsonArray(rawText);
+      if (extracted) {
+        insights = parseInsights(extracted);
       }
     }
 
-    loadInsights()
-  }, [book, chapter, verse, submittedFocusWord])
+    if (!insights) {
+      return NextResponse.json(
+        {
+          error: "Failed to parse insights JSON.",
+          raw: rawText || "Empty model response",
+        },
+        { status: 500 }
+      );
+    }
 
-  const currentInsight = useMemo(() => {
-    return insights[currentIndex]
-  }, [insights, currentIndex])
+    return NextResponse.json({
+      reference,
+      focusWord: focusWord ?? "",
+      count: insights.length,
+      insights,
+    });
+  } catch (error) {
+    console.error("Insights API error:", error);
 
-  function handleNext() {
-    if (insights.length === 0) return
-    setCurrentIndex((prev) => (prev + 1) % insights.length)
+    return NextResponse.json(
+      {
+        error: "Something went wrong while generating insights.",
+      },
+      { status: 500 }
+    );
   }
-
-  function handleGenerate() {
-    setSubmittedFocusWord(focusWord.trim())
-  }
-
-  return (
-    <main className="min-h-screen bg-white px-4 py-6">
-      <div className="mx-auto flex w-full max-w-md flex-col">
-        <Link
-          href={`/bible/${book}/${chapter}`}
-          className="mb-6 text-sm text-neutral-500"
-        >
-          ← Back
-        </Link>
-
-        <h1 className="mb-2 text-3xl font-semibold text-neutral-900">
-          {book
-            ? `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
-            : 'Loading...'}
-        </h1>
-
-        <div className="mb-4 rounded-2xl border border-neutral-200 p-4">
-          <label
-            htmlFor="focusWord"
-            className="mb-2 block text-sm font-medium text-neutral-700"
-          >
-            What word or phrase would you like to focus on?
-          </label>
-
-          <input
-            id="focusWord"
-            type="text"
-            value={focusWord}
-            onChange={(e) => setFocusWord(e.target.value)}
-            placeholder="Optional: e.g. know, truth, eternal life"
-            className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-base text-neutral-900 outline-none"
-          />
-
-          <button
-            type="button"
-            onClick={handleGenerate}
-            className="mt-3 w-full rounded-xl bg-neutral-900 px-4 py-3 text-base font-medium text-white"
-          >
-            Generate insights
-          </button>
-
-          {submittedFocusWord && (
-            <p className="mt-3 text-sm text-neutral-500">
-              Focus: “{submittedFocusWord}”
-            </p>
-          )}
-        </div>
-
-        {!loading && insights.length > 0 && (
-          <p className="mb-4 text-sm text-neutral-500">
-            {currentIndex + 1} / {insights.length}
-          </p>
-        )}
-
-        <div className="rounded-2xl border border-neutral-200 p-4">
-          {loading ? (
-            <div>
-              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
-                Loading insight...
-              </h2>
-              <p className="text-base leading-7 text-neutral-800">
-                Please wait while the insight cards are generated.
-              </p>
-            </div>
-          ) : error ? (
-            <div>
-              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
-                Unable to load
-              </h2>
-              <p className="text-base leading-7 text-neutral-800">{error}</p>
-            </div>
-          ) : currentInsight ? (
-            <div>
-              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
-                {currentInsight.title}
-              </h2>
-
-              <p className="whitespace-pre-line text-base leading-7 text-neutral-800">
-                {currentInsight.text}
-              </p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
-                >
-                  Translate to Russian
-                </button>
-
-                <button
-                  type="button"
-                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
-                >
-                  Translate to Spanish
-                </button>
-
-                <button
-                  type="button"
-                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
-                >
-                  Show original
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
-                No insight
-              </h2>
-              <p className="text-base leading-7 text-neutral-800">
-                No insight is available for this verse yet.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {!loading && insights.length > 1 && (
-          <button
-            type="button"
-            onClick={handleNext}
-            className="mt-4 rounded-2xl bg-neutral-900 px-4 py-3 text-base font-medium text-white"
-          >
-            Next
-          </button>
-        )}
-      </div>
-    </main>
-  )
 }
