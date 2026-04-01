@@ -213,7 +213,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     })
 
     const data: TranslateCardApiResponse = await res.json()
-
     const translatedText = data?.card?.text?.trim()
 
     if (!res.ok || !translatedText) {
@@ -283,7 +282,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (!nextInsight) return
 
     const nextCardKey = `${nextIndex}:${nextInsight.title}:${nextInsight.text}`
-
     const tasks: Promise<unknown>[] = []
 
     if (!translatedCards[`${translationMode}:${nextCardKey}`]) {
@@ -366,9 +364,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const displayedVerseText = useMemo(() => {
     if (translationMode === 'original') return verseText
-
     if (!verseTranslationKey) return verseText
-
     return translatedVerseTexts[`${translationMode}:${verseTranslationKey}`] || verseText
   }, [translationMode, verseText, verseTranslationKey, translatedVerseTexts])
 
@@ -381,7 +377,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (!displayedCard || !formattedReference) return ''
 
     const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
-
     return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
   }, [displayedCard, formattedReference, displayedVerseText])
 
@@ -429,9 +424,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           navigator.canShare &&
           navigator.canShare({ files: [file] })
         ) {
-          await navigator.share({
-            files: [file],
-          })
+          await navigator.share({ files: [file] })
           setShareStatus('Shared as image')
           setCopyStatus('idle')
           return
@@ -439,9 +432,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       }
 
       if (navigator.share) {
-        await navigator.share({
-          text: shareText,
-        })
+        await navigator.share({ text: shareText })
         setShareStatus('Shared as text')
         setCopyStatus('idle')
       } else {
@@ -685,4 +676,87 @@ export default function VerseDetailPage({ params }: PageProps) {
             <div
               style={{
                 borderRadius: '34px',
-                border: '1px solid rgba(120, 97,
+                border: '1px solid rgba(120, 97, 61, 0.14)',
+                background: 'radial-gradient(circle at top, #fbf5e8 0%, #f2e7cf 55%, #ead9b6 100%)',
+                padding: '64px 72px',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
+              }}
+            >
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: '24px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: '#78716c',
+                  marginBottom: '34px',
+                }}
+              >
+                {formattedReference}
+              </div>
+
+              {displayedVerseText ? (
+                <div
+                  style={{
+                    marginBottom: '38px',
+                    padding: '24px 28px',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(120, 97, 61, 0.18)',
+                    background: 'rgba(251, 246, 234, 0.72)',
+                    fontSize: '30px',
+                    lineHeight: 1.8,
+                    color: '#44403c',
+                    fontStyle: 'italic',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {displayedVerseText}
+                </div>
+              ) : null}
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: '68px',
+                  lineHeight: 1.08,
+                  fontWeight: 700,
+                  letterSpacing: '-0.03em',
+                  color: '#1c1917',
+                  marginBottom: '42px',
+                }}
+              >
+                {displayedCard.title}
+              </div>
+
+              <div
+                style={{
+                  fontSize: '42px',
+                  lineHeight: 1.75,
+                  color: '#292524',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {displayedCard.text}
+              </div>
+
+              <div
+                style={{
+                  marginTop: '44px',
+                  textAlign: 'center',
+                  fontSize: '24px',
+                  fontWeight: 600,
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: '#78716c',
+                }}
+              >
+                Scriptura+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  )
+}
