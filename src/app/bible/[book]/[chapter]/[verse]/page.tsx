@@ -305,12 +305,10 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [book, chapter, verse])
 
   const shareText = useMemo(() => {
-    if (!displayedCard || !formattedReference) return ''
+  if (!displayedCard || !formattedReference) return ''
 
-    const focusLine = submittedFocusWord ? `Focus: ${submittedFocusWord}\n\n` : ''
-
-    return `${formattedReference}\n\n${focusLine}${displayedCard.title}\n\n${displayedCard.text}`
-  }, [displayedCard, formattedReference, submittedFocusWord])
+  return `${formattedReference}\n\n${displayedCard.title}\n\n${displayedCard.text}`
+}, [displayedCard, formattedReference])
 
   async function handleCopy() {
     if (!shareText) return
