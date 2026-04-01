@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toPng } from 'html-to-image'
 
 type PageProps = {
   params: Promise<{
@@ -57,7 +58,9 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [shareStatus, setShareStatus] = useState('')
+
   const copyTimerRef = useRef<number | null>(null)
+  const cardRef = useRef<HTMLDivElement | null>(null)
 
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
@@ -331,15 +334,45 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function handleShare() {
-    if (!shareText) return
+    if (!displayedCard || !formattedReference) return
+
+    setShareStatus('')
 
     try {
+      if (cardRef.current) {
+        const dataUrl = await toPng(cardRef.current, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: '#f2e7cf',
+        })
+
+        const blob = await (await fetch(dataUrl)).blob()
+        const file = new File([blob], `${formattedReference}.png`, {
+          type: 'image/png',
+        })
+
+        if (
+          navigator.share &&
+          'canShare' in navigator &&
+          navigator.canShare &&
+          navigator.canShare({ files: [file] })
+        ) {
+          await navigator.share({
+            title: displayedCard.title,
+            files: [file],
+          })
+          setShareStatus('Shared as image')
+          setCopyStatus('idle')
+          return
+        }
+      }
+
       if (navigator.share) {
         await navigator.share({
-          title: displayedCard?.title || formattedReference,
+          title: displayedCard.title || formattedReference,
           text: shareText,
         })
-        setShareStatus('Shared')
+        setShareStatus('Shared as text')
         setCopyStatus('idle')
       } else {
         await navigator.clipboard.writeText(shareText)
@@ -411,6 +444,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         )}
 
         <div
+          ref={cardRef}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
