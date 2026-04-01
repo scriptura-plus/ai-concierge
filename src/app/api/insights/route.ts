@@ -71,25 +71,24 @@ STYLE:
 - No religious clichés
 - No vague abstraction
 
-FORMAT:
-Return exactly ${count} cards in this plain text format:
+FORMAT FOR EACH CARD:
+- "title": short, sharp, intriguing
+- "text": 4-5 sentences, tightly written, readable, and self-contained
 
-===CARD===
-TITLE: <short title>
-TEXT: <4-5 sentences>
+OUTPUT RULES:
+- Return ONLY valid JSON
+- No markdown
+- No code fences
+- No commentary outside JSON
+- Output must be a JSON array
 
-===CARD===
-TITLE: <short title>
-TEXT: <4-5 sentences>
-
-RULES:
-- Do NOT return JSON
-- Do NOT return markdown
-- Do NOT use code fences
-- Do NOT add any intro or outro
-- Each card must begin with ===CARD===
-- Each card must contain exactly one TITLE: line and one TEXT: block
-- Put the full text after TEXT:
+Example:
+[
+  {
+    "title": "The Detail That Slows the Verse Down",
+    "text": "Sentence one. Sentence two. Sentence three. Sentence four."
+  }
+]
 `.trim();
 }
 
@@ -101,27 +100,37 @@ function extractText(data: any): string {
   );
 }
 
-function parseCards(raw: string): InsightItem[] {
-  const chunks = raw
-    .split("===CARD===")
-    .map((chunk) => chunk.trim())
-    .filter(Boolean);
+function parseInsights(raw: string): InsightItem[] | null {
+  try {
+    const parsed = JSON.parse(raw);
 
-  const results: InsightItem[] = [];
-
-  for (const chunk of chunks) {
-    const titleMatch = chunk.match(/TITLE:\s*(.+)/i);
-    const textMatch = chunk.match(/TEXT:\s*([\s\S]+)/i);
-
-    const title = titleMatch?.[1]?.trim() ?? "";
-    const text = textMatch?.[1]?.trim() ?? "";
-
-    if (title && text) {
-      results.push({ title, text });
+    if (!Array.isArray(parsed)) {
+      return null;
     }
+
+    const cleaned = parsed
+      .filter((item) => item && typeof item === "object")
+      .map((item) => ({
+        title: String(item.title ?? "").trim(),
+        text: String(item.text ?? "").trim(),
+      }))
+      .filter((item) => item.title && item.text);
+
+    return cleaned.length ? cleaned : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractJsonArray(raw: string): string | null {
+  const start = raw.indexOf("[");
+  const end = raw.lastIndexOf("]");
+
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
   }
 
-  return results;
+  return raw.slice(start, end + 1);
 }
 
 export async function POST(req: Request) {
@@ -167,6 +176,7 @@ export async function POST(req: Request) {
             temperature: 0.9,
             topP: 0.95,
             maxOutputTokens: 4000,
+            responseMimeType: "application/json",
           },
         }),
       }
@@ -174,12 +184,20 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     const rawText = extractText(data);
-    const insights = parseCards(rawText);
 
-    if (!insights.length) {
+    let insights = parseInsights(rawText);
+
+    if (!insights) {
+      const extracted = extractJsonArray(rawText);
+      if (extracted) {
+        insights = parseInsights(extracted);
+      }
+    }
+
+    if (!insights) {
       return NextResponse.json(
         {
-          error: "Failed to parse insight cards.",
+          error: "Failed to parse insights JSON.",
           raw: rawText || "Empty model response",
         },
         { status: 500 }
