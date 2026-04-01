@@ -99,10 +99,33 @@ Example:
 
 function buildTranslationPrompt(
   insights: InsightItem[],
-  language: LanguageOption
+  language: LanguageOption,
+  strict = false
 ) {
   const languageName =
     language === "ru" ? "Russian" : language === "es" ? "Spanish" : "English";
+
+  if (strict) {
+    return `
+Translate this JSON array of Bible insight cards into ${languageName}.
+
+CRITICAL RULES:
+- Return ONLY a JSON array
+- No markdown
+- No code fences
+- No intro text
+- No notes
+- No explanations
+- Keep the exact same array structure
+- Keep each object with exactly two keys: "title" and "text"
+- Translate all values naturally into ${languageName}
+- Do not add or remove items
+- Do not change the meaning
+
+JSON:
+${JSON.stringify(insights)}
+`.trim();
+  }
 
   return `
 You are a precise translator for a Bible insight app.
@@ -120,7 +143,6 @@ RULES:
 - Preserve the meaning and sharpness
 - Do not paraphrase more than necessary
 - Do not add new ideas
-- If the input is already effectively suitable, still return the full translated JSON
 
 JSON TO TRANSLATE:
 ${JSON.stringify(insights)}
@@ -168,7 +190,24 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1);
 }
 
-async function callGemini(apiKey: string, prompt: string) {
+function parseInsightsFromModelText(rawText: string): InsightItem[] | null {
+  let insights = parseInsights(rawText);
+
+  if (!insights) {
+    const extracted = extractJsonArray(rawText);
+    if (extracted) {
+      insights = parseInsights(extracted);
+    }
+  }
+
+  return insights;
+}
+
+async function callGemini(
+  apiKey: string,
+  prompt: string,
+  temperature = 0.9
+) {
   const response = await fetch(
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
     {
@@ -184,7 +223,7 @@ async function callGemini(apiKey: string, prompt: string) {
           },
         ],
         generationConfig: {
-          temperature: 0.9,
+          temperature,
           topP: 0.95,
           maxOutputTokens: 4000,
           responseMimeType: "application/json",
@@ -210,25 +249,35 @@ async function translateInsights(
     return insights;
   }
 
-  const prompt = buildTranslationPrompt(insights, language);
-  const result = await callGemini(apiKey, prompt);
+  const firstAttempt = await callGemini(
+    apiKey,
+    buildTranslationPrompt(insights, language, false),
+    0.2
+  );
 
-  if (!result.ok) {
-    return null;
-  }
-
-  const rawText = extractText(result.data);
-
-  let translated = parseInsights(rawText);
-
-  if (!translated) {
-    const extracted = extractJsonArray(rawText);
-    if (extracted) {
-      translated = parseInsights(extracted);
+  if (firstAttempt.ok) {
+    const firstRaw = extractText(firstAttempt.data);
+    const firstParsed = parseInsightsFromModelText(firstRaw);
+    if (firstParsed) {
+      return firstParsed;
     }
   }
 
-  return translated;
+  const secondAttempt = await callGemini(
+    apiKey,
+    buildTranslationPrompt(insights, language, true),
+    0
+  );
+
+  if (secondAttempt.ok) {
+    const secondRaw = extractText(secondAttempt.data);
+    const secondParsed = parseInsightsFromModelText(secondRaw);
+    if (secondParsed) {
+      return secondParsed;
+    }
+  }
+
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -260,9 +309,8 @@ export async function POST(req: Request) {
     const reference = `${book} ${chapter}:${verse}`;
     const safeCount = Math.min(Math.max(Number(count ?? 12), 10), 20);
 
-    const prompt = buildInsightsPrompt(reference, focusWord, safeCount);
-
-    const generationResult = await callGemini(apiKey, prompt);
+    const generationPrompt = buildInsightsPrompt(reference, focusWord, safeCount);
+    const generationResult = await callGemini(apiKey, generationPrompt, 0.9);
 
     if (!generationResult.ok) {
       return NextResponse.json(
@@ -275,17 +323,9 @@ export async function POST(req: Request) {
     }
 
     const rawText = extractText(generationResult.data);
+    const englishInsights = parseInsightsFromModelText(rawText);
 
-    let insights = parseInsights(rawText);
-
-    if (!insights) {
-      const extracted = extractJsonArray(rawText);
-      if (extracted) {
-        insights = parseInsights(extracted);
-      }
-    }
-
-    if (!insights) {
+    if (!englishInsights) {
       return NextResponse.json(
         {
           error: "Failed to parse insights JSON.",
@@ -297,25 +337,20 @@ export async function POST(req: Request) {
 
     const translatedInsights = await translateInsights(
       apiKey,
-      insights,
+      englishInsights,
       safeLanguage
     );
 
-    if (!translatedInsights) {
-      return NextResponse.json(
-        {
-          error: "Failed to translate insights.",
-        },
-        { status: 500 }
-      );
-    }
+    const finalInsights =
+      safeLanguage === "en" || translatedInsights ? translatedInsights ?? englishInsights : englishInsights;
 
     return NextResponse.json({
       reference,
       focusWord: focusWord ?? "",
       language: safeLanguage,
-      count: translatedInsights.length,
-      insights: translatedInsights,
+      translated: Boolean(safeLanguage !== "en" && translatedInsights),
+      count: finalInsights.length,
+      insights: finalInsights,
     });
   } catch (error) {
     console.error("Insights API error:", error);
