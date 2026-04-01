@@ -16,17 +16,6 @@ type InsightItem = {
   text: string
 }
 
-type SavedInsightItem = {
-  id: string
-  book: string
-  chapter: string
-  verse: string
-  focusWord: string
-  originalTitle: string
-  originalText: string
-  savedAt: string
-}
-
 type InsightsApiResponse = {
   reference?: string
   focusWord?: string
@@ -44,8 +33,6 @@ type TranslateCardApiResponse = {
 }
 
 type TranslationMode = 'original' | 'ru' | 'es'
-
-const SAVED_INSIGHTS_STORAGE_KEY = 'scriptura-saved-insights'
 
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
@@ -67,7 +54,9 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [translationError, setTranslationError] = useState('')
 
   const [translatedCards, setTranslatedCards] = useState<Record<string, InsightItem>>({})
-  const [savedInsightIds, setSavedInsightIds] = useState<string[]>([])
+
+  const [copyStatus, setCopyStatus] = useState('')
+  const [shareStatus, setShareStatus] = useState('')
 
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
@@ -84,24 +73,6 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [params])
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(SAVED_INSIGHTS_STORAGE_KEY)
-      if (!raw) return
-
-      const parsed = JSON.parse(raw)
-      if (!Array.isArray(parsed)) return
-
-      const ids = parsed
-        .map((item: SavedInsightItem) => item?.id)
-        .filter((id: unknown) => typeof id === 'string')
-
-      setSavedInsightIds(ids)
-    } catch {
-      // ignore localStorage parse issues
-    }
-  }, [])
-
-  useEffect(() => {
     if (!book || !chapter || !verse) return
 
     async function loadInsights() {
@@ -114,6 +85,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       setTranslationLoading(false)
       setTranslationError('')
       setTranslatedCards({})
+      setCopyStatus('')
+      setShareStatus('')
 
       try {
         const res = await fetch('/api/insights', {
@@ -165,24 +138,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     return `${currentIndex}:${currentInsight.title}:${currentInsight.text}`
   }, [currentIndex, currentInsight])
 
-  const currentSavedInsightId = useMemo(() => {
-    if (!currentInsight || !book || !chapter || !verse) return ''
-
-    return [
-      book,
-      chapter,
-      verse,
-      submittedFocusWord || '',
-      currentInsight.title,
-      currentInsight.text,
-    ].join('::')
-  }, [book, chapter, verse, submittedFocusWord, currentInsight])
-
-  const isCurrentInsightSaved = useMemo(() => {
-    if (!currentSavedInsightId) return false
-    return savedInsightIds.includes(currentSavedInsightId)
-  }, [savedInsightIds, currentSavedInsightId])
-
   async function translateCard(targetLanguage: 'ru' | 'es', card: InsightItem, cardKey: string) {
     const existingTranslation = translatedCards[`${targetLanguage}:${cardKey}`]
 
@@ -221,6 +176,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     setTranslationLoading(true)
     setTranslationError('')
+    setCopyStatus('')
+    setShareStatus('')
 
     try {
       await translateCard(targetLanguage, currentInsight, currentCardKey)
@@ -243,40 +200,8 @@ export default function VerseDetailPage({ params }: PageProps) {
   function handleShowOriginal() {
     setTranslationMode('original')
     setTranslationError('')
-  }
-
-  function handleSaveInsight() {
-    if (!currentInsight || !currentSavedInsightId) return
-
-    try {
-      const raw = window.localStorage.getItem(SAVED_INSIGHTS_STORAGE_KEY)
-      const parsed = raw ? JSON.parse(raw) : []
-      const existing: SavedInsightItem[] = Array.isArray(parsed) ? parsed : []
-
-      const alreadyExists = existing.some((item) => item.id === currentSavedInsightId)
-      if (alreadyExists) return
-
-      const nextItem: SavedInsightItem = {
-        id: currentSavedInsightId,
-        book,
-        chapter,
-        verse,
-        focusWord: submittedFocusWord || '',
-        originalTitle: currentInsight.title,
-        originalText: currentInsight.text,
-        savedAt: new Date().toISOString(),
-      }
-
-      const nextSaved = [nextItem, ...existing]
-      window.localStorage.setItem(
-        SAVED_INSIGHTS_STORAGE_KEY,
-        JSON.stringify(nextSaved)
-      )
-
-      setSavedInsightIds((prev) => [currentSavedInsightId, ...prev])
-    } catch {
-      // ignore localStorage save issues
-    }
+    setCopyStatus('')
+    setShareStatus('')
   }
 
   async function goToIndex(nextIndex: number) {
@@ -284,6 +209,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     setCurrentIndex(nextIndex)
     setTranslationError('')
+    setCopyStatus('')
+    setShareStatus('')
 
     if (translationMode === 'original') {
       return
@@ -362,6 +289,48 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     return translatedCards[`${translationMode}:${currentCardKey}`] || currentInsight
   }, [currentInsight, currentCardKey, translatedCards, translationMode])
+
+  const shareText = useMemo(() => {
+    if (!displayedCard || !book || !chapter || !verse) return ''
+
+    const reference = `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
+    const focusLine = submittedFocusWord ? `Focus: ${submittedFocusWord}\n\n` : ''
+
+    return `${reference}\n\n${focusLine}${displayedCard.title}\n\n${displayedCard.text}`
+  }, [displayedCard, book, chapter, verse, submittedFocusWord])
+
+  async function handleCopy() {
+    if (!shareText) return
+
+    try {
+      await navigator.clipboard.writeText(shareText)
+      setCopyStatus('Copied')
+      setShareStatus('')
+    } catch {
+      setCopyStatus('Copy failed')
+    }
+  }
+
+  async function handleShare() {
+    if (!shareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: displayedCard?.title || `${book} ${chapter}:${verse}`,
+          text: shareText,
+        })
+        setShareStatus('Shared')
+        setCopyStatus('')
+      } else {
+        await navigator.clipboard.writeText(shareText)
+        setShareStatus('Share unavailable — copied instead')
+        setCopyStatus('')
+      }
+    } catch {
+      setShareStatus('')
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
@@ -493,14 +462,18 @@ export default function VerseDetailPage({ params }: PageProps) {
 
                 <button
                   type="button"
-                  onClick={handleSaveInsight}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                    isCurrentInsightSaved
-                      ? 'border-stone-400 bg-[#efe2bf] text-stone-800'
-                      : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-                  }`}
+                  onClick={handleCopy}
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  {isCurrentInsightSaved ? 'Saved' : 'Save'}
+                  Copy
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  Share
                 </button>
               </div>
 
@@ -510,6 +483,14 @@ export default function VerseDetailPage({ params }: PageProps) {
                     ? 'Showing Russian translation'
                     : 'Showing Spanish translation'}
                 </p>
+              )}
+
+              {copyStatus && (
+                <p className="mt-3 text-sm text-stone-500">{copyStatus}</p>
+              )}
+
+              {shareStatus && (
+                <p className="mt-3 text-sm text-stone-500">{shareStatus}</p>
               )}
 
               {translationError && (
