@@ -60,7 +60,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [shareStatus, setShareStatus] = useState('')
 
   const copyTimerRef = useRef<number | null>(null)
-  const cardRef = useRef<HTMLDivElement | null>(null)
+  const exportCardRef = useRef<HTMLDivElement | null>(null)
 
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
@@ -309,7 +309,6 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
-
     return `${formattedReference}\n\n${displayedCard.title}\n\n${displayedCard.text}`
   }, [displayedCard, formattedReference])
 
@@ -339,8 +338,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setShareStatus('')
 
     try {
-      if (cardRef.current) {
-        const dataUrl = await toPng(cardRef.current, {
+      if (exportCardRef.current) {
+        const dataUrl = await toPng(exportCardRef.current, {
           cacheBust: true,
           pixelRatio: 2,
           backgroundColor: '#f2e7cf',
@@ -358,7 +357,6 @@ export default function VerseDetailPage({ params }: PageProps) {
           navigator.canShare({ files: [file] })
         ) {
           await navigator.share({
-            title: displayedCard.title,
             files: [file],
           })
           setShareStatus('Shared as image')
@@ -369,7 +367,6 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       if (navigator.share) {
         await navigator.share({
-          title: displayedCard.title || formattedReference,
           text: shareText,
         })
         setShareStatus('Shared as text')
@@ -444,7 +441,6 @@ export default function VerseDetailPage({ params }: PageProps) {
         )}
 
         <div
-          ref={cardRef}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -591,6 +587,87 @@ export default function VerseDetailPage({ params }: PageProps) {
           </div>
         )}
       </div>
+
+      {displayedCard && (
+        <div className="pointer-events-none fixed -left-[9999px] top-0 z-[-1]">
+          <div
+            ref={exportCardRef}
+            style={{
+              width: 1080,
+              background:
+                'linear-gradient(180deg, #f6ecd6 0%, #efe2bf 100%)',
+              padding: '48px',
+              borderRadius: '44px',
+              color: '#1c1917',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div
+              style={{
+                borderRadius: '34px',
+                border: '1px solid rgba(120, 97, 61, 0.14)',
+                background:
+                  'radial-gradient(circle at top, #fbf5e8 0%, #f2e7cf 55%, #ead9b6 100%)',
+                padding: '64px 72px',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
+              }}
+            >
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: '24px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: '#78716c',
+                  marginBottom: '34px',
+                }}
+              >
+                {formattedReference}
+              </div>
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: '68px',
+                  lineHeight: 1.08,
+                  fontWeight: 700,
+                  letterSpacing: '-0.03em',
+                  color: '#1c1917',
+                  marginBottom: '42px',
+                }}
+              >
+                {displayedCard.title}
+              </div>
+
+              <div
+                style={{
+                  fontSize: '42px',
+                  lineHeight: 1.75,
+                  color: '#292524',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {displayedCard.text}
+              </div>
+
+              <div
+                style={{
+                  marginTop: '44px',
+                  textAlign: 'center',
+                  fontSize: '24px',
+                  fontWeight: 600,
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: '#78716c',
+                }}
+              >
+                Scriptura+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
