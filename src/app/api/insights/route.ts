@@ -182,7 +182,32 @@ export async function POST(req: Request) {
       }
     );
 
-    const data = await response.json();
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          error: "Gemini request failed.",
+          raw: responseText || "Empty Gemini error response",
+        },
+        { status: 500 }
+      );
+    }
+
+    let data: any;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Gemini returned non-JSON HTTP response.",
+          raw: responseText || "Empty HTTP response body",
+        },
+        { status: 500 }
+      );
+    }
+
     const rawText = extractText(data);
 
     let insights = parseInsights(rawText);
