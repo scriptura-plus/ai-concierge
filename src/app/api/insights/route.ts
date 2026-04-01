@@ -5,7 +5,9 @@ type InsightItem = {
   text: string;
 };
 
-function buildPrompt(reference: string, focusWord?: string, count = 12) {
+type LanguageOption = "en" | "ru" | "es";
+
+function buildInsightsPrompt(reference: string, focusWord?: string, count = 12) {
   const focusBlock = focusWord?.trim()
     ? `
 FOCUS MODE:
@@ -26,6 +28,9 @@ You are an elite generator of biblical insight cards.
 Your task is to produce ${count} distinct, non-obvious, high-value insight cards based on this Bible verse reference:
 
 ${reference}
+
+IMPORTANT:
+Generate the insights in ENGLISH only.
 
 CORE PRINCIPLE:
 This is not commentary.
@@ -92,6 +97,36 @@ Example:
 `.trim();
 }
 
+function buildTranslationPrompt(
+  insights: InsightItem[],
+  language: LanguageOption
+) {
+  const languageName =
+    language === "ru" ? "Russian" : language === "es" ? "Spanish" : "English";
+
+  return `
+You are a precise translator for a Bible insight app.
+
+Translate the following JSON array of insight cards into ${languageName}.
+
+RULES:
+- Preserve the JSON structure exactly
+- Return ONLY valid JSON
+- Do not add markdown
+- Do not add commentary
+- Keep the same number of items
+- Keep each item's keys exactly as "title" and "text"
+- Translate naturally and clearly
+- Preserve the meaning and sharpness
+- Do not paraphrase more than necessary
+- Do not add new ideas
+- If the input is already effectively suitable, still return the full translated JSON
+
+JSON TO TRANSLATE:
+${JSON.stringify(insights)}
+`.trim();
+}
+
 function extractText(data: any): string {
   return (
     data?.candidates?.[0]?.content?.parts
@@ -133,9 +168,73 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1);
 }
 
+async function callGemini(apiKey: string, prompt: string) {
+  const response = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.9,
+          topP: 0.95,
+          maxOutputTokens: 4000,
+          responseMimeType: "application/json",
+        },
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  return {
+    ok: response.ok,
+    data,
+  };
+}
+
+async function translateInsights(
+  apiKey: string,
+  insights: InsightItem[],
+  language: LanguageOption
+): Promise<InsightItem[] | null> {
+  if (language === "en") {
+    return insights;
+  }
+
+  const prompt = buildTranslationPrompt(insights, language);
+  const result = await callGemini(apiKey, prompt);
+
+  if (!result.ok) {
+    return null;
+  }
+
+  const rawText = extractText(result.data);
+
+  let translated = parseInsights(rawText);
+
+  if (!translated) {
+    const extracted = extractJsonArray(rawText);
+    if (extracted) {
+      translated = parseInsights(extracted);
+    }
+  }
+
+  return translated;
+}
+
 export async function POST(req: Request) {
   try {
-    const { book, chapter, verse, focusWord, count } = await req.json();
+    const { book, chapter, verse, focusWord, count, language } =
+      await req.json();
 
     const apiKey = process.env.GOOGLE_API_KEY;
 
@@ -153,37 +252,29 @@ export async function POST(req: Request) {
       );
     }
 
+    const safeLanguage: LanguageOption =
+      language === "ru" || language === "es" || language === "en"
+        ? language
+        : "en";
+
     const reference = `${book} ${chapter}:${verse}`;
     const safeCount = Math.min(Math.max(Number(count ?? 12), 10), 20);
 
-    const prompt = buildPrompt(reference, focusWord, safeCount);
+    const prompt = buildInsightsPrompt(reference, focusWord, safeCount);
 
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
+    const generationResult = await callGemini(apiKey, prompt);
+
+    if (!generationResult.ok) {
+      return NextResponse.json(
+        {
+          error: "Gemini generation failed.",
+          raw: generationResult.data,
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.9,
-            topP: 0.95,
-            maxOutputTokens: 4000,
-            responseMimeType: "application/json",
-          },
-        }),
-      }
-    );
+        { status: 500 }
+      );
+    }
 
-    const data = await response.json();
-    const rawText = extractText(data);
+    const rawText = extractText(generationResult.data);
 
     let insights = parseInsights(rawText);
 
@@ -204,11 +295,27 @@ export async function POST(req: Request) {
       );
     }
 
+    const translatedInsights = await translateInsights(
+      apiKey,
+      insights,
+      safeLanguage
+    );
+
+    if (!translatedInsights) {
+      return NextResponse.json(
+        {
+          error: "Failed to translate insights.",
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       reference,
       focusWord: focusWord ?? "",
-      count: insights.length,
-      insights,
+      language: safeLanguage,
+      count: translatedInsights.length,
+      insights: translatedInsights,
     });
   } catch (error) {
     console.error("Insights API error:", error);
