@@ -32,6 +32,8 @@ type TranslateCardApiResponse = {
   raw?: string
 }
 
+type TranslationMode = 'original' | 'ru' | 'es'
+
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
   const [chapter, setChapter] = useState('')
@@ -47,10 +49,11 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [error, setError] = useState('')
   const [rawOutput, setRawOutput] = useState('')
 
-  const [translatedCard, setTranslatedCard] = useState<InsightItem | null>(null)
-  const [translationMode, setTranslationMode] = useState<'original' | 'ru'>('original')
+  const [translationMode, setTranslationMode] = useState<TranslationMode>('original')
   const [translationLoading, setTranslationLoading] = useState(false)
   const [translationError, setTranslationError] = useState('')
+
+  const [translatedCards, setTranslatedCards] = useState<Record<string, InsightItem>>({})
 
   useEffect(() => {
     async function loadInitial() {
@@ -72,9 +75,10 @@ export default function VerseDetailPage({ params }: PageProps) {
       setRawOutput('')
       setInsights([])
       setCurrentIndex(0)
-      setTranslatedCard(null)
       setTranslationMode('original')
+      setTranslationLoading(false)
       setTranslationError('')
+      setTranslatedCards({})
 
       try {
         const res = await fetch('/api/insights', {
@@ -121,39 +125,66 @@ export default function VerseDetailPage({ params }: PageProps) {
     return insights[currentIndex]
   }, [insights, currentIndex])
 
-  async function translateCurrentCardToRussian() {
-    if (!currentInsight) return
+  const currentCardKey = useMemo(() => {
+    if (!currentInsight) return ''
+    return `${currentIndex}:${currentInsight.title}:${currentInsight.text}`
+  }, [currentIndex, currentInsight])
+
+  async function translateCard(targetLanguage: 'ru' | 'es', card: InsightItem, cardKey: string) {
+    const existingTranslation = translatedCards[`${targetLanguage}:${cardKey}`]
+
+    if (existingTranslation) {
+      return existingTranslation
+    }
+
+    const res = await fetch('/api/translate-card', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: card.title,
+        text: card.text,
+        targetLanguage,
+      }),
+    })
+
+    const data: TranslateCardApiResponse = await res.json()
+
+    if (!res.ok || !data.card) {
+      throw new Error(data.error || 'Translation failed.')
+    }
+
+    setTranslatedCards((prev) => ({
+      ...prev,
+      [`${targetLanguage}:${cardKey}`]: data.card as InsightItem,
+    }))
+
+    return data.card
+  }
+
+  async function ensureCurrentCardTranslated(targetLanguage: 'ru' | 'es') {
+    if (!currentInsight || !currentCardKey) return
 
     setTranslationLoading(true)
     setTranslationError('')
 
     try {
-      const res = await fetch('/api/translate-card', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: currentInsight.title,
-          text: currentInsight.text,
-          targetLanguage: 'ru',
-        }),
-      })
-
-      const data: TranslateCardApiResponse = await res.json()
-
-      if (!res.ok || !data.card) {
-        setTranslationError(data.error || 'Translation failed.')
-        return
-      }
-
-      setTranslatedCard(data.card)
-      setTranslationMode('ru')
-    } catch {
-      setTranslationError('Translation failed.')
+      await translateCard(targetLanguage, currentInsight, currentCardKey)
+      setTranslationMode(targetLanguage)
+    } catch (err) {
+      setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
     } finally {
       setTranslationLoading(false)
     }
+  }
+
+  async function handleTranslateToRussian() {
+    await ensureCurrentCardTranslated('ru')
+  }
+
+  async function handleTranslateToSpanish() {
+    await ensureCurrentCardTranslated('es')
   }
 
   function handleShowOriginal() {
@@ -161,20 +192,51 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTranslationError('')
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (insights.length === 0) return
-    setCurrentIndex((prev) => (prev + 1) % insights.length)
-    setTranslatedCard(null)
-    setTranslationMode('original')
+
+    const nextIndex = (currentIndex + 1) % insights.length
+    setCurrentIndex(nextIndex)
     setTranslationError('')
+
+    if (translationMode === 'original') {
+      return
+    }
+
+    const nextInsight = insights[nextIndex]
+    if (!nextInsight) return
+
+    const nextCardKey = `${nextIndex}:${nextInsight.title}:${nextInsight.text}`
+    const existingTranslation = translatedCards[`${translationMode}:${nextCardKey}`]
+
+    if (existingTranslation) {
+      return
+    }
+
+    setTranslationLoading(true)
+
+    try {
+      await translateCard(translationMode, nextInsight, nextCardKey)
+    } catch (err) {
+      setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+    } finally {
+      setTranslationLoading(false)
+    }
   }
 
   function handleGenerate() {
     setSubmittedFocusWord(focusWord.trim())
   }
 
-  const displayedCard =
-    translationMode === 'ru' && translatedCard ? translatedCard : currentInsight
+  const displayedCard = useMemo(() => {
+    if (!currentInsight || !currentCardKey) return null
+
+    if (translationMode === 'original') {
+      return currentInsight
+    }
+
+    return translatedCards[`${translationMode}:${currentCardKey}`] || currentInsight
+  }, [currentInsight, currentCardKey, translatedCards, translationMode])
 
   return (
     <main className="min-h-screen bg-white px-4 py-6">
@@ -271,18 +333,24 @@ export default function VerseDetailPage({ params }: PageProps) {
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={translateCurrentCardToRussian}
+                  onClick={handleTranslateToRussian}
                   disabled={translationLoading}
                   className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:opacity-50"
                 >
-                  {translationLoading ? 'Translating...' : 'Translate to Russian'}
+                  {translationLoading && translationMode === 'ru'
+                    ? 'Translating...'
+                    : 'Translate to Russian'}
                 </button>
 
                 <button
                   type="button"
-                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-400"
+                  onClick={handleTranslateToSpanish}
+                  disabled={translationLoading}
+                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700 disabled:opacity-50"
                 >
-                  Translate to Spanish
+                  {translationLoading && translationMode === 'es'
+                    ? 'Translating...'
+                    : 'Translate to Spanish'}
                 </button>
 
                 <button
@@ -297,6 +365,12 @@ export default function VerseDetailPage({ params }: PageProps) {
               {translationMode === 'ru' && (
                 <p className="mt-3 text-sm text-neutral-500">
                   Showing Russian translation
+                </p>
+              )}
+
+              {translationMode === 'es' && (
+                <p className="mt-3 text-sm text-neutral-500">
+                  Showing Spanish translation
                 </p>
               )}
 
