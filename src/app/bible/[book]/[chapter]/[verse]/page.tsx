@@ -305,10 +305,10 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [book, chapter, verse])
 
   const shareText = useMemo(() => {
-  if (!displayedCard || !formattedReference) return ''
+    if (!displayedCard || !formattedReference) return ''
 
-  return `${formattedReference}\n\n${displayedCard.title}\n\n${displayedCard.text}`
-}, [displayedCard, formattedReference])
+    return `${formattedReference}\n\n${displayedCard.title}\n\n${displayedCard.text}`
+  }, [displayedCard, formattedReference])
 
   async function handleCopy() {
     if (!shareText) return
@@ -532,6 +532,32 @@ export default function VerseDetailPage({ params }: PageProps) {
             </div>
           )}
         </div>
+
+        {displayedCard && (
+          <div className="mt-6 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="h-px flex-1 bg-stone-400/40" />
+              <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-stone-500">
+                Share Card Preview
+              </p>
+              <div className="h-px flex-1 bg-stone-400/40" />
+            </div>
+
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {formattedReference}
+              </p>
+
+              <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
+                {displayedCard.title}
+              </h2>
+
+              <p className="text-[1.08rem] leading-9 text-stone-800">
+                {displayedCard.text}
+              </p>
+            </div>
+          </div>
+        )}
 
         {!loading && insights.length > 1 && (
           <div className="mt-5 grid grid-cols-2 gap-3">
