@@ -71,16 +71,15 @@ STYLE:
 - No religious clichés
 - No vague abstraction
 
-FORMAT FOR EACH CARD:
-- "title": short, sharp, intriguing
-- "text": 4-5 sentences, tightly written, readable, and self-contained
-
 OUTPUT RULES:
 - Return ONLY valid JSON
 - No markdown
 - No code fences
 - No commentary outside JSON
 - Output must be a JSON array
+- Each item must have:
+  - "title": short, sharp, intriguing
+  - "text": 4-5 sentences, tightly written, readable, and self-contained
 
 Example:
 [
@@ -90,14 +89,6 @@ Example:
   }
 ]
 `.trim();
-}
-
-function extractText(data: any): string {
-  return (
-    data?.candidates?.[0]?.content?.parts
-      ?.map((part: any) => part?.text ?? "")
-      .join("") ?? ""
-  );
 }
 
 function parseInsights(raw: string): InsightItem[] | null {
@@ -133,15 +124,33 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1);
 }
 
+function extractOpenAIText(data: any): string {
+  if (typeof data?.output_text === "string" && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+
+  const pieces =
+    data?.output
+      ?.flatMap((item: any) => item?.content ?? [])
+      ?.map((part: any) => {
+        if (typeof part?.text === "string") return part.text;
+        if (typeof part?.output_text === "string") return part.output_text;
+        return "";
+      })
+      ?.filter(Boolean) ?? [];
+
+  return pieces.join("").trim();
+}
+
 export async function POST(req: Request) {
   try {
     const { book, chapter, verse, focusWord, count } = await req.json();
 
-    const apiKey = process.env.GOOGLE_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GOOGLE_API_KEY is missing." },
+        { error: "OPENAI_API_KEY is missing." },
         { status: 500 }
       );
     }
@@ -158,37 +167,31 @@ export async function POST(req: Request) {
 
     const prompt = buildPrompt(reference, focusWord, safeCount);
 
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.9,
-            topP: 0.95,
-            maxOutputTokens: 4000,
-            responseMimeType: "application/json",
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-5.4-mini",
+        input: [
+          {
+            role: "user",
+            content: prompt,
           },
-        }),
-      }
-    );
+        ],
+        max_output_tokens: 3000,
+      }),
+    });
 
     const responseText = await response.text();
 
     if (!response.ok) {
       return NextResponse.json(
         {
-          error: "Gemini request failed.",
-          raw: responseText || "Empty Gemini error response",
+          error: "OpenAI request failed.",
+          raw: responseText || "Empty OpenAI error response",
         },
         { status: 500 }
       );
@@ -201,14 +204,14 @@ export async function POST(req: Request) {
     } catch {
       return NextResponse.json(
         {
-          error: "Gemini returned non-JSON HTTP response.",
+          error: "OpenAI returned non-JSON HTTP response.",
           raw: responseText || "Empty HTTP response body",
         },
         { status: 500 }
       );
     }
 
-    const rawText = extractText(data);
+    const rawText = extractOpenAIText(data);
 
     let insights = parseInsights(rawText);
 
