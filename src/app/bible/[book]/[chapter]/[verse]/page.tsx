@@ -55,8 +55,9 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [translatedCards, setTranslatedCards] = useState<Record<string, InsightItem>>({})
 
-  const [copyStatus, setCopyStatus] = useState('')
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [shareStatus, setShareStatus] = useState('')
+  const copyTimerRef = useRef<number | null>(null)
 
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
@@ -73,6 +74,14 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [params])
 
   useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        window.clearTimeout(copyTimerRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (!book || !chapter || !verse) return
 
     async function loadInsights() {
@@ -85,7 +94,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setTranslationLoading(false)
       setTranslationError('')
       setTranslatedCards({})
-      setCopyStatus('')
+      setCopyStatus('idle')
       setShareStatus('')
 
       try {
@@ -176,7 +185,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     setTranslationLoading(true)
     setTranslationError('')
-    setCopyStatus('')
+    setCopyStatus('idle')
     setShareStatus('')
 
     try {
@@ -200,7 +209,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   function handleShowOriginal() {
     setTranslationMode('original')
     setTranslationError('')
-    setCopyStatus('')
+    setCopyStatus('idle')
     setShareStatus('')
   }
 
@@ -209,7 +218,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     setCurrentIndex(nextIndex)
     setTranslationError('')
-    setCopyStatus('')
+    setCopyStatus('idle')
     setShareStatus('')
 
     if (translationMode === 'original') {
@@ -290,24 +299,36 @@ export default function VerseDetailPage({ params }: PageProps) {
     return translatedCards[`${translationMode}:${currentCardKey}`] || currentInsight
   }, [currentInsight, currentCardKey, translatedCards, translationMode])
 
-  const shareText = useMemo(() => {
-    if (!displayedCard || !book || !chapter || !verse) return ''
+  const formattedReference = useMemo(() => {
+    if (!book || !chapter || !verse) return ''
+    return `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
+  }, [book, chapter, verse])
 
-    const reference = `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
+  const shareText = useMemo(() => {
+    if (!displayedCard || !formattedReference) return ''
+
     const focusLine = submittedFocusWord ? `Focus: ${submittedFocusWord}\n\n` : ''
 
-    return `${reference}\n\n${focusLine}${displayedCard.title}\n\n${displayedCard.text}`
-  }, [displayedCard, book, chapter, verse, submittedFocusWord])
+    return `${formattedReference}\n\n${focusLine}${displayedCard.title}\n\n${displayedCard.text}`
+  }, [displayedCard, formattedReference, submittedFocusWord])
 
   async function handleCopy() {
     if (!shareText) return
 
     try {
       await navigator.clipboard.writeText(shareText)
-      setCopyStatus('Copied')
+      setCopyStatus('copied')
       setShareStatus('')
+
+      if (copyTimerRef.current) {
+        window.clearTimeout(copyTimerRef.current)
+      }
+
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopyStatus('idle')
+      }, 1600)
     } catch {
-      setCopyStatus('Copy failed')
+      setCopyStatus('failed')
     }
   }
 
@@ -317,20 +338,27 @@ export default function VerseDetailPage({ params }: PageProps) {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: displayedCard?.title || `${book} ${chapter}:${verse}`,
+          title: displayedCard?.title || formattedReference,
           text: shareText,
         })
         setShareStatus('Shared')
-        setCopyStatus('')
+        setCopyStatus('idle')
       } else {
         await navigator.clipboard.writeText(shareText)
         setShareStatus('Share unavailable — copied instead')
-        setCopyStatus('')
+        setCopyStatus('idle')
       }
     } catch {
       setShareStatus('')
     }
   }
+
+  const copyButtonClass =
+    copyStatus === 'copied'
+      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+      : copyStatus === 'failed'
+        ? 'border-red-300 bg-red-50 text-red-700'
+        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
@@ -343,9 +371,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         </Link>
 
         <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
-          {book
-            ? `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
-            : 'Loading...'}
+          {formattedReference || 'Loading...'}
         </h1>
 
         <div className="mb-4 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
@@ -463,9 +489,13 @@ export default function VerseDetailPage({ params }: PageProps) {
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
                 >
-                  Copy
+                  {copyStatus === 'copied'
+                    ? 'Copied'
+                    : copyStatus === 'failed'
+                      ? 'Copy failed'
+                      : 'Copy'}
                 </button>
 
                 <button
@@ -483,10 +513,6 @@ export default function VerseDetailPage({ params }: PageProps) {
                     ? 'Showing Russian translation'
                     : 'Showing Spanish translation'}
                 </p>
-              )}
-
-              {copyStatus && (
-                <p className="mt-3 text-sm text-stone-500">{copyStatus}</p>
               )}
 
               {shareStatus && (
