@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
+import { getVerseText } from "@/lib/bible/getVerseText";
 
 type InsightItem = {
   title: string;
   text: string;
 };
 
-function buildPrompt(reference: string, focusWord?: string, count = 12) {
+function buildPrompt(
+  reference: string,
+  verseText: string,
+  focusWord?: string,
+  count = 12
+) {
   const focusBlock = focusWord?.trim()
     ? `
 FOCUS MODE:
@@ -23,15 +29,26 @@ Generate insights based on the verse as a whole.
   return `
 You are an elite generator of biblical insight cards.
 
-Your task is to produce ${count} distinct, non-obvious, high-value insight cards based on this Bible verse reference:
+Your task is to produce ${count} distinct, non-obvious, high-value insight cards based on this Bible verse.
 
+REFERENCE:
 ${reference}
+
+VERSE TEXT:
+${verseText}
 
 CORE PRINCIPLE:
 This is not commentary.
 This is not summary.
 This is not preaching.
 This is discovery.
+
+CRITICAL ACCURACY RULES:
+- Base your insights on the verse text provided above
+- Do not attribute words or phrases to the verse if they do not appear in the verse text
+- Do not blend in wording from nearby verses unless clearly marked as wider context
+- If a point depends on broader context, make that explicit
+- Stay anchored in this specific verse
 
 AUDIENCE:
 Thoughtful, scripture-literate adult readers who value depth, precision, and fresh angles.
@@ -54,7 +71,7 @@ Across the full set, vary the type of insight. Draw from different angles such a
 - a hidden contrast
 - context that changes the emotional force
 - a structural or rhetorical feature
-- an unexpected biblical echo
+- an unexpected implication
 - a paradox
 - a practical implication that is not immediately obvious
 - a focus on one striking word or phrase
@@ -162,10 +179,19 @@ export async function POST(req: Request) {
       );
     }
 
+    const verseText = await getVerseText(book, chapter, verse);
+
+    if (!verseText) {
+      return NextResponse.json(
+        { error: "Failed to load verse text from WEB API." },
+        { status: 500 }
+      );
+    }
+
     const reference = `${book} ${chapter}:${verse}`;
     const safeCount = Math.min(Math.max(Number(count ?? 12), 10), 20);
 
-    const prompt = buildPrompt(reference, focusWord, safeCount);
+    const prompt = buildPrompt(reference, verseText, focusWord, safeCount);
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -234,6 +260,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       reference,
+      verseText,
       focusWord: focusWord ?? "",
       count: insights.length,
       insights,
