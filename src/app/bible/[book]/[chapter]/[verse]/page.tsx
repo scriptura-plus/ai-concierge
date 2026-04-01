@@ -21,22 +21,33 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [chapter, setChapter] = useState('')
   const [verse, setVerse] = useState('')
 
+  const [focusWord, setFocusWord] = useState('')
+  const [submittedFocusWord, setSubmittedFocusWord] = useState('')
+
   const [insights, setInsights] = useState<InsightItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    async function load() {
-      setLoading(true)
-      setError('')
-      setInsights([])
-      setCurrentIndex(0)
-
+    async function loadInitial() {
       const resolved = await params
       setBook(resolved.book)
       setChapter(resolved.chapter)
       setVerse(resolved.verse)
+    }
+
+    loadInitial()
+  }, [params])
+
+  useEffect(() => {
+    if (!book || !chapter || !verse) return
+
+    async function loadInsights() {
+      setLoading(true)
+      setError('')
+      setInsights([])
+      setCurrentIndex(0)
 
       try {
         const res = await fetch('/api/insights', {
@@ -45,9 +56,10 @@ export default function VerseDetailPage({ params }: PageProps) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            book: resolved.book,
-            chapter: resolved.chapter,
-            verse: resolved.verse,
+            book,
+            chapter,
+            verse,
+            focusWord: submittedFocusWord,
             count: 12,
           }),
         })
@@ -67,8 +79,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       }
     }
 
-    load()
-  }, [params])
+    loadInsights()
+  }, [book, chapter, verse, submittedFocusWord])
 
   const currentInsight = useMemo(() => {
     return insights[currentIndex]
@@ -77,6 +89,10 @@ export default function VerseDetailPage({ params }: PageProps) {
   function handleNext() {
     if (insights.length === 0) return
     setCurrentIndex((prev) => (prev + 1) % insights.length)
+  }
+
+  function handleGenerate() {
+    setSubmittedFocusWord(focusWord.trim())
   }
 
   return (
@@ -94,6 +110,38 @@ export default function VerseDetailPage({ params }: PageProps) {
             ? `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
             : 'Loading...'}
         </h1>
+
+        <div className="mb-4 rounded-2xl border border-neutral-200 p-4">
+          <label
+            htmlFor="focusWord"
+            className="mb-2 block text-sm font-medium text-neutral-700"
+          >
+            What word or phrase would you like to focus on?
+          </label>
+
+          <input
+            id="focusWord"
+            type="text"
+            value={focusWord}
+            onChange={(e) => setFocusWord(e.target.value)}
+            placeholder="Optional: e.g. know, truth, eternal life"
+            className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-base text-neutral-900 outline-none"
+          />
+
+          <button
+            type="button"
+            onClick={handleGenerate}
+            className="mt-3 w-full rounded-xl bg-neutral-900 px-4 py-3 text-base font-medium text-white"
+          >
+            Generate insights
+          </button>
+
+          {submittedFocusWord && (
+            <p className="mt-3 text-sm text-neutral-500">
+              Focus: “{submittedFocusWord}”
+            </p>
+          )}
+        </div>
 
         {!loading && insights.length > 0 && (
           <p className="mb-4 text-sm text-neutral-500">
