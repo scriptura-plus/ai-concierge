@@ -100,6 +100,19 @@ function extractText(data: any): string {
   );
 }
 
+function cleanModelText(raw: string): string {
+  return raw
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+}
+
+function normalizeSmartQuotes(raw: string): string {
+  return raw
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'");
+}
+
 function parseInsights(raw: string): InsightItem[] | null {
   try {
     const parsed = JSON.parse(raw);
@@ -131,6 +144,32 @@ function extractJsonArray(raw: string): string | null {
   }
 
   return raw.slice(start, end + 1);
+}
+
+function parseInsightsRobust(raw: string): InsightItem[] | null {
+  const variants = [
+    raw,
+    cleanModelText(raw),
+    normalizeSmartQuotes(raw),
+    normalizeSmartQuotes(cleanModelText(raw)),
+  ];
+
+  for (const variant of variants) {
+    const direct = parseInsights(variant);
+    if (direct) return direct;
+
+    const extracted = extractJsonArray(variant);
+    if (extracted) {
+      const extractedParsed = parseInsights(extracted);
+      if (extractedParsed) return extractedParsed;
+
+      const normalizedExtracted = normalizeSmartQuotes(extracted);
+      const normalizedParsed = parseInsights(normalizedExtracted);
+      if (normalizedParsed) return normalizedParsed;
+    }
+  }
+
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -185,14 +224,7 @@ export async function POST(req: Request) {
     const data = await response.json();
     const rawText = extractText(data);
 
-    let insights = parseInsights(rawText);
-
-    if (!insights) {
-      const extracted = extractJsonArray(rawText);
-      if (extracted) {
-        insights = parseInsights(extracted);
-      }
-    }
+    const insights = parseInsightsRobust(rawText);
 
     if (!insights) {
       return NextResponse.json(
