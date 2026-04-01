@@ -1,365 +1,240 @@
-import { NextResponse } from "next/server";
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+
+type PageProps = {
+  params: Promise<{
+    book: string
+    chapter: string
+    verse: string
+  }>
+}
 
 type InsightItem = {
-  title: string;
-  text: string;
-};
-
-type LanguageOption = "en" | "ru" | "es";
-
-function buildInsightsPrompt(reference: string, focusWord?: string, count = 12) {
-  const focusBlock = focusWord?.trim()
-    ? `
-FOCUS MODE:
-Pay special attention to this word or phrase:
-"${focusWord.trim()}"
-
-If possible, let many of the insights revolve around that focal point from different angles.
-`
-    : `
-FOCUS MODE:
-No specific word or phrase was provided.
-Generate insights based on the verse as a whole.
-`;
-
-  return `
-You are an elite generator of biblical insight cards.
-
-Your task is to produce ${count} distinct, non-obvious, high-value insight cards based on this Bible verse reference:
-
-${reference}
-
-IMPORTANT:
-Generate the insights in ENGLISH only.
-
-CORE PRINCIPLE:
-This is not commentary.
-This is not summary.
-This is not preaching.
-This is discovery.
-
-AUDIENCE:
-Thoughtful, scripture-literate adult readers who value depth, precision, and fresh angles.
-
-PRIMARY GOAL:
-Generate insights that feel rare, sharp, and worth saving.
-
-QUALITY STANDARD:
-- Avoid obvious observations
-- Avoid generic spiritual language
-- Avoid clichés
-- Avoid repeating the same idea in different words
-- Each card must reveal a different angle, tension, contrast, pattern, or implication
-- Do not produce insights that could fit almost any verse
-
-DIVERSITY RULE:
-Across the full set, vary the type of insight. Draw from different angles such as:
-- a surprising wording detail
-- an inner tension in the verse
-- a hidden contrast
-- context that changes the emotional force
-- a structural or rhetorical feature
-- an unexpected biblical echo
-- a paradox
-- a practical implication that is not immediately obvious
-- a focus on one striking word or phrase
-- an insight based on what the verse does NOT say but the reader might expect
-
-${focusBlock}
-
-STYLE:
-- Clear
-- Modern
-- Intelligent
-- Concise but vivid
-- Memorable without sounding dramatic
-- No religious clichés
-- No vague abstraction
-
-FORMAT FOR EACH CARD:
-- "title": short, sharp, intriguing
-- "text": 4-5 sentences, tightly written, readable, and self-contained
-
-OUTPUT RULES:
-- Return ONLY valid JSON
-- No markdown
-- No code fences
-- No commentary outside JSON
-- Output must be a JSON array
-
-Example:
-[
-  {
-    "title": "The Detail That Slows the Verse Down",
-    "text": "Sentence one. Sentence two. Sentence three. Sentence four."
-  }
-]
-`.trim();
+  title: string
+  text: string
 }
 
-function buildTranslationPrompt(
-  insights: InsightItem[],
-  language: LanguageOption,
-  strict = false
-) {
-  const languageName =
-    language === "ru" ? "Russian" : language === "es" ? "Spanish" : "English";
-
-  if (strict) {
-    return `
-Translate this JSON array of Bible insight cards into ${languageName}.
-
-CRITICAL RULES:
-- Return ONLY a JSON array
-- No markdown
-- No code fences
-- No intro text
-- No notes
-- No explanations
-- Keep the exact same array structure
-- Keep each object with exactly two keys: "title" and "text"
-- Translate all values naturally into ${languageName}
-- Do not add or remove items
-- Do not change the meaning
-
-JSON:
-${JSON.stringify(insights)}
-`.trim();
-  }
-
-  return `
-You are a precise translator for a Bible insight app.
-
-Translate the following JSON array of insight cards into ${languageName}.
-
-RULES:
-- Preserve the JSON structure exactly
-- Return ONLY valid JSON
-- Do not add markdown
-- Do not add commentary
-- Keep the same number of items
-- Keep each item's keys exactly as "title" and "text"
-- Translate naturally and clearly
-- Preserve the meaning and sharpness
-- Do not paraphrase more than necessary
-- Do not add new ideas
-
-JSON TO TRANSLATE:
-${JSON.stringify(insights)}
-`.trim();
+type InsightsApiResponse = {
+  reference?: string
+  focusWord?: string
+  count?: number
+  insights?: InsightItem[]
+  error?: string
 }
 
-function extractText(data: any): string {
-  return (
-    data?.candidates?.[0]?.content?.parts
-      ?.map((part: any) => part?.text ?? "")
-      .join("") ?? ""
-  );
-}
+export default function VerseDetailPage({ params }: PageProps) {
+  const [book, setBook] = useState('')
+  const [chapter, setChapter] = useState('')
+  const [verse, setVerse] = useState('')
 
-function parseInsights(raw: string): InsightItem[] | null {
-  try {
-    const parsed = JSON.parse(raw);
+  const [focusWord, setFocusWord] = useState('')
+  const [submittedFocusWord, setSubmittedFocusWord] = useState('')
 
-    if (!Array.isArray(parsed)) {
-      return null;
+  const [insights, setInsights] = useState<InsightItem[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function loadInitial() {
+      const resolved = await params
+      setBook(resolved.book)
+      setChapter(resolved.chapter)
+      setVerse(resolved.verse)
     }
 
-    const cleaned = parsed
-      .filter((item) => item && typeof item === "object")
-      .map((item) => ({
-        title: String(item.title ?? "").trim(),
-        text: String(item.text ?? "").trim(),
-      }))
-      .filter((item) => item.title && item.text);
+    loadInitial()
+  }, [params])
 
-    return cleaned.length ? cleaned : null;
-  } catch {
-    return null;
-  }
-}
+  useEffect(() => {
+    if (!book || !chapter || !verse) return
 
-function extractJsonArray(raw: string): string | null {
-  const start = raw.indexOf("[");
-  const end = raw.lastIndexOf("]");
+    async function loadInsights() {
+      setLoading(true)
+      setError('')
+      setInsights([])
+      setCurrentIndex(0)
 
-  if (start === -1 || end === -1 || end <= start) {
-    return null;
-  }
-
-  return raw.slice(start, end + 1);
-}
-
-function parseInsightsFromModelText(rawText: string): InsightItem[] | null {
-  let insights = parseInsights(rawText);
-
-  if (!insights) {
-    const extracted = extractJsonArray(rawText);
-    if (extracted) {
-      insights = parseInsights(extracted);
-    }
-  }
-
-  return insights;
-}
-
-async function callGemini(
-  apiKey: string,
-  prompt: string,
-  temperature = 0.9
-) {
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }],
+      try {
+        const res = await fetch('/api/insights', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        ],
-        generationConfig: {
-          temperature,
-          topP: 0.95,
-          maxOutputTokens: 4000,
-          responseMimeType: "application/json",
-        },
-      }),
+          body: JSON.stringify({
+            book,
+            chapter,
+            verse,
+            focusWord: submittedFocusWord,
+            count: 12,
+          }),
+        })
+
+        const data: InsightsApiResponse = await res.json()
+
+        if (!res.ok) {
+          setError(data.error || 'API request failed.')
+          return
+        }
+
+        const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
+
+        if (receivedInsights.length > 0) {
+          setInsights(receivedInsights)
+        } else {
+          setError(data.error || 'No insights returned.')
+        }
+      } catch {
+        setError('Error loading insights.')
+      } finally {
+        setLoading(false)
+      }
     }
-  );
 
-  const data = await response.json();
+    loadInsights()
+  }, [book, chapter, verse, submittedFocusWord])
 
-  return {
-    ok: response.ok,
-    data,
-  };
-}
+  const currentInsight = useMemo(() => {
+    return insights[currentIndex]
+  }, [insights, currentIndex])
 
-async function translateInsights(
-  apiKey: string,
-  insights: InsightItem[],
-  language: LanguageOption
-): Promise<InsightItem[] | null> {
-  if (language === "en") {
-    return insights;
+  function handleNext() {
+    if (insights.length === 0) return
+    setCurrentIndex((prev) => (prev + 1) % insights.length)
   }
 
-  const firstAttempt = await callGemini(
-    apiKey,
-    buildTranslationPrompt(insights, language, false),
-    0.2
-  );
-
-  if (firstAttempt.ok) {
-    const firstRaw = extractText(firstAttempt.data);
-    const firstParsed = parseInsightsFromModelText(firstRaw);
-    if (firstParsed) {
-      return firstParsed;
-    }
+  function handleGenerate() {
+    setSubmittedFocusWord(focusWord.trim())
   }
 
-  const secondAttempt = await callGemini(
-    apiKey,
-    buildTranslationPrompt(insights, language, true),
-    0
-  );
+  return (
+    <main className="min-h-screen bg-white px-4 py-6">
+      <div className="mx-auto flex w-full max-w-md flex-col">
+        <Link
+          href={`/bible/${book}/${chapter}`}
+          className="mb-6 text-sm text-neutral-500"
+        >
+          ← Back
+        </Link>
 
-  if (secondAttempt.ok) {
-    const secondRaw = extractText(secondAttempt.data);
-    const secondParsed = parseInsightsFromModelText(secondRaw);
-    if (secondParsed) {
-      return secondParsed;
-    }
-  }
+        <h1 className="mb-2 text-3xl font-semibold text-neutral-900">
+          {book
+            ? `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
+            : 'Loading...'}
+        </h1>
 
-  return null;
-}
+        <div className="mb-4 rounded-2xl border border-neutral-200 p-4">
+          <label
+            htmlFor="focusWord"
+            className="mb-2 block text-sm font-medium text-neutral-700"
+          >
+            What word or phrase would you like to focus on?
+          </label>
 
-export async function POST(req: Request) {
-  try {
-    const { book, chapter, verse, focusWord, count, language } =
-      await req.json();
+          <input
+            id="focusWord"
+            type="text"
+            value={focusWord}
+            onChange={(e) => setFocusWord(e.target.value)}
+            placeholder="Optional: e.g. know, truth, eternal life"
+            className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-base text-neutral-900 outline-none"
+          />
 
-    const apiKey = process.env.GOOGLE_API_KEY;
+          <button
+            type="button"
+            onClick={handleGenerate}
+            className="mt-3 w-full rounded-xl bg-neutral-900 px-4 py-3 text-base font-medium text-white"
+          >
+            Generate insights
+          </button>
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "GOOGLE_API_KEY is missing." },
-        { status: 500 }
-      );
-    }
+          {submittedFocusWord && (
+            <p className="mt-3 text-sm text-neutral-500">
+              Focus: “{submittedFocusWord}”
+            </p>
+          )}
+        </div>
 
-    if (!book || !chapter || !verse) {
-      return NextResponse.json(
-        { error: "book, chapter, and verse are required." },
-        { status: 400 }
-      );
-    }
+        {!loading && insights.length > 0 && (
+          <p className="mb-4 text-sm text-neutral-500">
+            {currentIndex + 1} / {insights.length}
+          </p>
+        )}
 
-    const safeLanguage: LanguageOption =
-      language === "ru" || language === "es" || language === "en"
-        ? language
-        : "en";
+        <div className="rounded-2xl border border-neutral-200 p-4">
+          {loading ? (
+            <div>
+              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+                Loading insight...
+              </h2>
+              <p className="text-base leading-7 text-neutral-800">
+                Please wait while the insight cards are generated.
+              </p>
+            </div>
+          ) : error ? (
+            <div>
+              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+                Unable to load
+              </h2>
+              <p className="text-base leading-7 text-neutral-800">{error}</p>
+            </div>
+          ) : currentInsight ? (
+            <div>
+              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+                {currentInsight.title}
+              </h2>
 
-    const reference = `${book} ${chapter}:${verse}`;
-    const safeCount = Math.min(Math.max(Number(count ?? 12), 10), 20);
+              <p className="whitespace-pre-line text-base leading-7 text-neutral-800">
+                {currentInsight.text}
+              </p>
 
-    const generationPrompt = buildInsightsPrompt(reference, focusWord, safeCount);
-    const generationResult = await callGemini(apiKey, generationPrompt, 0.9);
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+                >
+                  Translate to Russian
+                </button>
 
-    if (!generationResult.ok) {
-      return NextResponse.json(
-        {
-          error: "Gemini generation failed.",
-          raw: generationResult.data,
-        },
-        { status: 500 }
-      );
-    }
+                <button
+                  type="button"
+                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+                >
+                  Translate to Spanish
+                </button>
 
-    const rawText = extractText(generationResult.data);
-    const englishInsights = parseInsightsFromModelText(rawText);
+                <button
+                  type="button"
+                  className="rounded-full border border-neutral-300 px-3 py-1.5 text-sm text-neutral-700"
+                >
+                  Show original
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h2 className="mb-3 text-xl font-semibold text-neutral-900">
+                No insight
+              </h2>
+              <p className="text-base leading-7 text-neutral-800">
+                No insight is available for this verse yet.
+              </p>
+            </div>
+          )}
+        </div>
 
-    if (!englishInsights) {
-      return NextResponse.json(
-        {
-          error: "Failed to parse insights JSON.",
-          raw: rawText || "Empty model response",
-        },
-        { status: 500 }
-      );
-    }
-
-    const translatedInsights = await translateInsights(
-      apiKey,
-      englishInsights,
-      safeLanguage
-    );
-
-    const finalInsights =
-      safeLanguage === "en" || translatedInsights ? translatedInsights ?? englishInsights : englishInsights;
-
-    return NextResponse.json({
-      reference,
-      focusWord: focusWord ?? "",
-      language: safeLanguage,
-      translated: Boolean(safeLanguage !== "en" && translatedInsights),
-      count: finalInsights.length,
-      insights: finalInsights,
-    });
-  } catch (error) {
-    console.error("Insights API error:", error);
-
-    return NextResponse.json(
-      {
-        error: "Something went wrong while generating insights.",
-      },
-      { status: 500 }
-    );
-  }
+        {!loading && insights.length > 1 && (
+          <button
+            type="button"
+            onClick={handleNext}
+            className="mt-4 rounded-2xl bg-neutral-900 px-4 py-3 text-base font-medium text-white"
+          >
+            Next
+          </button>
+        )}
+      </div>
+    </main>
+  )
 }
