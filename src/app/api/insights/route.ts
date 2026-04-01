@@ -71,24 +71,25 @@ STYLE:
 - No religious clichés
 - No vague abstraction
 
-FORMAT FOR EACH CARD:
-- "title": short, sharp, intriguing
-- "text": 4-5 sentences, tightly written, readable, and self-contained
+FORMAT:
+Return exactly ${count} cards in this plain text format:
 
-OUTPUT RULES:
-- Return ONLY valid JSON
-- No markdown
-- No code fences
-- No commentary outside JSON
-- Output must be a JSON array
+===CARD===
+TITLE: <short title>
+TEXT: <4-5 sentences>
 
-Example:
-[
-  {
-    "title": "The Detail That Slows the Verse Down",
-    "text": "Sentence one. Sentence two. Sentence three. Sentence four."
-  }
-]
+===CARD===
+TITLE: <short title>
+TEXT: <4-5 sentences>
+
+RULES:
+- Do NOT return JSON
+- Do NOT return markdown
+- Do NOT use code fences
+- Do NOT add any intro or outro
+- Each card must begin with ===CARD===
+- Each card must contain exactly one TITLE: line and one TEXT: block
+- Put the full text after TEXT:
 `.trim();
 }
 
@@ -100,76 +101,27 @@ function extractText(data: any): string {
   );
 }
 
-function cleanModelText(raw: string): string {
-  return raw
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-}
+function parseCards(raw: string): InsightItem[] {
+  const chunks = raw
+    .split("===CARD===")
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
 
-function normalizeSmartQuotes(raw: string): string {
-  return raw
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'");
-}
+  const results: InsightItem[] = [];
 
-function parseInsights(raw: string): InsightItem[] | null {
-  try {
-    const parsed = JSON.parse(raw);
+  for (const chunk of chunks) {
+    const titleMatch = chunk.match(/TITLE:\s*(.+)/i);
+    const textMatch = chunk.match(/TEXT:\s*([\s\S]+)/i);
 
-    if (!Array.isArray(parsed)) {
-      return null;
-    }
+    const title = titleMatch?.[1]?.trim() ?? "";
+    const text = textMatch?.[1]?.trim() ?? "";
 
-    const cleaned = parsed
-      .filter((item) => item && typeof item === "object")
-      .map((item) => ({
-        title: String(item.title ?? "").trim(),
-        text: String(item.text ?? "").trim(),
-      }))
-      .filter((item) => item.title && item.text);
-
-    return cleaned.length ? cleaned : null;
-  } catch {
-    return null;
-  }
-}
-
-function extractJsonArray(raw: string): string | null {
-  const start = raw.indexOf("[");
-  const end = raw.lastIndexOf("]");
-
-  if (start === -1 || end === -1 || end <= start) {
-    return null;
-  }
-
-  return raw.slice(start, end + 1);
-}
-
-function parseInsightsRobust(raw: string): InsightItem[] | null {
-  const variants = [
-    raw,
-    cleanModelText(raw),
-    normalizeSmartQuotes(raw),
-    normalizeSmartQuotes(cleanModelText(raw)),
-  ];
-
-  for (const variant of variants) {
-    const direct = parseInsights(variant);
-    if (direct) return direct;
-
-    const extracted = extractJsonArray(variant);
-    if (extracted) {
-      const extractedParsed = parseInsights(extracted);
-      if (extractedParsed) return extractedParsed;
-
-      const normalizedExtracted = normalizeSmartQuotes(extracted);
-      const normalizedParsed = parseInsights(normalizedExtracted);
-      if (normalizedParsed) return normalizedParsed;
+    if (title && text) {
+      results.push({ title, text });
     }
   }
 
-  return null;
+  return results;
 }
 
 export async function POST(req: Request) {
@@ -215,7 +167,6 @@ export async function POST(req: Request) {
             temperature: 0.9,
             topP: 0.95,
             maxOutputTokens: 4000,
-            responseMimeType: "application/json",
           },
         }),
       }
@@ -223,13 +174,12 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     const rawText = extractText(data);
+    const insights = parseCards(rawText);
 
-    const insights = parseInsightsRobust(rawText);
-
-    if (!insights) {
+    if (!insights.length) {
       return NextResponse.json(
         {
-          error: "Failed to parse insights JSON.",
+          error: "Failed to parse insight cards.",
           raw: rawText || "Empty model response",
         },
         { status: 500 }
