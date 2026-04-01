@@ -18,6 +18,16 @@ type InsightItem = {
 
 type LanguageOption = 'en' | 'ru' | 'es'
 
+type InsightsApiResponse = {
+  reference?: string
+  focusWord?: string
+  language?: LanguageOption
+  count?: number
+  insights?: InsightItem[]
+  error?: string
+  raw?: unknown
+}
+
 const LANGUAGE_STORAGE_KEY = 'scriptura-language'
 
 export default function VerseDetailPage({ params }: PageProps) {
@@ -82,17 +92,24 @@ export default function VerseDetailPage({ params }: PageProps) {
             chapter,
             verse,
             focusWord: submittedFocusWord,
+            language,
             count: 12,
           }),
         })
 
-        const data = await res.json()
+        const data: InsightsApiResponse = await res.json()
+
+        if (!res.ok) {
+          setError(data.error || 'API request failed.')
+          return
+        }
+
         const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
 
         if (receivedInsights.length > 0) {
           setInsights(receivedInsights)
         } else {
-          setError('No insights returned.')
+          setError(data.error || 'No insights returned.')
         }
       } catch {
         setError('Error loading insights.')
@@ -102,7 +119,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     loadInsights()
-  }, [book, chapter, verse, submittedFocusWord])
+  }, [book, chapter, verse, submittedFocusWord, language])
 
   const currentInsight = useMemo(() => {
     return insights[currentIndex]
