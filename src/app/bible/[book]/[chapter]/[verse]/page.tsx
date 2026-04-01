@@ -385,7 +385,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                 >
                   {translationLoading && translationMode === 'ru'
                     ? 'Translating...'
-                    : 'Translate to Russian'}
+                    : 'Russian'}
                 </button>
 
                 <button
@@ -396,7 +396,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                 >
                   {translationLoading && translationMode === 'es'
                     ? 'Translating...'
-                    : 'Translate to Spanish'}
+                    : 'Spanish'}
                 </button>
 
                 <button
@@ -404,24 +404,15 @@ export default function VerseDetailPage({ params }: PageProps) {
                   onClick={handleShowOriginal}
                   className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Show original
+                  Original
                 </button>
               </div>
 
-              <div className="mt-4 flex items-center justify-between text-xs font-medium uppercase tracking-[0.12em] text-stone-400">
-                <span>Swipe right for previous</span>
-                <span>Swipe left for next</span>
-              </div>
-
-              {translationMode === 'ru' && (
+              {(translationMode === 'ru' || translationMode === 'es') && (
                 <p className="mt-4 text-sm text-stone-500">
-                  Showing Russian translation
-                </p>
-              )}
-
-              {translationMode === 'es' && (
-                <p className="mt-4 text-sm text-stone-500">
-                  Showing Spanish translation
+                  {translationMode === 'ru'
+                    ? 'Showing Russian translation'
+                    : 'Showing Spanish translation'}
                 </p>
               )}
 
