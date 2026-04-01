@@ -16,10 +16,16 @@ type InsightItem = {
   text: string
 }
 
+type LanguageOption = 'en' | 'ru' | 'es'
+
+const LANGUAGE_STORAGE_KEY = 'scriptura-language'
+
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
   const [chapter, setChapter] = useState('')
   const [verse, setVerse] = useState('')
+
+  const [language, setLanguage] = useState<LanguageOption>('en')
 
   const [focusWord, setFocusWord] = useState('')
   const [submittedFocusWord, setSubmittedFocusWord] = useState('')
@@ -28,6 +34,22 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const savedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
+
+    if (
+      savedLanguage === 'en' ||
+      savedLanguage === 'ru' ||
+      savedLanguage === 'es'
+    ) {
+      setLanguage(savedLanguage)
+    }
+  }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
+  }, [language])
 
   useEffect(() => {
     async function loadInitial() {
@@ -110,6 +132,30 @@ export default function VerseDetailPage({ params }: PageProps) {
             ? `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
             : 'Loading...'}
         </h1>
+
+        <div className="mb-4 rounded-2xl border border-neutral-200 p-4">
+          <label
+            htmlFor="language"
+            className="mb-2 block text-sm font-medium text-neutral-700"
+          >
+            Language
+          </label>
+
+          <select
+            id="language"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as LanguageOption)}
+            className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-base text-neutral-900 outline-none"
+          >
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="es">Español</option>
+          </select>
+
+          <p className="mt-3 text-sm text-neutral-500">
+            Selected language: {language.toUpperCase()}
+          </p>
+        </div>
 
         <div className="mb-4 rounded-2xl border border-neutral-200 p-4">
           <label
