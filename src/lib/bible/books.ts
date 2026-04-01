@@ -3,7 +3,7 @@ export type BibleBook = {
   name: string;
   title: string;
   chapters: number;
-  versesPerChapter: number[];
+  versesPerChapter: readonly number[];
   verseCounts: number[];
 };
 
