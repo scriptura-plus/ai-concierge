@@ -372,7 +372,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           {formattedReference || 'Loading...'}
         </h1>
 
-        <div className="mb-4 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
+        <div className="mb-5 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
           <label
             htmlFor="focusWord"
             className="mb-2 block text-sm font-medium text-stone-700"
@@ -414,26 +414,26 @@ export default function VerseDetailPage({ params }: PageProps) {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="rounded-[30px] border border-stone-200/80 bg-[#f7f0e1] p-5 shadow-[0_14px_36px_rgba(95,74,40,0.10)]"
+          className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
         >
           {loading ? (
-            <div>
-              <h2 className="mb-3 text-2xl font-semibold tracking-tight text-stone-900">
-                Loading insight...
-              </h2>
-              <p className="text-[17px] leading-8 text-stone-700">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                Loading insight
+              </p>
+              <p className="text-[1.08rem] leading-9 text-stone-800">
                 Please wait while the insight cards are generated.
               </p>
             </div>
           ) : error ? (
-            <div>
-              <h2 className="mb-3 text-2xl font-semibold tracking-tight text-stone-900">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
                 Unable to load
-              </h2>
-              <p className="mb-4 text-[17px] leading-8 text-stone-700">{error}</p>
+              </p>
+              <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{error}</p>
 
               {rawOutput && (
-                <div className="rounded-2xl border border-stone-200 bg-[#fffaf0] p-3">
+                <div className="rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
                     Raw model output
                   </p>
@@ -444,16 +444,20 @@ export default function VerseDetailPage({ params }: PageProps) {
               )}
             </div>
           ) : displayedCard ? (
-            <div>
-              <h2 className="mb-4 text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {formattedReference}
+              </p>
+
+              <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
                 {displayedCard.title}
               </h2>
 
-              <p className="whitespace-pre-line text-[1.12rem] leading-9 text-stone-800">
+              <p className="text-[1.08rem] leading-9 text-stone-800">
                 {displayedCard.text}
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-2.5">
+              <div className="mt-6 flex flex-wrap justify-center gap-2.5">
                 <button
                   type="button"
                   onClick={handleTranslateToRussian}
@@ -506,7 +510,7 @@ export default function VerseDetailPage({ params }: PageProps) {
               </div>
 
               {(translationMode === 'ru' || translationMode === 'es') && (
-                <p className="mt-4 text-sm text-stone-500">
+                <p className="mt-5 text-center text-sm text-stone-500">
                   {translationMode === 'ru'
                     ? 'Showing Russian translation'
                     : 'Showing Spanish translation'}
@@ -514,50 +518,24 @@ export default function VerseDetailPage({ params }: PageProps) {
               )}
 
               {shareStatus && (
-                <p className="mt-3 text-sm text-stone-500">{shareStatus}</p>
+                <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
               )}
 
               {translationError && (
-                <p className="mt-3 text-sm text-red-700">{translationError}</p>
+                <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
               )}
             </div>
           ) : (
-            <div>
-              <h2 className="mb-3 text-2xl font-semibold tracking-tight text-stone-900">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
                 No insight
-              </h2>
-              <p className="text-[17px] leading-8 text-stone-700">
+              </p>
+              <p className="text-[1.08rem] leading-9 text-stone-800">
                 No insight is available for this verse yet.
               </p>
             </div>
           )}
         </div>
-
-        {displayedCard && (
-          <div className="mt-6 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="h-px flex-1 bg-stone-400/40" />
-              <p className="px-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-stone-500">
-                Share Card Preview
-              </p>
-              <div className="h-px flex-1 bg-stone-400/40" />
-            </div>
-
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {formattedReference}
-              </p>
-
-              <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
-                {displayedCard.title}
-              </h2>
-
-              <p className="text-[1.08rem] leading-9 text-stone-800">
-                {displayedCard.text}
-              </p>
-            </div>
-          </div>
-        )}
 
         {!loading && insights.length > 1 && (
           <div className="mt-5 grid grid-cols-2 gap-3">
