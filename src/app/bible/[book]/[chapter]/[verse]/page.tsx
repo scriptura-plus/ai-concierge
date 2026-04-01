@@ -206,7 +206,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        title: '',
+        title: 'Verse text',
         text,
         targetLanguage,
       }),
