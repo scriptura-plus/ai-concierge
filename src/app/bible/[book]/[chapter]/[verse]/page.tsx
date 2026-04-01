@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type PageProps = {
   params: Promise<{
@@ -54,6 +54,9 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [translationError, setTranslationError] = useState('')
 
   const [translatedCards, setTranslatedCards] = useState<Record<string, InsightItem>>({})
+
+  const touchStartXRef = useRef<number | null>(null)
+  const touchDeltaXRef = useRef(0)
 
   useEffect(() => {
     async function loadInitial() {
@@ -192,10 +195,9 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTranslationError('')
   }
 
-  async function handleNext() {
+  async function goToIndex(nextIndex: number) {
     if (insights.length === 0) return
 
-    const nextIndex = (currentIndex + 1) % insights.length
     setCurrentIndex(nextIndex)
     setTranslationError('')
 
@@ -224,8 +226,47 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function handleNext() {
+    if (insights.length === 0) return
+    const nextIndex = (currentIndex + 1) % insights.length
+    await goToIndex(nextIndex)
+  }
+
+  async function handlePrev() {
+    if (insights.length === 0) return
+    const prevIndex = (currentIndex - 1 + insights.length) % insights.length
+    await goToIndex(prevIndex)
+  }
+
   function handleGenerate() {
     setSubmittedFocusWord(focusWord.trim())
+  }
+
+  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null
+    touchDeltaXRef.current = 0
+  }
+
+  function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    if (touchStartXRef.current === null) return
+    const currentX = e.touches[0]?.clientX ?? touchStartXRef.current
+    touchDeltaXRef.current = currentX - touchStartXRef.current
+  }
+
+  async function handleTouchEnd() {
+    const threshold = 50
+    const deltaX = touchDeltaXRef.current
+
+    touchStartXRef.current = null
+    touchDeltaXRef.current = 0
+
+    if (Math.abs(deltaX) < threshold) return
+
+    if (deltaX < 0) {
+      await handleNext()
+    } else {
+      await handlePrev()
+    }
   }
 
   const displayedCard = useMemo(() => {
@@ -292,7 +333,12 @@ export default function VerseDetailPage({ params }: PageProps) {
           </p>
         )}
 
-        <div className="rounded-[30px] border border-stone-200/80 bg-[#f7f0e1] p-5 shadow-[0_14px_36px_rgba(95,74,40,0.10)]">
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className="rounded-[30px] border border-stone-200/80 bg-[#f7f0e1] p-5 shadow-[0_14px_36px_rgba(95,74,40,0.10)]"
+        >
           {loading ? (
             <div>
               <h2 className="mb-3 text-2xl font-semibold tracking-tight text-stone-900">
@@ -362,6 +408,11 @@ export default function VerseDetailPage({ params }: PageProps) {
                 </button>
               </div>
 
+              <div className="mt-4 flex items-center justify-between text-xs font-medium uppercase tracking-[0.12em] text-stone-400">
+                <span>Swipe right for previous</span>
+                <span>Swipe left for next</span>
+              </div>
+
               {translationMode === 'ru' && (
                 <p className="mt-4 text-sm text-stone-500">
                   Showing Russian translation
@@ -391,13 +442,23 @@ export default function VerseDetailPage({ params }: PageProps) {
         </div>
 
         {!loading && insights.length > 1 && (
-          <button
-            type="button"
-            onClick={handleNext}
-            className="mt-5 rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
-          >
-            Next
-          </button>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
+            >
+              Previous
+            </button>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
+            >
+              Next
+            </button>
+          </div>
         )}
       </div>
     </main>
