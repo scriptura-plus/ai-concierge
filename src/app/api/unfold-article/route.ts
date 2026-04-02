@@ -9,6 +9,13 @@ type RequestBody = {
   targetLanguage?: 'en' | 'ru' | 'es'
 }
 
+type ArticlePayload = {
+  title: string
+  lead: string
+  body: string[]
+  quote?: string
+}
+
 function buildArticlePrompt({
   reference,
   verseText,
@@ -19,23 +26,30 @@ function buildArticlePrompt({
 }: Required<RequestBody>) {
   const languageInstruction =
     targetLanguage === 'ru'
-      ? 'Write the article in Russian.'
+      ? 'Write the result in Russian.'
       : targetLanguage === 'es'
-        ? 'Write the article in Spanish.'
-        : 'Write the article in English.'
+        ? 'Write the result in Spanish.'
+        : 'Write the result in English.'
 
   const focusBlock = focusWord?.trim()
     ? `Focus word or phrase: ${focusWord.trim()}`
     : 'No focus word was provided.'
 
   return `
-You are writing a long-form journal-style article for an advanced Bible insight app.
-
-Your task is to take one selected insight and unfold it into a deep, elegant, intellectually serious article.
+You are creating a premium editorial article for a Bible insight app.
 
 ${languageInstruction}
 
-INPUTS
+Your task is to unfold one selected insight into a structured long-form article that feels like a refined intellectual magazine piece:
+- elegant
+- dense with thought
+- readable
+- serious
+- non-preachy
+- non-list-like
+- not simplistic
+
+INPUT
 
 Reference:
 ${reference}
@@ -51,81 +65,71 @@ ${insightText}
 
 ${focusBlock}
 
-MISSION
+GOAL
 
-Write a fully developed article that feels like a piece from a high-end intellectual journal:
-- serious
-- elegant
-- dense with thought
-- carefully structured
-- readable and polished
-- never preachy
-- never simplistic
-- never list-like
+Turn the chosen insight into a substantial journal-style article.
+The article should feel polished and literary-intellectual, not like sermon notes and not like a bullet-point explanation.
 
-This is NOT:
-- a sermon
-- a devotional
-- a bullet-point summary
-- a short explanation
-- a list of facts
-- a casual blog post
+IMPORTANT STYLE RULES
 
-This IS:
-- a long-form analytical essay
-- built around one central insight
-- written with compositional control
-- enriched by language, structure, historical context, literary texture, and conceptual tension where relevant
-
-CRITICAL STYLE RULES
-
-- Write in continuous article form
-- No bullet points
+- No bullet points in the article body
 - No numbered sections
-- No “first, second, third”
-- No motivational tone
-- No doctrinal preaching
+- No devotional tone
+- No preaching
 - No filler
-- No shallow repetition of the same idea
-- Each paragraph must deepen the thought
+- No shallow repetition
+- Each paragraph must add something
+- The prose should feel elegant, controlled, and mature
 
-TONE
+STRUCTURE TO PRODUCE
 
-The tone should feel like a thoughtful article in an expensive literary-intellectual magazine:
-- restrained
-- exact
-- mature
-- quietly powerful
-- scholarly without becoming dry
-- beautiful without becoming theatrical
+Return valid JSON only with this exact shape:
 
-STRUCTURE
+{
+  "title": "string",
+  "lead": "string",
+  "body": ["paragraph 1", "paragraph 2", "paragraph 3"],
+  "quote": "optional short striking sentence"
+}
 
-1. Open with a strong intellectual entrance into the central tension of the insight.
-2. Clarify why the chosen insight is more significant than it first appears.
-3. Move slowly through the verse and its wording.
-4. Expand the idea through linguistic, literary, contextual, and historical depth where useful.
-5. Show how this insight changes the reading of the verse as a whole.
-6. End with a strong, lucid, non-preachy closing paragraph.
+FIELD RULES
 
-QUALITY BAR
+title:
+- a refined article title
+- not too long
+- should feel editorial, not mechanical
 
-- Prefer depth over speed
-- Prefer density over length-padding
-- Prefer elegance over bluntness
-- Prefer argument over slogan
-- Prefer developed prose over compressed notes
+lead:
+- one strong opening paragraph
+- should introduce the central tension or insight
+- should read like a premium journal opening
 
-LENGTH
+body:
+- an array of substantial paragraphs
+- ideally 6 to 10 paragraphs
+- each paragraph should be complete and polished
+- no markdown
+- no bullet points
+- no numbering
 
-Target roughly 1200-1800 words if the material supports it.
-Do not force length with fluff.
-If the idea is better served in a somewhat shorter but still substantial article, keep it dense and controlled.
+quote:
+- optional
+- one short striking sentence or phrase
+- should sound elegant and quotable
+- omit it if there is no good one
 
-OUTPUT
+QUALITY
 
-Return only the finished article text.
-Do not add explanations, labels, bullet points, or JSON.
+The article should:
+- begin with intellectual tension
+- move through the verse carefully
+- deepen through wording, structure, context, and conceptual implications where useful
+- remain fact-sensitive and disciplined
+- sound like a serious long-form essay
+
+Do not return markdown.
+Do not wrap JSON in code fences.
+Return JSON only.
 `.trim()
 }
 
@@ -145,6 +149,42 @@ function extractOpenAIText(data: any): string {
       ?.filter(Boolean) ?? []
 
   return pieces.join('').trim()
+}
+
+function coerceArticlePayload(raw: any, fallbackTitle: string): ArticlePayload | null {
+  if (!raw || typeof raw !== 'object') return null
+
+  const title =
+    typeof raw.title === 'string' && raw.title.trim()
+      ? raw.title.trim()
+      : fallbackTitle
+
+  const lead =
+    typeof raw.lead === 'string' && raw.lead.trim()
+      ? raw.lead.trim()
+      : ''
+
+  const body =
+    Array.isArray(raw.body)
+      ? raw.body
+          .filter((item) => typeof item === 'string')
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : []
+
+  const quote =
+    typeof raw.quote === 'string' && raw.quote.trim()
+      ? raw.quote.trim()
+      : undefined
+
+  if (!lead || body.length === 0) return null
+
+  return {
+    title,
+    lead,
+    body,
+    quote,
+  }
 }
 
 export async function POST(req: Request) {
@@ -224,13 +264,36 @@ export async function POST(req: Request) {
       )
     }
 
-    const article = extractOpenAIText(data)
-
-    if (!article) {
+    const rawText = extractOpenAIText(data)
+    if (!rawText) {
       return NextResponse.json(
         {
           error: 'Model returned empty article.',
           raw: responseText || 'Empty model response',
+        },
+        { status: 500 }
+      )
+    }
+
+    let parsed: any
+    try {
+      parsed = JSON.parse(rawText)
+    } catch {
+      return NextResponse.json(
+        {
+          error: 'Model did not return valid JSON.',
+          raw: rawText,
+        },
+        { status: 500 }
+      )
+    }
+
+    const article = coerceArticlePayload(parsed, insightTitle)
+    if (!article) {
+      return NextResponse.json(
+        {
+          error: 'Model returned incomplete article structure.',
+          raw: rawText,
         },
         { status: 500 }
       )
