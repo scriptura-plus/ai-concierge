@@ -165,12 +165,12 @@ function coerceArticlePayload(raw: any, fallbackTitle: string): ArticlePayload |
       : ''
 
   const body =
-    Array.isArray(raw.body)
-      ? raw.body
-          .filter((item) => typeof item === 'string')
-          .map((item) => item.trim())
-          .filter(Boolean)
-      : []
+  Array.isArray(raw.body)
+    ? raw.body
+        .filter((item: unknown): item is string => typeof item === 'string')
+        .map((item: string) => item.trim())
+        .filter((item: string) => Boolean(item))
+    : []
 
   const quote =
     typeof raw.quote === 'string' && raw.quote.trim()
