@@ -34,7 +34,7 @@ type TranslateCardApiResponse = {
   raw?: string
 }
 
-type TranslationMode = 'original' | 'ru' | 'es'
+type AppLanguage = 'en' | 'ru' | 'es'
 
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
@@ -54,7 +54,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [error, setError] = useState('')
   const [rawOutput, setRawOutput] = useState('')
 
-  const [translationMode, setTranslationMode] = useState<TranslationMode>('original')
+  const [appLanguage, setAppLanguage] = useState<AppLanguage>('en')
   const [translationLoading, setTranslationLoading] = useState(false)
   const [translationError, setTranslationError] = useState('')
 
@@ -243,7 +243,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           : Promise.resolve(),
       ])
 
-      setTranslationMode(targetLanguage)
+      setAppLanguage(targetLanguage)
     } catch (err) {
       setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
     } finally {
@@ -267,47 +267,47 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function goToIndex(nextIndex: number) {
-    if (insights.length === 0) return
+  if (insights.length === 0) return
 
-    setCurrentIndex(nextIndex)
-    setTranslationError('')
-    setCopyStatus('idle')
-    setShareStatus('')
+  setCurrentIndex(nextIndex)
+  setTranslationError('')
+  setCopyStatus('idle')
+  setShareStatus('')
 
-    if (translationMode === 'original') {
-      return
-    }
-
-    const nextInsight = insights[nextIndex]
-    if (!nextInsight) return
-
-    const nextCardKey = `${nextIndex}:${nextInsight.title}:${nextInsight.text}`
-    const tasks: Promise<unknown>[] = []
-
-    if (!translatedCards[`${translationMode}:${nextCardKey}`]) {
-      tasks.push(translateCard(translationMode, nextInsight, nextCardKey))
-    }
-
-    if (
-      verseText &&
-      verseTranslationKey &&
-      !translatedVerseTexts[`${translationMode}:${verseTranslationKey}`]
-    ) {
-      tasks.push(translateVerseText(translationMode, verseText, verseTranslationKey))
-    }
-
-    if (tasks.length === 0) return
-
-    setTranslationLoading(true)
-
-    try {
-      await Promise.all(tasks)
-    } catch (err) {
-      setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
-    } finally {
-      setTranslationLoading(false)
-    }
+  if (appLanguage === 'en') {
+    return
   }
+
+  const nextInsight = insights[nextIndex]
+  if (!nextInsight) return
+
+  const nextCardKey = `${nextIndex}:${nextInsight.title}:${nextInsight.text}`
+  const tasks: Promise<unknown>[] = []
+
+  if (!translatedCards[`${appLanguage}:${nextCardKey}`]) {
+    tasks.push(translateCard(appLanguage, nextInsight, nextCardKey))
+  }
+
+  if (
+    verseText &&
+    verseTranslationKey &&
+    !translatedVerseTexts[`${appLanguage}:${verseTranslationKey}`]
+  ) {
+    tasks.push(translateVerseText(appLanguage, verseText, verseTranslationKey))
+  }
+
+  if (tasks.length === 0) return
+
+  setTranslationLoading(true)
+
+  try {
+    await Promise.all(tasks)
+  } catch (err) {
+    setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+  } finally {
+    setTranslationLoading(false)
+  }
+}
 
   async function handleNext() {
     if (insights.length === 0) return
@@ -353,20 +353,26 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   const displayedCard = useMemo(() => {
-    if (!currentInsight || !currentCardKey) return null
+  if (!currentInsight || !currentCardKey) return null
 
-    if (translationMode === 'original') {
-      return currentInsight
-    }
+  if (appLanguage === 'en') {
+    return currentInsight
+  }
+
+  return translatedCards[`${appLanguage}:${currentCardKey}`] || currentInsight
+}, [currentInsight, currentCardKey, translatedCards, appLanguage])
+
+  return translatedCards[`${appLanguage}:${currentCardKey}`] || currentInsight
+}, [currentInsight, currentCardKey, translatedCards, appLanguage])
 
     return translatedCards[`${translationMode}:${currentCardKey}`] || currentInsight
   }, [currentInsight, currentCardKey, translatedCards, translationMode])
 
   const displayedVerseText = useMemo(() => {
-    if (translationMode === 'original') return verseText
-    if (!verseTranslationKey) return verseText
-    return translatedVerseTexts[`${translationMode}:${verseTranslationKey}`] || verseText
-  }, [translationMode, verseText, verseTranslationKey, translatedVerseTexts])
+  if (appLanguage === 'en') return verseText
+  if (!verseTranslationKey) return verseText
+  return translatedVerseTexts[`${appLanguage}:${verseTranslationKey}`] || verseText
+}, [appLanguage, verseText, verseTranslationKey, translatedVerseTexts])
 
   const formattedReference = useMemo(() => {
     if (!book || !chapter || !verse) return ''
@@ -577,9 +583,9 @@ export default function VerseDetailPage({ params }: PageProps) {
                   disabled={translationLoading}
                   className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-50"
                 >
-                  {translationLoading && translationMode === 'es'
-                    ? 'Translating...'
-                    : 'Spanish'}
+                  {translationLoading && appLanguage === 'es'
+  ? 'Translating...'
+  : 'Spanish'}
                 </button>
 
                 <button
@@ -611,13 +617,13 @@ export default function VerseDetailPage({ params }: PageProps) {
                 </button>
               </div>
 
-              {(translationMode === 'ru' || translationMode === 'es') && (
-                <p className="mt-5 text-center text-sm text-stone-500">
-                  {translationMode === 'ru'
-                    ? 'Showing Russian translation'
-                    : 'Showing Spanish translation'}
-                </p>
-              )}
+              {(appLanguage === 'ru' || appLanguage === 'es') && (
+  <p className="mt-5 text-center text-sm text-stone-500">
+    {appLanguage === 'ru'
+      ? 'Showing Russian translation'
+      : 'Showing Spanish translation'}
+  </p>
+)}
 
               {shareStatus && (
                 <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
