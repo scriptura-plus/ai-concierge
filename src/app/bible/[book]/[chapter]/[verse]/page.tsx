@@ -47,6 +47,12 @@ type UnfoldApiResponse = {
   raw?: string
 }
 
+type WordLensApiResponse = {
+  cards?: InsightItem[]
+  error?: string
+  raw?: string
+}
+
 type AppLanguage = 'en' | 'ru' | 'es'
 type TopMode = 'insights' | 'compare' | 'context' | 'another-lens'
 type LensKind = 'word' | 'tension' | 'phrase'
@@ -75,11 +81,15 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [translatedVerseTexts, setTranslatedVerseTexts] = useState<Record<string, string>>({})
 
   const [insights, setInsights] = useState<InsightItem[]>([])
+  const [wordLensCards, setWordLensCards] = useState<InsightItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [rawOutput, setRawOutput] = useState('')
+
+  const [wordLensLoading, setWordLensLoading] = useState(false)
+  const [wordLensError, setWordLensError] = useState('')
 
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en')
   const [translationLoading, setTranslationLoading] = useState(false)
@@ -134,6 +144,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       setRawOutput('')
       setVerseText('')
       setInsights([])
+      setWordLensCards([])
+      setWordLensError('')
       setCurrentIndex(0)
       setTopMode('insights')
       setSelectedLens(null)
@@ -193,14 +205,31 @@ export default function VerseDetailPage({ params }: PageProps) {
     loadInsights()
   }, [book, chapter, verse, submittedFocusWord])
 
+  const currentCards = useMemo(() => {
+    if (topMode === 'another-lens' && selectedLens === 'word') {
+      return wordLensCards
+    }
+    if (topMode === 'another-lens' && (selectedLens === 'tension' || selectedLens === 'phrase')) {
+      return []
+    }
+    return insights
+  }, [topMode, selectedLens, wordLensCards, insights])
+
   const currentInsight = useMemo(() => {
-    return insights[currentIndex]
-  }, [insights, currentIndex])
+    return currentCards[currentIndex]
+  }, [currentCards, currentIndex])
+
+  const currentModeKey = useMemo(() => {
+    if (topMode === 'another-lens') {
+      return `another-lens:${selectedLens ?? 'none'}`
+    }
+    return topMode
+  }, [topMode, selectedLens])
 
   const currentCardKey = useMemo(() => {
     if (!currentInsight) return ''
-    return `${currentIndex}:${currentInsight.title}:${currentInsight.text}`
-  }, [currentIndex, currentInsight])
+    return `${currentModeKey}:${currentIndex}:${currentInsight.title}:${currentInsight.text}`
+  }, [currentModeKey, currentIndex, currentInsight])
 
   const verseTranslationKey = useMemo(() => {
     if (!verseText) return ''
@@ -312,7 +341,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function goToIndex(nextIndex: number) {
-    if (insights.length === 0) return
+    if (currentCards.length === 0) return
 
     setCurrentIndex(nextIndex)
     setArticleViewOpen(false)
@@ -326,10 +355,10 @@ export default function VerseDetailPage({ params }: PageProps) {
       return
     }
 
-    const nextInsight = insights[nextIndex]
+    const nextInsight = currentCards[nextIndex]
     if (!nextInsight) return
 
-    const nextCardKey = `${nextIndex}:${nextInsight.title}:${nextInsight.text}`
+    const nextCardKey = `${currentModeKey}:${nextIndex}:${nextInsight.title}:${nextInsight.text}`
     const tasks: Promise<unknown>[] = []
 
     if (!translatedCards[`${appLanguage}:${nextCardKey}`]) {
@@ -358,14 +387,14 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function handleNext() {
-    if (insights.length === 0) return
-    const nextIndex = (currentIndex + 1) % insights.length
+    if (currentCards.length === 0) return
+    const nextIndex = (currentIndex + 1) % currentCards.length
     await goToIndex(nextIndex)
   }
 
   async function handlePrev() {
-    if (insights.length === 0) return
-    const prevIndex = (currentIndex - 1 + insights.length) % insights.length
+    if (currentCards.length === 0) return
+    const prevIndex = (currentIndex - 1 + currentCards.length) % currentCards.length
     await goToIndex(prevIndex)
   }
 
@@ -732,11 +761,57 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
-  function handleSelectLens(lens: LensKind) {
+  async function loadWordLens(force = false) {
+    if (!formattedReference || !verseText) return
+    if (!force && wordLensCards.length > 0) return
+
+    setWordLensLoading(true)
+    setWordLensError('')
+    setCurrentIndex(0)
+    setArticleViewOpen(false)
+
+    try {
+      const res = await fetch('/api/word-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: appLanguage,
+        }),
+      })
+
+      const data: WordLensApiResponse = await res.json()
+
+      if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
+        setWordLensError(data.error || 'Unable to load Word lens.')
+        setWordLensCards([])
+        return
+      }
+
+      setWordLensCards(data.cards)
+    } catch {
+      setWordLensError('Unable to load Word lens.')
+      setWordLensCards([])
+    } finally {
+      setWordLensLoading(false)
+    }
+  }
+
+  async function handleSelectLens(lens: LensKind) {
     setSelectedLens(lens)
     setTopMode('another-lens')
     setLensSheetOpen(false)
     setArticleViewOpen(false)
+    setCurrentIndex(0)
+    setCopyStatus('idle')
+    setShareStatus('')
+    setArticleCopyStatus('idle')
+    setArticleShareStatus('')
+
+    if (lens === 'word') {
+      await loadWordLens()
+    }
   }
 
   const currentLensLabel = useMemo(() => {
@@ -747,9 +822,9 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [selectedLens])
 
   const insightsCountText = useMemo(() => {
-    if (loading || insights.length === 0) return ''
-    return `${currentIndex + 1} / ${insights.length}`
-  }, [loading, insights.length, currentIndex])
+    if (loading || currentCards.length === 0) return ''
+    return `${currentIndex + 1} / ${currentCards.length}`
+  }, [loading, currentCards.length, currentIndex])
 
   const languageOptions: Array<{
     key: 'en' | 'es' | 'fr' | 'de' | 'ru'
@@ -823,13 +898,15 @@ export default function VerseDetailPage({ params }: PageProps) {
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="text-sm font-medium text-stone-500">{insightsCountText}</div>
 
-        <button
-          type="button"
-          onClick={() => setShowFocusInput((prev) => !prev)}
-          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-        >
-          Focus word
-        </button>
+        {topMode === 'insights' && (
+          <button
+            type="button"
+            onClick={() => setShowFocusInput((prev) => !prev)}
+            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+          >
+            Focus word
+          </button>
+        )}
       </div>
     )
   }
@@ -877,7 +954,90 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
+  function renderWordLensLoading() {
+    return (
+      <div className="mt-4 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            Word lens
+          </p>
+          <p className="text-[1.08rem] leading-9 text-stone-800">
+            Reading the verse through the hidden weight of its words…
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  function renderAnotherLensPlaceholder(title: string, subtitle: string) {
+    return (
+      <div className="mt-4 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-stone-500">Lens: {title}</p>
+            <button
+              type="button"
+              onClick={() => setLensSheetOpen(true)}
+              className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+            >
+              Change
+            </button>
+          </div>
+
+          <p className="text-[1.08rem] leading-9 text-stone-800">{subtitle}</p>
+        </div>
+      </div>
+    )
+  }
+
   function renderCardMode() {
+    if (topMode === 'another-lens' && selectedLens === 'word' && wordLensLoading) {
+      return renderWordLensLoading()
+    }
+
+    if (topMode === 'another-lens' && selectedLens === 'word' && wordLensError) {
+      return (
+        <div className="mt-4 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-stone-500">Lens: Word</p>
+              <button
+                type="button"
+                onClick={() => setLensSheetOpen(true)}
+                className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+              >
+                Change
+              </button>
+            </div>
+
+            <p className="text-[1.08rem] leading-9 text-stone-800">{wordLensError}</p>
+
+            <button
+              type="button"
+              onClick={() => loadWordLens(true)}
+              className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (topMode === 'another-lens' && selectedLens === 'tension') {
+      return renderAnotherLensPlaceholder(
+        'Tension',
+        'Tension cards come next. This lens will surface what is surprising, paradoxical, or internally pressured in the verse.'
+      )
+    }
+
+    if (topMode === 'another-lens' && selectedLens === 'phrase') {
+      return renderAnotherLensPlaceholder(
+        'Why This Phrase',
+        'Why This Phrase comes next. This lens will read the verse as a shaped phrase, not just as a container of words.'
+      )
+    }
+
     return (
       <>
         {topMode === 'another-lens' && selectedLens && (
@@ -893,7 +1053,9 @@ export default function VerseDetailPage({ params }: PageProps) {
           </div>
         )}
 
-        {topMode === 'insights' && renderInsightsToolbar()}
+        {(topMode === 'insights' || (topMode === 'another-lens' && selectedLens === 'word')) &&
+          renderInsightsToolbar()}
+
         {renderFocusWordPanel()}
 
         <div
@@ -1021,7 +1183,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           )}
         </div>
 
-        {!loading && insights.length > 1 && (
+        {!loading && currentCards.length > 1 && (
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -1075,10 +1237,32 @@ export default function VerseDetailPage({ params }: PageProps) {
             ))}
           </div>
 
-          <p className="mt-6 text-sm text-stone-500">
-            Compare will stay neutral in the UI while still honoring NWT 2007 and 2021 inside the
-            protocol.
-          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Deepen
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Comment
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Copy
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Share
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -1119,9 +1303,32 @@ export default function VerseDetailPage({ params }: PageProps) {
             ))}
           </div>
 
-          <p className="mt-6 text-sm text-stone-500">
-            Context will explicitly name its main context type so the mode never feels random.
-          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Deepen
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Comment
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Copy
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Share
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -1233,19 +1440,12 @@ export default function VerseDetailPage({ params }: PageProps) {
           {formattedReference || 'Loading...'}
         </h1>
 
-        <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+        <div className="mt-4 flex gap-5 overflow-x-auto pb-1 text-[0.98rem] leading-6">
           {languageOptions.map((option) => {
             const isActive =
               (option.key === 'en' && appLanguage === 'en') ||
               (option.key === 'es' && appLanguage === 'es') ||
               (option.key === 'ru' && appLanguage === 'ru')
-
-            const commonClass =
-              'whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition'
-            const activeClass = 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-            const idleClass = option.available
-              ? 'border-stone-300 bg-transparent text-stone-700 hover:bg-[#f8efdc]'
-              : 'border-stone-200 bg-transparent text-stone-400 opacity-60'
 
             let onClick: (() => void) | undefined
 
@@ -1261,7 +1461,13 @@ export default function VerseDetailPage({ params }: PageProps) {
                 type="button"
                 onClick={onClick}
                 disabled={!option.available || translationLoading}
-                className={`${commonClass} ${isActive ? activeClass : idleClass}`}
+                className={`whitespace-nowrap border-b bg-transparent pb-1 transition ${
+                  isActive
+                    ? 'border-stone-500 text-stone-900'
+                    : option.available
+                      ? 'border-transparent text-stone-500 hover:text-stone-700'
+                      : 'border-transparent text-stone-300'
+                }`}
               >
                 {option.label}
               </button>
