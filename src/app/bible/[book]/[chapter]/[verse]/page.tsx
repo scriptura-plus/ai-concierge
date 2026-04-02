@@ -260,7 +260,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   function handleShowOriginal() {
-    setTranslationMode('original')
+    setAppLanguage('en')
     setTranslationError('')
     setCopyStatus('idle')
     setShareStatus('')
