@@ -98,7 +98,6 @@ export default function VerseDetailPage({ params }: PageProps) {
       setVerseText('')
       setInsights([])
       setCurrentIndex(0)
-      
       setTranslationLoading(false)
       setTranslationError('')
       setTranslatedCards({})
@@ -165,10 +164,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   async function translateCard(targetLanguage: 'ru' | 'es', card: InsightItem, cardKey: string) {
     const existingTranslation = translatedCards[`${targetLanguage}:${cardKey}`]
-
-    if (existingTranslation) {
-      return existingTranslation
-    }
+    if (existingTranslation) return existingTranslation
 
     const res = await fetch('/api/translate-card', {
       method: 'POST',
@@ -267,47 +263,47 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function goToIndex(nextIndex: number) {
-  if (insights.length === 0) return
+    if (insights.length === 0) return
 
-  setCurrentIndex(nextIndex)
-  setTranslationError('')
-  setCopyStatus('idle')
-  setShareStatus('')
+    setCurrentIndex(nextIndex)
+    setTranslationError('')
+    setCopyStatus('idle')
+    setShareStatus('')
 
-  if (appLanguage === 'en') {
-    return
+    if (appLanguage === 'en') {
+      return
+    }
+
+    const nextInsight = insights[nextIndex]
+    if (!nextInsight) return
+
+    const nextCardKey = `${nextIndex}:${nextInsight.title}:${nextInsight.text}`
+    const tasks: Promise<unknown>[] = []
+
+    if (!translatedCards[`${appLanguage}:${nextCardKey}`]) {
+      tasks.push(translateCard(appLanguage, nextInsight, nextCardKey))
+    }
+
+    if (
+      verseText &&
+      verseTranslationKey &&
+      !translatedVerseTexts[`${appLanguage}:${verseTranslationKey}`]
+    ) {
+      tasks.push(translateVerseText(appLanguage, verseText, verseTranslationKey))
+    }
+
+    if (tasks.length === 0) return
+
+    setTranslationLoading(true)
+
+    try {
+      await Promise.all(tasks)
+    } catch (err) {
+      setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+    } finally {
+      setTranslationLoading(false)
+    }
   }
-
-  const nextInsight = insights[nextIndex]
-  if (!nextInsight) return
-
-  const nextCardKey = `${nextIndex}:${nextInsight.title}:${nextInsight.text}`
-  const tasks: Promise<unknown>[] = []
-
-  if (!translatedCards[`${appLanguage}:${nextCardKey}`]) {
-    tasks.push(translateCard(appLanguage, nextInsight, nextCardKey))
-  }
-
-  if (
-    verseText &&
-    verseTranslationKey &&
-    !translatedVerseTexts[`${appLanguage}:${verseTranslationKey}`]
-  ) {
-    tasks.push(translateVerseText(appLanguage, verseText, verseTranslationKey))
-  }
-
-  if (tasks.length === 0) return
-
-  setTranslationLoading(true)
-
-  try {
-    await Promise.all(tasks)
-  } catch (err) {
-    setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
-  } finally {
-    setTranslationLoading(false)
-  }
-}
 
   async function handleNext() {
     if (insights.length === 0) return
@@ -353,52 +349,52 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   const displayedCard = useMemo(() => {
-  if (!currentInsight || !currentCardKey) return null
+    if (!currentInsight || !currentCardKey) return null
 
-  if (appLanguage === 'en') {
-    return currentInsight
-  }
-
-  return translatedCards[`${appLanguage}:${currentCardKey}`] || currentInsight
-}, [currentInsight, currentCardKey, translatedCards, appLanguage])
-
-const displayedVerseText = useMemo(() => {
-  if (appLanguage === 'en') return verseText
-  if (!verseTranslationKey) return verseText
-  return translatedVerseTexts[`${appLanguage}:${verseTranslationKey}`] || verseText
-}, [appLanguage, verseText, verseTranslationKey, translatedVerseTexts])
-
-const formattedReference = useMemo(() => {
-  if (!book || !chapter || !verse) return ''
-  return `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
-}, [book, chapter, verse])
-
-const shareText = useMemo(() => {
-  if (!displayedCard || !formattedReference) return ''
-
-  const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
-  return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
-}, [displayedCard, formattedReference, displayedVerseText])
-
-async function handleCopy() {
-  if (!shareText) return
-
-  try {
-    await navigator.clipboard.writeText(shareText)
-    setCopyStatus('copied')
-    setShareStatus('')
-
-    if (copyTimerRef.current) {
-      window.clearTimeout(copyTimerRef.current)
+    if (appLanguage === 'en') {
+      return currentInsight
     }
 
-    copyTimerRef.current = window.setTimeout(() => {
-      setCopyStatus('idle')
-    }, 1600)
-  } catch {
-    setCopyStatus('failed')
+    return translatedCards[`${appLanguage}:${currentCardKey}`] || currentInsight
+  }, [currentInsight, currentCardKey, translatedCards, appLanguage])
+
+  const displayedVerseText = useMemo(() => {
+    if (appLanguage === 'en') return verseText
+    if (!verseTranslationKey) return verseText
+    return translatedVerseTexts[`${appLanguage}:${verseTranslationKey}`] || verseText
+  }, [appLanguage, verseText, verseTranslationKey, translatedVerseTexts])
+
+  const formattedReference = useMemo(() => {
+    if (!book || !chapter || !verse) return ''
+    return `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
+  }, [book, chapter, verse])
+
+  const shareText = useMemo(() => {
+    if (!displayedCard || !formattedReference) return ''
+
+    const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
+    return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
+  }, [displayedCard, formattedReference, displayedVerseText])
+
+  async function handleCopy() {
+    if (!shareText) return
+
+    try {
+      await navigator.clipboard.writeText(shareText)
+      setCopyStatus('copied')
+      setShareStatus('')
+
+      if (copyTimerRef.current) {
+        window.clearTimeout(copyTimerRef.current)
+      }
+
+      copyTimerRef.current = window.setTimeout(() => {
+        setCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setCopyStatus('failed')
+    }
   }
-}
 
   async function handleShare() {
     if (!displayedCard || !formattedReference) return
@@ -451,89 +447,92 @@ async function handleCopy() {
       : copyStatus === 'failed'
         ? 'border-red-300 bg-red-50 text-red-700'
         : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-return (
-  <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
-    <div className="mx-auto flex w-full max-w-md flex-col">
-      <Link
-        href={`/bible/${book}/${chapter}`}
-        className="mb-6 text-sm text-neutral-500 transition hover:text-neutral-700"
-      >
-        ← Back
-      </Link>
 
-      <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
-        {formattedReference || 'Loading...'}
-      </h1>
-<<div className="mb-4 flex flex-wrap gap-2">
-  <button
-    type="button"
-    onClick={handleShowOriginal}
-    className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-      appLanguage === 'en'
-        ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-    }`}
-  >
-    English
-  </button>
+  return (
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
+      <div className="mx-auto flex w-full max-w-md flex-col">
+        <Link
+          href={`/bible/${book}/${chapter}`}
+          className="mb-6 text-sm text-neutral-500 transition hover:text-neutral-700"
+        >
+          ← Back
+        </Link>
 
-  <button
-    type="button"
-    onClick={handleTranslateToRussian}
-    disabled={translationLoading}
-    className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
-      appLanguage === 'ru'
-        ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-    }`}
-  >
-    {translationLoading && appLanguage === 'ru' ? 'Translating...' : 'Russian'}
-  </button>
+        <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
+          {formattedReference || 'Loading...'}
+        </h1>
 
-  <button
-    type="button"
-    onClick={handleTranslateToSpanish}
-    disabled={translationLoading}
-    className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
-      appLanguage === 'es'
-        ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-    }`}
-  >
-    {translationLoading && appLanguage === 'es' ? 'Translating...' : 'Spanish'}
-  </button>
-</div>
-  <div className="mb-5 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
-  <label
-    htmlFor="focusWord"
-    className="mb-2 block text-sm font-medium text-stone-700"
-  >
-    What word or phrase would you like to focus on?
-  </label>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleShowOriginal}
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+              appLanguage === 'en'
+                ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+                : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+            }`}
+          >
+            English
+          </button>
 
-  <input
-    id="focusWord"
-    type="text"
-    value={focusWord}
-    onChange={(e) => setFocusWord(e.target.value)}
-    placeholder="Optional: e.g. know, truth, eternal life"
-    className="w-full rounded-2xl border border-stone-300/80 bg-[#fffdf7] px-4 py-3 text-base text-stone-900 shadow-inner outline-none placeholder:text-stone-400"
-  />
+          <button
+            type="button"
+            onClick={handleTranslateToRussian}
+            disabled={translationLoading}
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
+              appLanguage === 'ru'
+                ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+                : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+            }`}
+          >
+            {translationLoading && appLanguage === 'ru' ? 'Translating...' : 'Russian'}
+          </button>
 
-  <button
-    type="button"
-    onClick={handleGenerate}
-    className="mt-3 w-full rounded-2xl bg-stone-900 px-4 py-3 text-base font-medium text-stone-50 shadow-[0_10px_20px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
-  >
-    Generate insights
-  </button>
+          <button
+            type="button"
+            onClick={handleTranslateToSpanish}
+            disabled={translationLoading}
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
+              appLanguage === 'es'
+                ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+                : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+            }`}
+          >
+            {translationLoading && appLanguage === 'es' ? 'Translating...' : 'Spanish'}
+          </button>
+        </div>
 
-  {submittedFocusWord && (
-    <p className="mt-3 text-sm text-stone-500">
-      Focus: “{submittedFocusWord}”
-    </p>
-  )}
-</div>
+        <div className="mb-5 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
+          <label
+            htmlFor="focusWord"
+            className="mb-2 block text-sm font-medium text-stone-700"
+          >
+            What word or phrase would you like to focus on?
+          </label>
+
+          <input
+            id="focusWord"
+            type="text"
+            value={focusWord}
+            onChange={(e) => setFocusWord(e.target.value)}
+            placeholder="Optional: e.g. know, truth, eternal life"
+            className="w-full rounded-2xl border border-stone-300/80 bg-[#fffdf7] px-4 py-3 text-base text-stone-900 shadow-inner outline-none placeholder:text-stone-400"
+          />
+
+          <button
+            type="button"
+            onClick={handleGenerate}
+            className="mt-3 w-full rounded-2xl bg-stone-900 px-4 py-3 text-base font-medium text-stone-50 shadow-[0_10px_20px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
+          >
+            Generate insights
+          </button>
+
+          {submittedFocusWord && (
+            <p className="mt-3 text-sm text-stone-500">
+              Focus: “{submittedFocusWord}”
+            </p>
+          )}
+        </div>
 
         {!loading && insights.length > 0 && (
           <p className="mb-4 text-sm font-medium text-stone-500">
@@ -597,26 +596,26 @@ return (
               </p>
 
               <div className="mt-6 flex flex-wrap justify-center gap-2.5">
-  <button
-    type="button"
-    onClick={handleCopy}
-    className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
-  >
-    {copyStatus === 'copied'
-      ? 'Copied'
-      : copyStatus === 'failed'
-        ? 'Copy failed'
-        : 'Copy'}
-  </button>
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
+                >
+                  {copyStatus === 'copied'
+                    ? 'Copied'
+                    : copyStatus === 'failed'
+                      ? 'Copy failed'
+                      : 'Copy'}
+                </button>
 
-  <button
-    type="button"
-    onClick={handleShare}
-    className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-  >
-    Share
-  </button>
-</div>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  Share
+                </button>
+              </div>
 
               {shareStatus && (
                 <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
@@ -638,25 +637,25 @@ return (
           )}
         </div>
 
-      {!loading && insights.length > 1 && (
-  <div className="mt-5 grid grid-cols-2 gap-3">
-    <button
-      type="button"
-      onClick={handlePrev}
-      className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
-    >
-      Previous
-    </button>
+        {!loading && insights.length > 1 && (
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
+            >
+              Previous
+            </button>
 
-    <button
-      type="button"
-      onClick={handleNext}
-      className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
-    >
-      Next
-    </button>
-  </div>
-)}
+            <button
+              type="button"
+              onClick={handleNext}
+              className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {displayedCard && (
