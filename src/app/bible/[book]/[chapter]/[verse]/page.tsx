@@ -42,6 +42,21 @@ type UnfoldApiResponse = {
 
 type AppLanguage = 'en' | 'ru' | 'es'
 
+type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
+
+type ArticleJob = {
+  status: ArticleJobStatus
+  article?: string
+  error?: string
+  title: string
+  reference: string
+  verseText: string
+  language: AppLanguage
+  createdAt: number
+}
+
+const ARTICLE_STORAGE_KEY = 'scriptura_unfold_articles_v1'
+
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
   const [chapter, setChapter] = useState('')
@@ -69,10 +84,9 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [shareStatus, setShareStatus] = useState('')
 
-  const [articleLoading, setArticleLoading] = useState(false)
-  const [articleError, setArticleError] = useState('')
-  const [articleOpen, setArticleOpen] = useState(false)
-  const [unfoldedArticles, setUnfoldedArticles] = useState<Record<string, string>>({})
+  const [articleJobs, setArticleJobs] = useState<Record<string, ArticleJob>>({})
+  const [activeArticleKey, setActiveArticleKey] = useState('')
+  const [articleShareStatus, setArticleShareStatus] = useState('')
 
   const copyTimerRef = useRef<number | null>(null)
   const exportCardRef = useRef<HTMLDivElement | null>(null)
@@ -90,6 +104,32 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     loadInitial()
   }, [params])
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(ARTICLE_STORAGE_KEY)
+      if (!raw) return
+
+      const parsed = JSON.parse(raw) as Record<string, ArticleJob>
+      if (parsed && typeof parsed === 'object') {
+        setArticleJobs(parsed)
+      }
+    } catch {
+      // ignore malformed localStorage
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      const readyJobs = Object.fromEntries(
+        Object.entries(articleJobs).filter(([, job]) => job.status === 'ready' && job.article)
+      )
+
+      window.localStorage.setItem(ARTICLE_STORAGE_KEY, JSON.stringify(readyJobs))
+    } catch {
+      // ignore storage issues
+    }
+  }, [articleJobs])
 
   useEffect(() => {
     return () => {
@@ -115,10 +155,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       setTranslatedVerseTexts({})
       setCopyStatus('idle')
       setShareStatus('')
-      setArticleLoading(false)
-      setArticleError('')
-      setArticleOpen(false)
-      setUnfoldedArticles({})
+      setActiveArticleKey('')
+      setArticleShareStatus('')
 
       try {
         const res = await fetch('/api/insights', {
@@ -245,8 +283,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTranslationError('')
     setCopyStatus('idle')
     setShareStatus('')
-    setArticleError('')
-    setArticleOpen(false)
+    setArticleShareStatus('')
+    setActiveArticleKey('')
 
     try {
       await Promise.all([
@@ -277,8 +315,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTranslationError('')
     setCopyStatus('idle')
     setShareStatus('')
-    setArticleError('')
-    setArticleOpen(false)
+    setArticleShareStatus('')
+    setActiveArticleKey('')
   }
 
   async function goToIndex(nextIndex: number) {
@@ -288,8 +326,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTranslationError('')
     setCopyStatus('idle')
     setShareStatus('')
-    setArticleError('')
-    setArticleOpen(false)
+    setArticleShareStatus('')
+    setActiveArticleKey('')
 
     if (appLanguage === 'en') {
       return
@@ -340,8 +378,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   function handleGenerate() {
     setSubmittedFocusWord(focusWord.trim())
-    setArticleError('')
-    setArticleOpen(false)
+    setActiveArticleKey('')
+    setArticleShareStatus('')
   }
 
   function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
@@ -399,25 +437,41 @@ export default function VerseDetailPage({ params }: PageProps) {
     return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
   }, [displayedCard, formattedReference, displayedVerseText])
 
-  const articleCacheKey = useMemo(() => {
-    if (!displayedCard || !formattedReference) return ''
+  const articleJobKey = useMemo(() => {
+    if (!displayedCard || !formattedReference || !displayedVerseText) return ''
     return `${appLanguage}:${formattedReference}:${displayedCard.title}:${displayedCard.text}:${displayedVerseText}`
   }, [appLanguage, formattedReference, displayedCard, displayedVerseText])
 
-  const displayedArticle = articleCacheKey ? unfoldedArticles[articleCacheKey] || '' : ''
+  const currentArticleJob = articleJobKey ? articleJobs[articleJobKey] : undefined
+
+  const activeArticleJob = activeArticleKey ? articleJobs[activeArticleKey] : undefined
 
   async function handleUnfold() {
-    if (!displayedCard || !formattedReference || !displayedVerseText) return
+    if (!displayedCard || !formattedReference || !displayedVerseText || !articleJobKey) return
 
-    if (displayedArticle) {
-      setArticleOpen((prev) => !prev)
-      setArticleError('')
+    const existingJob = articleJobs[articleJobKey]
+
+    if (existingJob?.status === 'ready' && existingJob.article) {
+      setActiveArticleKey(articleJobKey)
+      setArticleShareStatus('')
       return
     }
 
-    setArticleLoading(true)
-    setArticleError('')
-    setArticleOpen(true)
+    if (existingJob?.status === 'generating') {
+      return
+    }
+
+    setArticleJobs((prev) => ({
+      ...prev,
+      [articleJobKey]: {
+        status: 'generating',
+        title: displayedCard.title,
+        reference: formattedReference,
+        verseText: displayedVerseText,
+        language: appLanguage,
+        createdAt: Date.now(),
+      },
+    }))
 
     try {
       const res = await fetch('/api/unfold-article', {
@@ -441,15 +495,51 @@ export default function VerseDetailPage({ params }: PageProps) {
         throw new Error(data.error || 'Failed to generate article.')
       }
 
-      setUnfoldedArticles((prev) => ({
+      setArticleJobs((prev) => ({
         ...prev,
-        [articleCacheKey]: data.article as string,
+        [articleJobKey]: {
+          status: 'ready',
+          article: data.article,
+          title: displayedCard.title,
+          reference: formattedReference,
+          verseText: displayedVerseText,
+          language: appLanguage,
+          createdAt: Date.now(),
+        },
       }))
     } catch (err) {
-      setArticleError(err instanceof Error ? err.message : 'Failed to generate article.')
-      setArticleOpen(false)
-    } finally {
-      setArticleLoading(false)
+      setArticleJobs((prev) => ({
+        ...prev,
+        [articleJobKey]: {
+          status: 'failed',
+          error: err instanceof Error ? err.message : 'Failed to generate article.',
+          title: displayedCard.title,
+          reference: formattedReference,
+          verseText: displayedVerseText,
+          language: appLanguage,
+          createdAt: Date.now(),
+        },
+      }))
+    }
+  }
+
+  async function handleShareArticle() {
+    if (!activeArticleJob?.article) return
+
+    const articleText = `${activeArticleJob.reference}\n\n${activeArticleJob.title}\n\n${activeArticleJob.article}`
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          text: articleText,
+        })
+        setArticleShareStatus('Article shared')
+      } else {
+        await navigator.clipboard.writeText(articleText)
+        setArticleShareStatus('Share unavailable — copied instead')
+      }
+    } catch {
+      setArticleShareStatus('')
     }
   }
 
@@ -525,10 +615,29 @@ export default function VerseDetailPage({ params }: PageProps) {
         ? 'border-red-300 bg-red-50 text-red-700'
         : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 
+  const unfoldButtonLabel =
+    currentArticleJob?.status === 'generating'
+      ? 'Generating...'
+      : currentArticleJob?.status === 'ready'
+        ? 'Open article'
+        : 'Unfold'
+
   const unfoldButtonClass =
-    articleOpen && displayedArticle
+    currentArticleJob?.status === 'ready'
       ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-      : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+      : currentArticleJob?.status === 'generating'
+        ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
+        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+
+  const activeArticleParagraphs = activeArticleJob?.article
+    ? activeArticleJob.article
+        .split('\n\n')
+        .map((p) => p.trim())
+        .filter(Boolean)
+    : []
+
+  const leadParagraph = activeArticleParagraphs[0] || ''
+  const bodyParagraphs = activeArticleParagraphs.slice(1)
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
@@ -593,192 +702,241 @@ export default function VerseDetailPage({ params }: PageProps) {
           </button>
         </div>
 
-        <div className="mb-5 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
-          <label
-            htmlFor="focusWord"
-            className="mb-2 block text-sm font-medium text-stone-700"
-          >
-            What word or phrase would you like to focus on?
-          </label>
+        {!activeArticleKey && (
+          <div className="mb-5 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
+            <label
+              htmlFor="focusWord"
+              className="mb-2 block text-sm font-medium text-stone-700"
+            >
+              What word or phrase would you like to focus on?
+            </label>
 
-          <input
-            id="focusWord"
-            type="text"
-            value={focusWord}
-            onChange={(e) => setFocusWord(e.target.value)}
-            placeholder="Optional: e.g. know, truth, eternal life"
-            className="w-full rounded-2xl border border-stone-300/80 bg-[#fffdf7] px-4 py-3 text-base text-stone-900 shadow-inner outline-none placeholder:text-stone-400"
-          />
+            <input
+              id="focusWord"
+              type="text"
+              value={focusWord}
+              onChange={(e) => setFocusWord(e.target.value)}
+              placeholder="Optional: e.g. know, truth, eternal life"
+              className="w-full rounded-2xl border border-stone-300/80 bg-[#fffdf7] px-4 py-3 text-base text-stone-900 shadow-inner outline-none placeholder:text-stone-400"
+            />
 
-          <button
-            type="button"
-            onClick={handleGenerate}
-            className="mt-3 w-full rounded-2xl bg-stone-900 px-4 py-3 text-base font-medium text-stone-50 shadow-[0_10px_20px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
-          >
-            Generate insights
-          </button>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              className="mt-3 w-full rounded-2xl bg-stone-900 px-4 py-3 text-base font-medium text-stone-50 shadow-[0_10px_20px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
+            >
+              Generate insights
+            </button>
 
-          {submittedFocusWord && (
-            <p className="mt-3 text-sm text-stone-500">
-              Focus: “{submittedFocusWord}”
-            </p>
-          )}
-        </div>
+            {submittedFocusWord && (
+              <p className="mt-3 text-sm text-stone-500">
+                Focus: “{submittedFocusWord}”
+              </p>
+            )}
+          </div>
+        )}
 
-        {!loading && insights.length > 0 && (
+        {!loading && insights.length > 0 && !activeArticleKey && (
           <p className="mb-4 text-sm font-medium text-stone-500">
             {currentIndex + 1} / {insights.length}
           </p>
         )}
 
-        <div
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
-        >
-          {loading ? (
+        {activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article ? (
+          <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                Loading insight
-              </p>
-              <p className="text-[1.08rem] leading-9 text-stone-800">
-                Please wait while the insight cards are generated.
-              </p>
-            </div>
-          ) : error ? (
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                Unable to load
-              </p>
-              <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{error}</p>
-
-              {rawOutput && (
-                <div className="rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-                    Raw model output
-                  </p>
-                  <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                    {rawOutput}
-                  </pre>
-                </div>
-              )}
-            </div>
-          ) : displayedCard ? (
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {formattedReference}
-              </p>
-
-              {displayedVerseText && (
-                <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
-                  <p className="text-[1rem] leading-8 text-stone-700 italic">
-                    {displayedVerseText}
-                  </p>
-                </div>
-              )}
-
-              <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
-                {displayedCard.title}
-              </h2>
-
-              <p className="text-[1.08rem] leading-9 text-stone-800">
-                {displayedCard.text}
-              </p>
-
-              <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+              <div className="mb-5 flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={handleUnfold}
-                  disabled={articleLoading}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${unfoldButtonClass}`}
-                >
-                  {articleLoading
-                    ? 'Unfolding...'
-                    : articleOpen && displayedArticle
-                      ? 'Hide article'
-                      : 'Unfold'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
-                >
-                  {copyStatus === 'copied'
-                    ? 'Copied'
-                    : copyStatus === 'failed'
-                      ? 'Copy failed'
-                      : 'Copy'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleShare}
+                  onClick={() => {
+                    setActiveArticleKey('')
+                    setArticleShareStatus('')
+                  }}
                   className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Share
+                  Back to insight
+                </button>
+
+                <span className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                  Article
+                </span>
+              </div>
+
+              <p className="mb-4 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {activeArticleJob.reference}
+              </p>
+
+              <h2 className="mb-6 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
+                {activeArticleJob.title}
+              </h2>
+
+              {leadParagraph ? (
+                <p className="mb-6 text-[1.18rem] leading-10 text-stone-900">
+                  {leadParagraph}
+                </p>
+              ) : null}
+
+              <div className="space-y-6 text-[1.03rem] leading-9 text-stone-800">
+                {bodyParagraphs.map((paragraph, index) => (
+                  <p key={`${index}-${paragraph.slice(0, 24)}`}>
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+
+              <div className="mt-8 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleShareArticle}
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-5 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  Share article
                 </button>
               </div>
 
-              {shareStatus && (
-                <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
+              {articleShareStatus && (
+                <p className="mt-3 text-center text-sm text-stone-500">{articleShareStatus}</p>
               )}
-
-              {translationError && (
-                <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
-              )}
-
-              {articleError && (
-                <p className="mt-3 text-center text-sm text-red-700">{articleError}</p>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                No insight
-              </p>
-              <p className="text-[1.08rem] leading-9 text-stone-800">
-                No insight is available for this verse yet.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {articleOpen && displayedArticle && (
-          <div className="mt-5 rounded-[30px] border border-stone-200/80 bg-[#fbf6ea] p-6 shadow-[0_10px_26px_rgba(90,72,41,0.08)]">
-            <p className="mb-4 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              Unfolded article
-            </p>
-
-            <div className="space-y-5 text-[1.03rem] leading-9 text-stone-800">
-              {displayedArticle.split('\n\n').map((paragraph, index) => (
-                <p key={`${index}-${paragraph.slice(0, 24)}`}>
-                  {paragraph}
-                </p>
-              ))}
             </div>
           </div>
-        )}
-
-        {!loading && insights.length > 1 && (
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={handlePrev}
-              className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
+        ) : (
+          <>
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
             >
-              Previous
-            </button>
+              {loading ? (
+                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    Loading insight
+                  </p>
+                  <p className="text-[1.08rem] leading-9 text-stone-800">
+                    Please wait while the insight cards are generated.
+                  </p>
+                </div>
+              ) : error ? (
+                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    Unable to load
+                  </p>
+                  <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{error}</p>
 
-            <button
-              type="button"
-              onClick={handleNext}
-              className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
-            >
-              Next
-            </button>
-          </div>
+                  {rawOutput && (
+                    <div className="rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                        Raw model output
+                      </p>
+                      <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                        {rawOutput}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ) : displayedCard ? (
+                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    {formattedReference}
+                  </p>
+
+                  {displayedVerseText && (
+                    <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
+                      <p className="text-[1rem] leading-8 text-stone-700 italic">
+                        {displayedVerseText}
+                      </p>
+                    </div>
+                  )}
+
+                  <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
+                    {displayedCard.title}
+                  </h2>
+
+                  <p className="text-[1.08rem] leading-9 text-stone-800">
+                    {displayedCard.text}
+                  </p>
+
+                  <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleUnfold}
+                      disabled={currentArticleJob?.status === 'generating'}
+                      className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${unfoldButtonClass}`}
+                    >
+                      {unfoldButtonLabel}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
+                    >
+                      {copyStatus === 'copied'
+                        ? 'Copied'
+                        : copyStatus === 'failed'
+                          ? 'Copy failed'
+                          : 'Copy'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                    >
+                      Share
+                    </button>
+                  </div>
+
+                  {currentArticleJob?.status === 'failed' && currentArticleJob.error && (
+                    <p className="mt-3 text-center text-sm text-red-700">{currentArticleJob.error}</p>
+                  )}
+
+                  {currentArticleJob?.status === 'ready' && (
+                    <p className="mt-3 text-center text-sm text-stone-500">
+                      Article ready
+                    </p>
+                  )}
+
+                  {shareStatus && (
+                    <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
+                  )}
+
+                  {translationError && (
+                    <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    No insight
+                  </p>
+                  <p className="text-[1.08rem] leading-9 text-stone-800">
+                    No insight is available for this verse yet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {!loading && insights.length > 1 && (
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
+                >
+                  Previous
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
