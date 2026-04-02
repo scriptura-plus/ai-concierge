@@ -34,19 +34,25 @@ type TranslateCardApiResponse = {
   raw?: string
 }
 
+type ArticlePayload = {
+  title: string
+  lead: string
+  body: string[]
+  quote?: string
+}
+
 type UnfoldApiResponse = {
-  article?: string
+  article?: ArticlePayload
   error?: string
   raw?: string
 }
 
 type AppLanguage = 'en' | 'ru' | 'es'
-
 type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
 
 type ArticleJob = {
   status: ArticleJobStatus
-  article?: string
+  article?: ArticlePayload
   error?: string
   title: string
   reference: string
@@ -55,7 +61,7 @@ type ArticleJob = {
   createdAt: number
 }
 
-const ARTICLE_STORAGE_KEY = 'scriptura_unfold_articles_v1'
+const ARTICLE_STORAGE_KEY = 'scriptura_unfold_articles_v2'
 
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
@@ -90,6 +96,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const copyTimerRef = useRef<number | null>(null)
   const exportCardRef = useRef<HTMLDivElement | null>(null)
+  const articleTopRef = useRef<HTMLDivElement | null>(null)
 
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
@@ -109,13 +116,12 @@ export default function VerseDetailPage({ params }: PageProps) {
     try {
       const raw = window.localStorage.getItem(ARTICLE_STORAGE_KEY)
       if (!raw) return
-
       const parsed = JSON.parse(raw) as Record<string, ArticleJob>
       if (parsed && typeof parsed === 'object') {
         setArticleJobs(parsed)
       }
     } catch {
-      // ignore malformed localStorage
+      // ignore
     }
   }, [])
 
@@ -124,10 +130,9 @@ export default function VerseDetailPage({ params }: PageProps) {
       const readyJobs = Object.fromEntries(
         Object.entries(articleJobs).filter(([, job]) => job.status === 'ready' && job.article)
       )
-
       window.localStorage.setItem(ARTICLE_STORAGE_KEY, JSON.stringify(readyJobs))
     } catch {
-      // ignore storage issues
+      // ignore
     }
   }, [articleJobs])
 
@@ -201,9 +206,13 @@ export default function VerseDetailPage({ params }: PageProps) {
     loadInsights()
   }, [book, chapter, verse, submittedFocusWord])
 
-  const currentInsight = useMemo(() => {
-    return insights[currentIndex]
-  }, [insights, currentIndex])
+  useEffect(() => {
+    if (activeArticleKey && articleTopRef.current) {
+      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [activeArticleKey])
+
+  const currentInsight = useMemo(() => insights[currentIndex], [insights, currentIndex])
 
   const currentCardKey = useMemo(() => {
     if (!currentInsight) return ''
@@ -329,9 +338,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     setArticleShareStatus('')
     setActiveArticleKey('')
 
-    if (appLanguage === 'en') {
-      return
-    }
+    if (appLanguage === 'en') return
 
     const nextInsight = insights[nextIndex]
     if (!nextInsight) return
@@ -411,11 +418,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const displayedCard = useMemo(() => {
     if (!currentInsight || !currentCardKey) return null
-
-    if (appLanguage === 'en') {
-      return currentInsight
-    }
-
+    if (appLanguage === 'en') return currentInsight
     return translatedCards[`${appLanguage}:${currentCardKey}`] || currentInsight
   }, [currentInsight, currentCardKey, translatedCards, appLanguage])
 
@@ -432,7 +435,6 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
-
     const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
     return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
   }, [displayedCard, formattedReference, displayedVerseText])
@@ -443,7 +445,6 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [appLanguage, formattedReference, displayedCard, displayedVerseText])
 
   const currentArticleJob = articleJobKey ? articleJobs[articleJobKey] : undefined
-
   const activeArticleJob = activeArticleKey ? articleJobs[activeArticleKey] : undefined
 
   async function handleUnfold() {
@@ -457,9 +458,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       return
     }
 
-    if (existingJob?.status === 'generating') {
-      return
-    }
+    if (existingJob?.status === 'generating') return
 
     setArticleJobs((prev) => ({
       ...prev,
@@ -476,9 +475,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     try {
       const res = await fetch('/api/unfold-article', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reference: formattedReference,
           verseText: displayedVerseText,
@@ -523,20 +520,49 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function handleCopyArticle() {
+    if (!activeArticleJob?.article) return
+
+    const text = [
+      activeArticleJob.reference,
+      '',
+      activeArticleJob.article.title,
+      '',
+      activeArticleJob.article.lead,
+      '',
+      ...activeArticleJob.article.body,
+      ...(activeArticleJob.article.quote ? ['', `“${activeArticleJob.article.quote}”`] : []),
+    ].join('\n\n')
+
+    try {
+      await navigator.clipboard.writeText(text)
+      setArticleShareStatus('Article copied')
+    } catch {
+      setArticleShareStatus('')
+    }
+  }
+
   async function handleShareArticle() {
     if (!activeArticleJob?.article) return
 
-    const articleText = `${activeArticleJob.reference}\n\n${activeArticleJob.title}\n\n${activeArticleJob.article}`
+    const text = [
+      activeArticleJob.reference,
+      '',
+      activeArticleJob.article.title,
+      '',
+      activeArticleJob.article.lead,
+      '',
+      ...activeArticleJob.article.body,
+      ...(activeArticleJob.article.quote ? ['', `“${activeArticleJob.article.quote}”`] : []),
+    ].join('\n\n')
 
     try {
       if (navigator.share) {
-        await navigator.share({
-          text: articleText,
-        })
+        await navigator.share({ text })
         setArticleShareStatus('Article shared')
       } else {
-        await navigator.clipboard.writeText(articleText)
-        setArticleShareStatus('Share unavailable — copied instead')
+        await navigator.clipboard.writeText(text)
+        setArticleShareStatus('Share unavailable — article copied')
       }
     } catch {
       setArticleShareStatus('')
@@ -629,19 +655,9 @@ export default function VerseDetailPage({ params }: PageProps) {
         ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
         : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 
-  const activeArticleParagraphs = activeArticleJob?.article
-    ? activeArticleJob.article
-        .split('\n\n')
-        .map((p) => p.trim())
-        .filter(Boolean)
-    : []
-
-  const leadParagraph = activeArticleParagraphs[0] || ''
-  const bodyParagraphs = activeArticleParagraphs.slice(1)
-
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
-      <div className="mx-auto flex w-full max-w-md flex-col">
+      <div ref={articleTopRef} className="mx-auto flex w-full max-w-md flex-col">
         <div className="mb-6 flex items-center gap-3 text-sm">
           <Link
             href={`/bible/${book}/${chapter}`}
@@ -650,10 +666,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             ← Back
           </Link>
 
-          <Link
-            href="/"
-            className="text-neutral-500 transition hover:text-neutral-700"
-          >
+          <Link href="/" className="text-neutral-500 transition hover:text-neutral-700">
             Home
           </Link>
         </div>
@@ -751,10 +764,13 @@ export default function VerseDetailPage({ params }: PageProps) {
                   onClick={() => {
                     setActiveArticleKey('')
                     setArticleShareStatus('')
+                    if (articleTopRef.current) {
+                      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
                   }}
                   className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Back to insight
+                  Back to cards
                 </button>
 
                 <span className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
@@ -762,36 +778,67 @@ export default function VerseDetailPage({ params }: PageProps) {
                 </span>
               </div>
 
-              <p className="mb-4 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
                 {activeArticleJob.reference}
               </p>
 
-              <h2 className="mb-6 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
-                {activeArticleJob.title}
+              <h2 className="mb-6 text-center text-[2.15rem] font-semibold leading-tight tracking-tight text-stone-900">
+                {activeArticleJob.article.title}
               </h2>
 
-              {leadParagraph ? (
-                <p className="mb-6 text-[1.18rem] leading-10 text-stone-900">
-                  {leadParagraph}
-                </p>
+              <p className="mb-8 text-[1.1rem] leading-9 text-stone-900">
+                {activeArticleJob.article.lead}
+              </p>
+
+              {activeArticleJob.article.quote ? (
+                <blockquote className="mb-8 border-l-2 border-stone-300 pl-4 text-[1rem] italic leading-8 text-stone-700">
+                  {activeArticleJob.article.quote}
+                </blockquote>
               ) : null}
 
-              <div className="space-y-6 text-[1.03rem] leading-9 text-stone-800">
-                {bodyParagraphs.map((paragraph, index) => (
-                  <p key={`${index}-${paragraph.slice(0, 24)}`}>
-                    {paragraph}
-                  </p>
+              <div className="space-y-7 text-[0.98rem] leading-8 text-stone-800">
+                {activeArticleJob.article.body.map((paragraph, index) => (
+                  <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
                 ))}
               </div>
 
-              <div className="mt-8 flex justify-center">
+              <div className="mt-10 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handleCopyArticle}
+                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  Copy article
+                </button>
+
                 <button
                   type="button"
                   onClick={handleShareArticle}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-5 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
                   Share article
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveArticleKey('')
+                    setArticleShareStatus('')
+                    if (articleTopRef.current) {
+                      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }}
+                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  Back to cards
+                </button>
+
+                <Link
+                  href="/"
+                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-center text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  Home
+                </Link>
               </div>
 
               {articleShareStatus && (
@@ -892,9 +939,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                   )}
 
                   {currentArticleJob?.status === 'ready' && (
-                    <p className="mt-3 text-center text-sm text-stone-500">
-                      Article ready
-                    </p>
+                    <p className="mt-3 text-center text-sm text-stone-500">Article ready</p>
                   )}
 
                   {shareStatus && (
