@@ -34,6 +34,12 @@ type TranslateCardApiResponse = {
   raw?: string
 }
 
+type UnfoldApiResponse = {
+  article?: string
+  error?: string
+  raw?: string
+}
+
 type AppLanguage = 'en' | 'ru' | 'es'
 
 export default function VerseDetailPage({ params }: PageProps) {
@@ -62,6 +68,11 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [shareStatus, setShareStatus] = useState('')
+
+  const [articleLoading, setArticleLoading] = useState(false)
+  const [articleError, setArticleError] = useState('')
+  const [articleOpen, setArticleOpen] = useState(false)
+  const [unfoldedArticles, setUnfoldedArticles] = useState<Record<string, string>>({})
 
   const copyTimerRef = useRef<number | null>(null)
   const exportCardRef = useRef<HTMLDivElement | null>(null)
@@ -104,6 +115,10 @@ export default function VerseDetailPage({ params }: PageProps) {
       setTranslatedVerseTexts({})
       setCopyStatus('idle')
       setShareStatus('')
+      setArticleLoading(false)
+      setArticleError('')
+      setArticleOpen(false)
+      setUnfoldedArticles({})
 
       try {
         const res = await fetch('/api/insights', {
@@ -230,6 +245,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTranslationError('')
     setCopyStatus('idle')
     setShareStatus('')
+    setArticleError('')
+    setArticleOpen(false)
 
     try {
       await Promise.all([
@@ -260,6 +277,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTranslationError('')
     setCopyStatus('idle')
     setShareStatus('')
+    setArticleError('')
+    setArticleOpen(false)
   }
 
   async function goToIndex(nextIndex: number) {
@@ -269,6 +288,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTranslationError('')
     setCopyStatus('idle')
     setShareStatus('')
+    setArticleError('')
+    setArticleOpen(false)
 
     if (appLanguage === 'en') {
       return
@@ -319,6 +340,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   function handleGenerate() {
     setSubmittedFocusWord(focusWord.trim())
+    setArticleError('')
+    setArticleOpen(false)
   }
 
   function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
@@ -375,6 +398,60 @@ export default function VerseDetailPage({ params }: PageProps) {
     const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
     return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
   }, [displayedCard, formattedReference, displayedVerseText])
+
+  const articleCacheKey = useMemo(() => {
+    if (!displayedCard || !formattedReference) return ''
+    return `${appLanguage}:${formattedReference}:${displayedCard.title}:${displayedCard.text}:${displayedVerseText}`
+  }, [appLanguage, formattedReference, displayedCard, displayedVerseText])
+
+  const displayedArticle = articleCacheKey ? unfoldedArticles[articleCacheKey] || '' : ''
+
+  async function handleUnfold() {
+    if (!displayedCard || !formattedReference || !displayedVerseText) return
+
+    if (displayedArticle) {
+      setArticleOpen((prev) => !prev)
+      setArticleError('')
+      return
+    }
+
+    setArticleLoading(true)
+    setArticleError('')
+    setArticleOpen(true)
+
+    try {
+      const res = await fetch('/api/unfold-article', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText: displayedVerseText,
+          insightTitle: displayedCard.title,
+          insightText: displayedCard.text,
+          focusWord: submittedFocusWord,
+          targetLanguage: appLanguage,
+        }),
+      })
+
+      const data: UnfoldApiResponse = await res.json()
+
+      if (!res.ok || !data.article) {
+        throw new Error(data.error || 'Failed to generate article.')
+      }
+
+      setUnfoldedArticles((prev) => ({
+        ...prev,
+        [articleCacheKey]: data.article as string,
+      }))
+    } catch (err) {
+      setArticleError(err instanceof Error ? err.message : 'Failed to generate article.')
+      setArticleOpen(false)
+    } finally {
+      setArticleLoading(false)
+    }
+  }
 
   async function handleCopy() {
     if (!shareText) return
@@ -448,15 +525,29 @@ export default function VerseDetailPage({ params }: PageProps) {
         ? 'border-red-300 bg-red-50 text-red-700'
         : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 
+  const unfoldButtonClass =
+    articleOpen && displayedArticle
+      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+      : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
       <div className="mx-auto flex w-full max-w-md flex-col">
-        <Link
-          href={`/bible/${book}/${chapter}`}
-          className="mb-6 text-sm text-neutral-500 transition hover:text-neutral-700"
-        >
-          ← Back
-        </Link>
+        <div className="mb-6 flex items-center gap-3 text-sm">
+          <Link
+            href={`/bible/${book}/${chapter}`}
+            className="text-neutral-500 transition hover:text-neutral-700"
+          >
+            ← Back
+          </Link>
+
+          <Link
+            href="/"
+            className="text-neutral-500 transition hover:text-neutral-700"
+          >
+            Home
+          </Link>
+        </div>
 
         <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
           {formattedReference || 'Loading...'}
@@ -598,6 +689,19 @@ export default function VerseDetailPage({ params }: PageProps) {
               <div className="mt-6 flex flex-wrap justify-center gap-2.5">
                 <button
                   type="button"
+                  onClick={handleUnfold}
+                  disabled={articleLoading}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${unfoldButtonClass}`}
+                >
+                  {articleLoading
+                    ? 'Unfolding...'
+                    : articleOpen && displayedArticle
+                      ? 'Hide article'
+                      : 'Unfold'}
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleCopy}
                   className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
                 >
@@ -624,6 +728,10 @@ export default function VerseDetailPage({ params }: PageProps) {
               {translationError && (
                 <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
               )}
+
+              {articleError && (
+                <p className="mt-3 text-center text-sm text-red-700">{articleError}</p>
+              )}
             </div>
           ) : (
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
@@ -636,6 +744,22 @@ export default function VerseDetailPage({ params }: PageProps) {
             </div>
           )}
         </div>
+
+        {articleOpen && displayedArticle && (
+          <div className="mt-5 rounded-[30px] border border-stone-200/80 bg-[#fbf6ea] p-6 shadow-[0_10px_26px_rgba(90,72,41,0.08)]">
+            <p className="mb-4 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              Unfolded article
+            </p>
+
+            <div className="space-y-5 text-[1.03rem] leading-9 text-stone-800">
+              {displayedArticle.split('\n\n').map((paragraph, index) => (
+                <p key={`${index}-${paragraph.slice(0, 24)}`}>
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
 
         {!loading && insights.length > 1 && (
           <div className="mt-5 grid grid-cols-2 gap-3">
