@@ -362,49 +362,43 @@ export default function VerseDetailPage({ params }: PageProps) {
   return translatedCards[`${appLanguage}:${currentCardKey}`] || currentInsight
 }, [currentInsight, currentCardKey, translatedCards, appLanguage])
 
-  return translatedCards[`${appLanguage}:${currentCardKey}`] || currentInsight
-}, [currentInsight, currentCardKey, translatedCards, appLanguage])
-
-    return translatedCards[`${translationMode}:${currentCardKey}`] || currentInsight
-  }, [currentInsight, currentCardKey, translatedCards, translationMode])
-
-  const displayedVerseText = useMemo(() => {
+const displayedVerseText = useMemo(() => {
   if (appLanguage === 'en') return verseText
   if (!verseTranslationKey) return verseText
   return translatedVerseTexts[`${appLanguage}:${verseTranslationKey}`] || verseText
 }, [appLanguage, verseText, verseTranslationKey, translatedVerseTexts])
 
-  const formattedReference = useMemo(() => {
-    if (!book || !chapter || !verse) return ''
-    return `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
-  }, [book, chapter, verse])
+const formattedReference = useMemo(() => {
+  if (!book || !chapter || !verse) return ''
+  return `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
+}, [book, chapter, verse])
 
-  const shareText = useMemo(() => {
-    if (!displayedCard || !formattedReference) return ''
+const shareText = useMemo(() => {
+  if (!displayedCard || !formattedReference) return ''
 
-    const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
-    return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
-  }, [displayedCard, formattedReference, displayedVerseText])
+  const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
+  return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
+}, [displayedCard, formattedReference, displayedVerseText])
 
-  async function handleCopy() {
-    if (!shareText) return
+async function handleCopy() {
+  if (!shareText) return
 
-    try {
-      await navigator.clipboard.writeText(shareText)
-      setCopyStatus('copied')
-      setShareStatus('')
+  try {
+    await navigator.clipboard.writeText(shareText)
+    setCopyStatus('copied')
+    setShareStatus('')
 
-      if (copyTimerRef.current) {
-        window.clearTimeout(copyTimerRef.current)
-      }
-
-      copyTimerRef.current = window.setTimeout(() => {
-        setCopyStatus('idle')
-      }, 1600)
-    } catch {
-      setCopyStatus('failed')
+    if (copyTimerRef.current) {
+      window.clearTimeout(copyTimerRef.current)
     }
+
+    copyTimerRef.current = window.setTimeout(() => {
+      setCopyStatus('idle')
+    }, 1600)
+  } catch {
+    setCopyStatus('failed')
   }
+}
 
   async function handleShare() {
     if (!displayedCard || !formattedReference) return
