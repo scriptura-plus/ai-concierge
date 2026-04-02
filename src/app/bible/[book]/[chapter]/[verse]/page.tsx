@@ -93,6 +93,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [articleJobs, setArticleJobs] = useState<Record<string, ArticleJob>>({})
   const [activeArticleKey, setActiveArticleKey] = useState('')
   const [articleShareStatus, setArticleShareStatus] = useState('')
+  const [articleCopyStatus, setArticleCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
 
   const copyTimerRef = useRef<number | null>(null)
   const exportCardRef = useRef<HTMLDivElement | null>(null)
@@ -162,6 +163,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setShareStatus('')
       setActiveArticleKey('')
       setArticleShareStatus('')
+      setArticleCopyStatus('idle')
 
       try {
         const res = await fetch('/api/insights', {
@@ -293,6 +295,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     setCopyStatus('idle')
     setShareStatus('')
     setArticleShareStatus('')
+    setArticleCopyStatus('idle')
     setActiveArticleKey('')
 
     try {
@@ -325,6 +328,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     setCopyStatus('idle')
     setShareStatus('')
     setArticleShareStatus('')
+    setArticleCopyStatus('idle')
     setActiveArticleKey('')
   }
 
@@ -336,6 +340,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     setCopyStatus('idle')
     setShareStatus('')
     setArticleShareStatus('')
+    setArticleCopyStatus('idle')
     setActiveArticleKey('')
 
     if (appLanguage === 'en') return
@@ -387,6 +392,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     setSubmittedFocusWord(focusWord.trim())
     setActiveArticleKey('')
     setArticleShareStatus('')
+    setArticleCopyStatus('idle')
   }
 
   function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
@@ -455,6 +461,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (existingJob?.status === 'ready' && existingJob.article) {
       setActiveArticleKey(articleJobKey)
       setArticleShareStatus('')
+      setArticleCopyStatus('idle')
       return
     }
 
@@ -536,9 +543,18 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     try {
       await navigator.clipboard.writeText(text)
-      setArticleShareStatus('Article copied')
-    } catch {
+      setArticleCopyStatus('copied')
       setArticleShareStatus('')
+
+      if (copyTimerRef.current) {
+        window.clearTimeout(copyTimerRef.current)
+      }
+
+      copyTimerRef.current = window.setTimeout(() => {
+        setArticleCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setArticleCopyStatus('failed')
     }
   }
 
@@ -764,6 +780,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                   onClick={() => {
                     setActiveArticleKey('')
                     setArticleShareStatus('')
+                    setArticleCopyStatus('idle')
                     if (articleTopRef.current) {
                       articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
                     }
@@ -808,7 +825,11 @@ export default function VerseDetailPage({ params }: PageProps) {
                   onClick={handleCopyArticle}
                   className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Copy article
+                  {articleCopyStatus === 'copied'
+                    ? 'Copied'
+                    : articleCopyStatus === 'failed'
+                      ? 'Copy failed'
+                      : 'Copy article'}
                 </button>
 
                 <button
@@ -824,6 +845,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                   onClick={() => {
                     setActiveArticleKey('')
                     setArticleShareStatus('')
+                    setArticleCopyStatus('idle')
                     if (articleTopRef.current) {
                       articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
                     }
