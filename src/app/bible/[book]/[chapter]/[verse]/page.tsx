@@ -566,7 +566,7 @@ async function handleCopy() {
                   disabled={translationLoading}
                   className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-50"
                 >
-                  {translationLoading && translationMode === 'ru'
+                  {translationLoading && appLanguage === 'ru'
                     ? 'Translating...'
                     : 'Russian'}
                 </button>
