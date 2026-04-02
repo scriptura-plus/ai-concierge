@@ -809,8 +809,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     setArticleCopyStatus('idle')
     setArticleShareStatus('')
 
-    if (lens === 'word') {
-      await loadWordLens()
+  
     }
   }
 
