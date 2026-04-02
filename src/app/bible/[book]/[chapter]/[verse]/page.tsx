@@ -808,9 +808,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     setShareStatus('')
     setArticleCopyStatus('idle')
     setArticleShareStatus('')
-
-  
-    }
   }
 
   const currentLensLabel = useMemo(() => {
