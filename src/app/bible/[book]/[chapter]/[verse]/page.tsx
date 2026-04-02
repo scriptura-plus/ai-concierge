@@ -98,7 +98,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setVerseText('')
       setInsights([])
       setCurrentIndex(0)
-      setAppLanguage('en')
+      
       setTranslationLoading(false)
       setTranslationError('')
       setTranslatedCards({})
