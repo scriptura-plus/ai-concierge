@@ -558,64 +558,26 @@ return (
               </p>
 
               <div className="mt-6 flex flex-wrap justify-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={handleTranslateToRussian}
-                  disabled={translationLoading}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-50"
-                >
-                  {translationLoading && appLanguage === 'ru'
-                    ? 'Translating...'
-                    : 'Russian'}
-                </button>
+  <button
+    type="button"
+    onClick={handleCopy}
+    className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
+  >
+    {copyStatus === 'copied'
+      ? 'Copied'
+      : copyStatus === 'failed'
+        ? 'Copy failed'
+        : 'Copy'}
+  </button>
 
-                <button
-                  type="button"
-                  onClick={handleTranslateToSpanish}
-                  disabled={translationLoading}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-50"
-                >
-                  {translationLoading && appLanguage === 'es'
-  ? 'Translating...'
-  : 'Spanish'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleShowOriginal}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                >
-                  Original
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
-                >
-                  {copyStatus === 'copied'
-                    ? 'Copied'
-                    : copyStatus === 'failed'
-                      ? 'Copy failed'
-                      : 'Copy'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                >
-                  Share
-                </button>
-              </div>
-
-              {(appLanguage === 'ru' || appLanguage === 'es') && (
-  <p className="mt-5 text-center text-sm text-stone-500">
-    {appLanguage === 'ru'
-      ? 'Showing Russian translation'
-      : 'Showing Spanish translation'}
-  </p>
-)}
+  <button
+    type="button"
+    onClick={handleShare}
+    className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+  >
+    Share
+  </button>
+</div>
 
               {shareStatus && (
                 <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
@@ -637,25 +599,25 @@ return (
           )}
         </div>
 
-        {!loading && insights.length > 1 && (
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={handlePrev}
-              className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
-            >
-              Previous
-            </button>
+      {!loading && insights.length > 1 && (
+  <div className="mt-5 grid grid-cols-2 gap-3">
+    <button
+      type="button"
+      onClick={handlePrev}
+      className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
+    >
+      Previous
+    </button>
 
-            <button
-              type="button"
-              onClick={handleNext}
-              className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
-            >
-              Next
-            </button>
-          </div>
-        )}
+    <button
+      type="button"
+      onClick={handleNext}
+      className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
+    >
+      Next
+    </button>
+  </div>
+)}
       </div>
 
       {displayedCard && (
