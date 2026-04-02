@@ -451,51 +451,19 @@ async function handleCopy() {
       : copyStatus === 'failed'
         ? 'border-red-300 bg-red-50 text-red-700'
         : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+return (
+  <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
+    <div className="mx-auto flex w-full max-w-md flex-col">
+      <Link
+        href={`/bible/${book}/${chapter}`}
+        className="mb-6 text-sm text-neutral-500 transition hover:text-neutral-700"
+      >
+        ← Back
+      </Link>
 
-  <h1 className="mb-3 text-4xl font-semibold tracking-tight text-stone-900">
-  {formattedReference || 'Loading...'}
-</h1>
-
-<div className="mb-4 flex flex-wrap gap-2">
-  <button
-    type="button"
-    onClick={handleShowOriginal}
-    className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-      appLanguage === 'en'
-        ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-    }`}
-  >
-    English
-  </button>
-
-  <button
-    type="button"
-    onClick={handleTranslateToRussian}
-    disabled={translationLoading}
-    className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
-      appLanguage === 'ru'
-        ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-    }`}
-  >
-    {translationLoading && appLanguage === 'ru' ? 'Translating...' : 'Russian'}
-  </button>
-
-  <button
-    type="button"
-    onClick={handleTranslateToSpanish}
-    disabled={translationLoading}
-    className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
-      appLanguage === 'es'
-        ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-    }`}
-  >
-    {translationLoading && appLanguage === 'es' ? 'Translating...' : 'Spanish'}
-  </button>
-</div>
-
+      <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
+        {formattedReference || 'Loading...'}
+      </h1>
 <div className="mb-5 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
   <label
     htmlFor="focusWord"
