@@ -681,7 +681,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     extraAction?: React.ReactNode
   ) {
     return (
-      <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+      <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
           <div className="mb-5 flex items-center justify-between gap-3">
             <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
@@ -690,54 +690,27 @@ export default function VerseDetailPage({ params }: PageProps) {
             {extraAction}
           </div>
 
-          <p className="text-[1.02rem] leading-8 text-stone-800">{lead}</p>
+          <p className="text-[1rem] leading-8 text-stone-800">{lead}</p>
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-5 space-y-3">
             {points.map((point, index) => (
               <div
                 key={`${title}-${index}`}
-                className="rounded-[20px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
+                className="rounded-[18px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
                   {labelPrefix} {index + 1}
                 </p>
-                <p className="mt-2 text-[0.98rem] leading-7 text-stone-800">{point}</p>
+                <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{point}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-6 rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+          <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
               Takeaway
             </p>
-            <p className="mt-2 text-[0.98rem] leading-7 text-stone-800">{takeaway}</p>
-          </div>
-
-          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
-            <button
-              type="button"
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              Deepen
-            </button>
-            <button
-              type="button"
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              Comment
-            </button>
-            <button
-              type="button"
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              Copy
-            </button>
-            <button
-              type="button"
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              Share
-            </button>
+            <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{takeaway}</p>
           </div>
         </div>
       </div>
@@ -767,7 +740,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   function renderInsightsView() {
     return (
-      <>
+      <div className="tab-panel-enter">
         {!loading && insights.length > 0 && !activeArticleKey && (
           <p className="mb-4 text-sm font-medium text-stone-500">
             {currentIndex + 1} / {insights.length}
@@ -1008,7 +981,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             )}
           </>
         )}
-      </>
+      </div>
     )
   }
 
@@ -1311,8 +1284,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       )}
 
       {lensSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/25 px-4 pb-4 pt-16">
-          <div className="mx-auto w-full max-w-md rounded-[28px] border border-stone-300 bg-[#fbf6ea] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
+        <div className="sheet-overlay fixed inset-0 z-50 flex items-end bg-black/25 px-4 pb-4 pt-16">
+          <div className="sheet-panel mx-auto w-full max-w-md rounded-[28px] border border-stone-300 bg-[#fbf6ea] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-lg font-semibold text-stone-900">Another Lens</p>
@@ -1360,6 +1333,51 @@ export default function VerseDetailPage({ params }: PageProps) {
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        @keyframes scriptura-fade-slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes scriptura-sheet-overlay {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes scriptura-sheet-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .tab-panel-enter {
+          animation: scriptura-fade-slide-up 220ms ease;
+        }
+
+        .sheet-overlay {
+          animation: scriptura-sheet-overlay 180ms ease;
+        }
+
+        .sheet-panel {
+          animation: scriptura-sheet-up 220ms ease;
+        }
+      `}</style>
     </main>
   )
 }
