@@ -20,14 +20,38 @@ function buildPrompt(
 ) {
   const languageInstruction =
     targetLanguage === "ru"
-      ? "Write the full output in Russian."
+      ? `
+Write the full output in Russian.
+Every field must be in Russian:
+- lead
+- every point.title
+- every point.text
+- takeaway
+
+Do not use English for the final answer.
+Do not leave headings or prose in English.
+`
       : targetLanguage === "es"
-        ? "Write the full output in Spanish."
+        ? `
+Write the full output in Spanish.
+Every field must be in Spanish.
+Do not use English for the final answer.
+`
         : targetLanguage === "fr"
-          ? "Write the full output in French."
+          ? `
+Write the full output in French.
+Every field must be in French.
+Do not use English for the final answer.
+`
           : targetLanguage === "de"
-            ? "Write the full output in German."
-            : "Write the full output in English.";
+            ? `
+Write the full output in German.
+Every field must be in German.
+Do not use English for the final answer.
+`
+            : `
+Write the full output in English.
+`;
 
   return `
 You are an elite Bible context analyst.
@@ -208,6 +232,21 @@ function extractOpenAIText(data: any): string {
   return pieces.join("").trim();
 }
 
+function looksRussian(text: string): boolean {
+  const sample = text.slice(0, 500);
+  const cyrillicMatches = sample.match(/[А-Яа-яЁё]/g) ?? [];
+  return cyrillicMatches.length >= 12;
+}
+
+function payloadLooksRussian(payload: ContextPayload): boolean {
+  const joined = [
+    payload.lead,
+    payload.takeaway,
+    ...payload.points.flatMap((point) => [point.title, point.text]),
+  ].join(" ");
+  return looksRussian(joined);
+}
+
 export async function POST(req: Request) {
   try {
     const { reference, verseText, targetLanguage } = await req.json();
@@ -310,6 +349,16 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: "Failed to parse Context JSON.",
+          raw: rawText || "Empty model response",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (safeLanguage === "ru" && !payloadLooksRussian(payload)) {
+      return NextResponse.json(
+        {
+          error: "Model did not return Russian content for Russian Context mode.",
           raw: rawText || "Empty model response",
         },
         { status: 500 }
