@@ -69,6 +69,31 @@ GOOD CONTEXT TYPES:
 - why this verse lands where it does
 - what the reader would likely miss without context
 
+STYLE RULES:
+- neutral
+- restrained
+- text-anchored
+- analytical
+- readable
+- compact
+- intellectually clear
+- lightly journal-like, but not dramatic
+
+VERY IMPORTANT STYLE RESTRICTIONS:
+- avoid doctrinally loaded Christian stock phrasing
+- avoid sermon language
+- avoid generic church vocabulary
+- do not introduce "cross" language unless explicitly present in the supplied verse/context
+- do not introduce confessional wording unless explicitly present in the supplied verse/context
+- prefer neutral wording like:
+  "in this statement"
+  "in this prayer"
+  "in this argument"
+  "in the immediate flow"
+  "in the surrounding movement"
+- do not speak as a preacher or theologian
+- speak like a careful literary-context analyst
+
 DO:
 - be selective
 - stay close to this verse
@@ -220,7 +245,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: \`Bearer \${apiKey}\`,
       },
       body: JSON.stringify({
         model: "gpt-5.4-mini",
