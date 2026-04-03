@@ -47,7 +47,7 @@ type UnfoldApiResponse = {
   raw?: string
 }
 
-type WordLensApiResponse = {
+type LensApiResponse = {
   cards?: InsightItem[]
   error?: string
   raw?: string
@@ -185,6 +185,11 @@ const UI_TEXT: Record<
     loadingWordLens: string
     loadingWordLensText: string
     wordLensUnavailable: string
+
+    loadingTensionLens: string
+    loadingTensionLensText: string
+    tensionLensUnavailable: string
+
     tryAgain: string
     lensLabel: string
   }
@@ -325,6 +330,12 @@ const UI_TEXT: Record<
     loadingWordLens: 'Loading Word lens',
     loadingWordLensText: 'Reading the verse through the hidden weight of its words…',
     wordLensUnavailable: 'Unable to load Word lens.',
+
+    loadingTensionLens: 'Loading Tension lens',
+    loadingTensionLensText:
+      'Reading the verse through its pressure points, contrasts, and surprises…',
+    tensionLensUnavailable: 'Unable to load Tension lens.',
+
     tryAgain: 'Try again',
     lensLabel: 'Lens',
   },
@@ -467,6 +478,12 @@ const UI_TEXT: Record<
     loadingWordLens: 'Загрузка линзы «Слово»',
     loadingWordLensText: 'Смотрим на стих через скрытый вес его слов…',
     wordLensUnavailable: 'Не удалось загрузить линзу «Слово».',
+
+    loadingTensionLens: 'Загрузка линзы «Напряжение»',
+    loadingTensionLensText:
+      'Смотрим на стих через его точки напряжения, контрасты и неожиданные повороты…',
+    tensionLensUnavailable: 'Не удалось загрузить линзу «Напряжение».',
+
     tryAgain: 'Попробовать снова',
     lensLabel: 'Линза',
   },
@@ -609,6 +626,12 @@ const UI_TEXT: Record<
     loadingWordLens: 'Cargando lente Palabra',
     loadingWordLensText: 'Leyendo el versículo a través del peso oculto de sus palabras…',
     wordLensUnavailable: 'No se pudo cargar la lente Palabra.',
+
+    loadingTensionLens: 'Cargando lente Tensión',
+    loadingTensionLensText:
+      'Leyendo el versículo a través de sus tensiones, contrastes y sorpresas…',
+    tensionLensUnavailable: 'No se pudo cargar la lente Tensión.',
+
     tryAgain: 'Intentar de nuevo',
     lensLabel: 'Lente',
   },
@@ -624,6 +647,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [insights, setInsights] = useState<InsightItem[]>([])
   const [wordLensCards, setWordLensCards] = useState<InsightItem[]>([])
+  const [tensionLensCards, setTensionLensCards] = useState<InsightItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const [loading, setLoading] = useState(true)
@@ -632,6 +656,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [wordLensLoading, setWordLensLoading] = useState(false)
   const [wordLensError, setWordLensError] = useState('')
+  const [tensionLensLoading, setTensionLensLoading] = useState(false)
+  const [tensionLensError, setTensionLensError] = useState('')
 
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en')
   const [translationLoading, setTranslationLoading] = useState(false)
@@ -713,7 +739,9 @@ export default function VerseDetailPage({ params }: PageProps) {
       setVerseText('')
       setInsights([])
       setWordLensCards([])
+      setTensionLensCards([])
       setWordLensError('')
+      setTensionLensError('')
       setCurrentIndex(0)
       setTranslationLoading(false)
       setTranslationError('')
@@ -780,8 +808,11 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (activeTab === 'another-lens' && selectedLens === 'word') {
       return wordLensCards
     }
+    if (activeTab === 'another-lens' && selectedLens === 'tension') {
+      return tensionLensCards
+    }
     return insights
-  }, [activeTab, selectedLens, wordLensCards, insights])
+  }, [activeTab, selectedLens, wordLensCards, tensionLensCards, insights])
 
   const currentInsight = useMemo(() => currentCards[currentIndex], [currentCards, currentIndex])
 
@@ -1238,7 +1269,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         }),
       })
 
-      const data: WordLensApiResponse = await res.json()
+      const data: LensApiResponse = await res.json()
 
       if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
         setWordLensError(data.error || t.wordLensUnavailable)
@@ -1255,6 +1286,43 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function loadTensionLens(force = false) {
+    if (!formattedReference || !verseText) return
+    if (!force && tensionLensCards.length > 0) return
+
+    setTensionLensLoading(true)
+    setTensionLensError('')
+    setCurrentIndex(0)
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/tension-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: appLanguage,
+        }),
+      })
+
+      const data: LensApiResponse = await res.json()
+
+      if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
+        setTensionLensError(data.error || t.tensionLensUnavailable)
+        setTensionLensCards([])
+        return
+      }
+
+      setTensionLensCards(data.cards)
+    } catch {
+      setTensionLensError(t.tensionLensUnavailable)
+      setTensionLensCards([])
+    } finally {
+      setTensionLensLoading(false)
+    }
+  }
+
   async function handleSelectLens(lens: LensKind) {
     setSelectedLens(lens)
     setLensSheetOpen(false)
@@ -1266,6 +1334,10 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     if (lens === 'word') {
       await loadWordLens()
+    }
+
+    if (lens === 'tension') {
+      await loadTensionLens()
     }
   }
 
@@ -1350,6 +1422,242 @@ export default function VerseDetailPage({ params }: PageProps) {
       : currentArticleJob?.status === 'generating'
         ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
         : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+
+  function renderLiveLensCardView() {
+    return (
+      <div className="tab-panel-enter">
+        {!loading && currentCards.length > 0 && !activeArticleKey && (
+          <p className="mb-4 text-sm font-medium text-stone-500">
+            {currentIndex + 1} / {currentCards.length}
+          </p>
+        )}
+
+        {activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article ? (
+          <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveArticleKey('')
+                    setArticleShareStatus('')
+                    setArticleCopyStatus('idle')
+                    if (articleTopRef.current) {
+                      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }}
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  {t.backToCards}
+                </button>
+
+                <span className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                  {t.article}
+                </span>
+              </div>
+
+              <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {activeArticleJob.reference}
+              </p>
+
+              <h2 className="mb-6 text-center text-[2.15rem] font-semibold leading-tight tracking-tight text-stone-900">
+                {activeArticleJob.article.title}
+              </h2>
+
+              <p className="mb-8 text-[1.1rem] leading-9 text-stone-900">
+                {activeArticleJob.article.lead}
+              </p>
+
+              {activeArticleJob.article.quote ? (
+                <blockquote className="mb-8 border-l-2 border-stone-300 pl-4 text-[1rem] italic leading-8 text-stone-700">
+                  {activeArticleJob.article.quote}
+                </blockquote>
+              ) : null}
+
+              <div className="space-y-7 text-[0.98rem] leading-8 text-stone-800">
+                {activeArticleJob.article.body.map((paragraph, index) => (
+                  <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
+                ))}
+              </div>
+
+              <div className="mt-10 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handleCopyArticle}
+                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  {articleCopyStatus === 'copied'
+                    ? t.copied
+                    : articleCopyStatus === 'failed'
+                      ? t.copyFailed
+                      : t.copyArticle}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShareArticle}
+                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  {t.shareArticle}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveArticleKey('')
+                    setArticleShareStatus('')
+                    setArticleCopyStatus('idle')
+                    if (articleTopRef.current) {
+                      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }}
+                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  {t.backToCards}
+                </button>
+
+                <Link
+                  href="/"
+                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-center text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  {t.home}
+                </Link>
+              </div>
+
+              {articleShareStatus && (
+                <p className="mt-3 text-center text-sm text-stone-500">{articleShareStatus}</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
+            >
+              {displayedCard ? (
+                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="text-sm font-medium text-stone-500">
+                      {t.lensLabel}:{' '}
+                      {selectedLens === 'word'
+                        ? t.word
+                        : selectedLens === 'tension'
+                          ? t.tension
+                          : t.phrase}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLensSheetOpen(true)}
+                      className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+                    >
+                      {t.change}
+                    </button>
+                  </div>
+
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    {formattedReference}
+                  </p>
+
+                  {displayedVerseText && (
+                    <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
+                      <p className="text-[1rem] leading-8 text-stone-700 italic">
+                        {displayedVerseText}
+                      </p>
+                    </div>
+                  )}
+
+                  <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
+                    {displayedCard.title}
+                  </h2>
+
+                  <p className="text-[1.08rem] leading-9 text-stone-800">{displayedCard.text}</p>
+
+                  <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleUnfold}
+                      disabled={currentArticleJob?.status === 'generating'}
+                      className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${unfoldButtonClass}`}
+                    >
+                      {unfoldButtonLabel}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
+                    >
+                      {copyStatus === 'copied'
+                        ? t.copied
+                        : copyStatus === 'failed'
+                          ? t.copyFailed
+                          : t.copy}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                    >
+                      {t.share}
+                    </button>
+                  </div>
+
+                  {currentArticleJob?.status === 'failed' && currentArticleJob.error && (
+                    <p className="mt-3 text-center text-sm text-red-700">
+                      {currentArticleJob.error}
+                    </p>
+                  )}
+
+                  {currentArticleJob?.status === 'ready' && (
+                    <p className="mt-3 text-center text-sm text-stone-500">{t.articleReady}</p>
+                  )}
+
+                  {shareStatus && (
+                    <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
+                  )}
+
+                  {translationError && (
+                    <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    {t.noInsight}
+                  </p>
+                  <p className="text-[1.08rem] leading-9 text-stone-800">{t.noInsightText}</p>
+                </div>
+              )}
+            </div>
+
+            {!loading && currentCards.length > 1 && (
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
+                >
+                  {t.previous}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
+                >
+                  {t.next}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    )
+  }
 
   function renderInsightsView() {
     return (
@@ -1459,174 +1767,115 @@ export default function VerseDetailPage({ params }: PageProps) {
           </div>
         ) : (
           <>
-            {activeTab === 'another-lens' && selectedLens === 'word' && wordLensLoading ? (
-              <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
+            >
+              {loading ? (
                 <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
                   <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                    {t.loadingWordLens}
+                    {t.loadingInsight}
                   </p>
-                  <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingWordLensText}</p>
+                  <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingInsightText}</p>
                 </div>
-              </div>
-            ) : activeTab === 'another-lens' && selectedLens === 'word' && wordLensError ? (
-              <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+              ) : error ? (
                 <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                  <div className="mb-5 flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-stone-500">
-                      {t.lensLabel}: {t.word}
-                    </p>
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    {t.unableToLoad}
+                  </p>
+                  <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{error}</p>
+
+                  {rawOutput && (
+                    <div className="rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                        {t.rawModelOutput}
+                      </p>
+                      <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                        {rawOutput}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ) : displayedCard ? (
+                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    {formattedReference}
+                  </p>
+
+                  {displayedVerseText && (
+                    <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
+                      <p className="text-[1rem] leading-8 text-stone-700 italic">
+                        {displayedVerseText}
+                      </p>
+                    </div>
+                  )}
+
+                  <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
+                    {displayedCard.title}
+                  </h2>
+
+                  <p className="text-[1.08rem] leading-9 text-stone-800">{displayedCard.text}</p>
+
+                  <div className="mt-6 flex flex-wrap justify-center gap-2.5">
                     <button
                       type="button"
-                      onClick={() => setLensSheetOpen(true)}
-                      className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+                      onClick={handleUnfold}
+                      disabled={currentArticleJob?.status === 'generating'}
+                      className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${unfoldButtonClass}`}
                     >
-                      {t.change}
+                      {unfoldButtonLabel}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
+                    >
+                      {copyStatus === 'copied'
+                        ? t.copied
+                        : copyStatus === 'failed'
+                          ? t.copyFailed
+                          : t.copy}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                    >
+                      {t.share}
                     </button>
                   </div>
 
-                  <p className="text-[1.08rem] leading-9 text-stone-800">{wordLensError}</p>
+                  {currentArticleJob?.status === 'failed' && currentArticleJob.error && (
+                    <p className="mt-3 text-center text-sm text-red-700">{currentArticleJob.error}</p>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={() => loadWordLens(true)}
-                    className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-                  >
-                    {t.tryAgain}
-                  </button>
+                  {currentArticleJob?.status === 'ready' && (
+                    <p className="mt-3 text-center text-sm text-stone-500">{t.articleReady}</p>
+                  )}
+
+                  {shareStatus && (
+                    <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
+                  )}
+
+                  {translationError && (
+                    <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <div
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-                className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
-              >
-                {loading ? (
-                  <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                    <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                      {t.loadingInsight}
-                    </p>
-                    <p className="text-[1.08rem] leading-9 text-stone-800">
-                      {t.loadingInsightText}
-                    </p>
-                  </div>
-                ) : error ? (
-                  <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                    <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                      {t.unableToLoad}
-                    </p>
-                    <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{error}</p>
+              ) : (
+                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                    {t.noInsight}
+                  </p>
+                  <p className="text-[1.08rem] leading-9 text-stone-800">{t.noInsightText}</p>
+                </div>
+              )}
+            </div>
 
-                    {rawOutput && (
-                      <div className="rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-                          {t.rawModelOutput}
-                        </p>
-                        <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                          {rawOutput}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                ) : displayedCard ? (
-                  <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                    {activeTab === 'another-lens' && selectedLens === 'word' && (
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <div className="text-sm font-medium text-stone-500">
-                          {t.lensLabel}: {t.word}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setLensSheetOpen(true)}
-                          className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-                        >
-                          {t.change}
-                        </button>
-                      </div>
-                    )}
-
-                    <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                      {formattedReference}
-                    </p>
-
-                    {displayedVerseText && (
-                      <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
-                        <p className="text-[1rem] leading-8 text-stone-700 italic">
-                          {displayedVerseText}
-                        </p>
-                      </div>
-                    )}
-
-                    <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
-                      {displayedCard.title}
-                    </h2>
-
-                    <p className="text-[1.08rem] leading-9 text-stone-800">{displayedCard.text}</p>
-
-                    <div className="mt-6 flex flex-wrap justify-center gap-2.5">
-                      <button
-                        type="button"
-                        onClick={handleUnfold}
-                        disabled={currentArticleJob?.status === 'generating'}
-                        className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${unfoldButtonClass}`}
-                      >
-                        {unfoldButtonLabel}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleCopy}
-                        className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
-                      >
-                        {copyStatus === 'copied'
-                          ? t.copied
-                          : copyStatus === 'failed'
-                            ? t.copyFailed
-                            : t.copy}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleShare}
-                        className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                      >
-                        {t.share}
-                      </button>
-                    </div>
-
-                    {currentArticleJob?.status === 'failed' && currentArticleJob.error && (
-                      <p className="mt-3 text-center text-sm text-red-700">
-                        {currentArticleJob.error}
-                      </p>
-                    )}
-
-                    {currentArticleJob?.status === 'ready' && (
-                      <p className="mt-3 text-center text-sm text-stone-500">{t.articleReady}</p>
-                    )}
-
-                    {shareStatus && (
-                      <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
-                    )}
-
-                    {translationError && (
-                      <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                    <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                      {t.noInsight}
-                    </p>
-                    <p className="text-[1.08rem] leading-9 text-stone-800">
-                      {t.noInsightText}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {!loading && currentCards.length > 1 && !(activeTab === 'another-lens' && selectedLens === 'word' && wordLensLoading) && (
+            {!loading && currentCards.length > 1 && (
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -1673,36 +1922,114 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   function renderLensView() {
     if (selectedLens === 'word') {
-      return renderInsightsView()
+      if (wordLensLoading) {
+        return (
+          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {t.loadingWordLens}
+              </p>
+              <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingWordLensText}</p>
+            </div>
+          </div>
+        )
+      }
+
+      if (wordLensError) {
+        return (
+          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-stone-500">
+                  {t.lensLabel}: {t.word}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setLensSheetOpen(true)}
+                  className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+                >
+                  {t.change}
+                </button>
+              </div>
+
+              <p className="text-[1.08rem] leading-9 text-stone-800">{wordLensError}</p>
+
+              <button
+                type="button"
+                onClick={() => loadWordLens(true)}
+                className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+              >
+                {t.tryAgain}
+              </button>
+            </div>
+          </div>
+        )
+      }
+
+      return renderLiveLensCardView()
     }
 
-    const lensLabel =
-      selectedLens === 'tension'
-        ? t.tension
-        : selectedLens === 'phrase'
-          ? t.phrase
-          : t.lensTitle
+    if (selectedLens === 'tension') {
+      if (tensionLensLoading) {
+        return (
+          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {t.loadingTensionLens}
+              </p>
+              <p className="text-[1.08rem] leading-9 text-stone-800">
+                {t.loadingTensionLensText}
+              </p>
+            </div>
+          </div>
+        )
+      }
 
-    const lead =
-      selectedLens === 'tension'
-        ? t.lensLeadTension
-        : selectedLens === 'phrase'
-          ? t.lensLeadPhrase
-          : t.lensLeadDefault
+      if (tensionLensError) {
+        return (
+          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-stone-500">
+                  {t.lensLabel}: {t.tension}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setLensSheetOpen(true)}
+                  className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+                >
+                  {t.change}
+                </button>
+              </div>
+
+              <p className="text-[1.08rem] leading-9 text-stone-800">{tensionLensError}</p>
+
+              <button
+                type="button"
+                onClick={() => loadTensionLens(true)}
+                className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+              >
+                {t.tryAgain}
+              </button>
+            </div>
+          </div>
+        )
+      }
+
+      return renderLiveLensCardView()
+    }
+
+    const lensLabel = selectedLens === 'phrase' ? t.phrase : t.lensTitle
+
+    const lead = selectedLens === 'phrase' ? t.lensLeadPhrase : t.lensLeadDefault
 
     const points =
-      selectedLens === 'tension'
-        ? [t.lensPoint1Tension, t.lensPoint2Tension, t.lensPoint3Tension]
-        : selectedLens === 'phrase'
-          ? [t.lensPoint1Phrase, t.lensPoint2Phrase, t.lensPoint3Phrase]
-          : [t.lensPoint1Default, t.lensPoint2Default, t.lensPoint3Default]
+      selectedLens === 'phrase'
+        ? [t.lensPoint1Phrase, t.lensPoint2Phrase, t.lensPoint3Phrase]
+        : [t.lensPoint1Default, t.lensPoint2Default, t.lensPoint3Default]
 
     const takeaway =
-      selectedLens === 'tension'
-        ? t.lensTakeawayTension
-        : selectedLens === 'phrase'
-          ? t.lensTakeawayPhrase
-          : t.lensTakeawayDefault
+      selectedLens === 'phrase' ? t.lensTakeawayPhrase : t.lensTakeawayDefault
 
     return renderStructuredPanel(
       `${t.anotherLens}: ${lensLabel}`,
