@@ -708,14 +708,28 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
-  function renderInsightsView() {
-    const copyButtonClass =
-      copyStatus === 'copied'
-        ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-        : copyStatus === 'failed'
-          ? 'border-red-300 bg-red-50 text-red-700'
-          : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+  const copyButtonClass =
+    copyStatus === 'copied'
+      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+      : copyStatus === 'failed'
+        ? 'border-red-300 bg-red-50 text-red-700'
+        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 
+  const unfoldButtonLabel =
+    currentArticleJob?.status === 'generating'
+      ? 'Generating...'
+      : currentArticleJob?.status === 'ready'
+        ? 'Open article'
+        : 'Unfold'
+
+  const unfoldButtonClass =
+    currentArticleJob?.status === 'ready'
+      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+      : currentArticleJob?.status === 'generating'
+        ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
+        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+
+  function renderInsightsView() {
     return (
       <>
         {!loading && insights.length > 0 && !activeArticleKey && (
