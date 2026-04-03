@@ -72,6 +72,23 @@ type CompareApiResponse = {
   raw?: string
 }
 
+type ContextPoint = {
+  title: string
+  text: string
+}
+
+type ContextPayload = {
+  lead: string
+  points: ContextPoint[]
+  takeaway: string
+}
+
+type ContextApiResponse = {
+  context?: ContextPayload
+  error?: string
+  raw?: string
+}
+
 type AppLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
 type TopTab = 'insights' | 'compare' | 'context' | 'lens'
@@ -190,6 +207,10 @@ const UI_TEXT: Record<
     loadingCompareText: string
     compareUnavailable: string
 
+    loadingContext: string
+    loadingContextText: string
+    contextUnavailable: string
+
     backToTop: string
     copiedAnalysis: string
     copyAnalysis: string
@@ -287,6 +308,10 @@ const UI_TEXT: Record<
     loadingCompareText:
       'Comparing translation pressure, wording choices, and shifts in emphasis…',
     compareUnavailable: 'Unable to load Compare mode.',
+    loadingContext: 'Loading Context mode',
+    loadingContextText:
+      'Tracing the immediate forces, flow, and setting that sharpen the verse…',
+    contextUnavailable: 'Unable to load Context mode.',
     backToTop: 'Back to top',
     copiedAnalysis: 'Analysis copied',
     copyAnalysis: 'Copy analysis',
@@ -385,6 +410,10 @@ const UI_TEXT: Record<
     loadingCompareText:
       'Сравниваем переводческое давление, выбор формулировок и сдвиги акцента…',
     compareUnavailable: 'Не удалось загрузить режим «Сравнение».',
+    loadingContext: 'Загрузка режима «Контекст»',
+    loadingContextText:
+      'Отслеживаем ближайшие силы, ход мысли и обстановку, которые заостряют чтение стиха…',
+    contextUnavailable: 'Не удалось загрузить режим «Контекст».',
     backToTop: 'Наверх',
     copiedAnalysis: 'Анализ скопирован',
     copyAnalysis: 'Копировать анализ',
@@ -483,6 +512,10 @@ const UI_TEXT: Record<
     loadingCompareText:
       'Comparando presión de traducción, elecciones de redacción y cambios de énfasis…',
     compareUnavailable: 'No se pudo cargar el modo Comparar.',
+    loadingContext: 'Cargando modo Contexto',
+    loadingContextText:
+      'Siguiendo las fuerzas inmediatas, el flujo y el marco que afinan la lectura del versículo…',
+    contextUnavailable: 'No se pudo cargar el modo Contexto.',
     backToTop: 'Volver arriba',
     copiedAnalysis: 'Análisis copiado',
     copyAnalysis: 'Copiar análisis',
@@ -579,6 +612,10 @@ const UI_TEXT: Record<
     loadingCompareText:
       'Comparaison de la pression de traduction, des choix de formulation et des déplacements d’accent…',
     compareUnavailable: 'Impossible de charger le mode Comparer.',
+    loadingContext: 'Chargement du mode Contexte',
+    loadingContextText:
+      'Repérage des forces immédiates, du mouvement et du cadre qui affinent la lecture du verset…',
+    contextUnavailable: 'Impossible de charger le mode Contexte.',
     backToTop: 'Haut de page',
     copiedAnalysis: 'Analyse copiée',
     copyAnalysis: 'Copier l’analyse',
@@ -676,6 +713,10 @@ const UI_TEXT: Record<
     loadingCompareText:
       'Übersetzungsdruck, Formulierungswahl und Akzentverschiebungen werden verglichen…',
     compareUnavailable: 'Vergleichsmodus konnte nicht geladen werden.',
+    loadingContext: 'Kontextmodus wird geladen',
+    loadingContextText:
+      'Unmittelbare Kräfte, Bewegungen und Rahmen werden verfolgt, die die Lesart des Verses schärfen…',
+    contextUnavailable: 'Kontextmodus konnte nicht geladen werden.',
     backToTop: 'Nach oben',
     copiedAnalysis: 'Analyse kopiert',
     copyAnalysis: 'Analyse kopieren',
@@ -690,6 +731,10 @@ function emptyLensMap(): Record<AppLanguage, InsightItem[]> {
 }
 
 function emptyCompareMap(): Record<AppLanguage, ComparePayload | null> {
+  return { en: null, ru: null, es: null, fr: null, de: null }
+}
+
+function emptyContextMap(): Record<AppLanguage, ContextPayload | null> {
   return { en: null, ru: null, es: null, fr: null, de: null }
 }
 
@@ -710,12 +755,19 @@ export default function VerseDetailPage({ params }: PageProps) {
     useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
   const [compareByLanguage, setCompareByLanguage] =
     useState<Record<AppLanguage, ComparePayload | null>>(emptyCompareMap())
+  const [contextByLanguage, setContextByLanguage] =
+    useState<Record<AppLanguage, ContextPayload | null>>(emptyContextMap())
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const [compareLoading, setCompareLoading] = useState(false)
   const [compareError, setCompareError] = useState('')
   const [compareCopyStatus, setCompareCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [compareShareStatus, setCompareShareStatus] = useState('')
+
+  const [contextLoading, setContextLoading] = useState(false)
+  const [contextError, setContextError] = useState('')
+  const [contextCopyStatus, setContextCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [contextShareStatus, setContextShareStatus] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -806,9 +858,13 @@ export default function VerseDetailPage({ params }: PageProps) {
       setTensionLensCardsByLanguage(emptyLensMap())
       setPhraseLensCardsByLanguage(emptyLensMap())
       setCompareByLanguage(emptyCompareMap())
+      setContextByLanguage(emptyContextMap())
       setCompareError('')
       setCompareCopyStatus('idle')
       setCompareShareStatus('')
+      setContextError('')
+      setContextCopyStatus('idle')
+      setContextShareStatus('')
       setWordLensError('')
       setTensionLensError('')
       setPhraseLensError('')
@@ -906,6 +962,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [activeTab, selectedLens])
 
   const compareData = useMemo(() => compareByLanguage[appLanguage], [compareByLanguage, appLanguage])
+  const contextData = useMemo(() => contextByLanguage[appLanguage], [contextByLanguage, appLanguage])
 
   async function translateCard(
     targetLanguage: 'ru' | 'es' | 'fr' | 'de',
@@ -1119,10 +1176,47 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function loadContext(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText) return
+    if (!force && contextByLanguage[language]) return
+
+    setContextLoading(true)
+    setContextError('')
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+        }),
+      })
+
+      const data: ContextApiResponse = await res.json()
+
+      if (!res.ok || !data.context || !Array.isArray(data.context.points)) {
+        setContextError(data.error || UI_TEXT[language].contextUnavailable)
+        setContextByLanguage((prev) => ({ ...prev, [language]: null }))
+        return
+      }
+
+      setContextByLanguage((prev) => ({ ...prev, [language]: data.context as ContextPayload }))
+    } catch {
+      setContextError(UI_TEXT[language].contextUnavailable)
+      setContextByLanguage((prev) => ({ ...prev, [language]: null }))
+    } finally {
+      setContextLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!formattedReference || !verseText) return
 
     if (activeTab === 'compare') void loadCompare(false, appLanguage)
+    if (activeTab === 'context') void loadContext(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'word') void loadWordLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'tension') void loadTensionLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'phrase') void loadPhraseLens(false, appLanguage)
@@ -1136,6 +1230,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setArticleCopyStatus('idle')
     setCompareCopyStatus('idle')
     setCompareShareStatus('')
+    setContextCopyStatus('idle')
+    setContextShareStatus('')
 
     if (targetLanguage === 'en') {
       setAppLanguage('en')
@@ -1261,6 +1357,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const compareShareText = useMemo(() => {
     if (!compareData || !formattedReference) return ''
+
     return [
       formattedReference,
       '',
@@ -1279,6 +1376,22 @@ export default function VerseDetailPage({ params }: PageProps) {
       .filter(Boolean)
       .join('\n')
   }, [compareData, formattedReference, t.takeaway])
+
+  const contextShareText = useMemo(() => {
+    if (!contextData || !formattedReference) return ''
+
+    return [
+      formattedReference,
+      '',
+      contextData.lead,
+      '',
+      ...contextData.points.flatMap((point) => [point.title, point.text, '']),
+      t.takeaway,
+      contextData.takeaway,
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [contextData, formattedReference, t.takeaway])
 
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
@@ -1519,6 +1632,47 @@ export default function VerseDetailPage({ params }: PageProps) {
       }
     } catch {
       setCompareShareStatus('')
+    }
+  }
+
+  function handleContextBackToTop() {
+    if (articleTopRef.current) {
+      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  async function handleCopyContext() {
+    if (!contextShareText) return
+
+    try {
+      await navigator.clipboard.writeText(contextShareText)
+      setContextCopyStatus('copied')
+      setContextShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setContextCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setContextCopyStatus('failed')
+    }
+  }
+
+  async function handleShareContext() {
+    if (!contextShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: contextShareText })
+        setContextShareStatus(t.sharedAsText)
+        setContextCopyStatus('idle')
+      } else {
+        await navigator.clipboard.writeText(contextShareText)
+        setContextShareStatus(t.shareUnavailableCopiedInstead)
+        setContextCopyStatus('idle')
+      }
+    } catch {
+      setContextShareStatus('')
     }
   }
 
@@ -2018,12 +2172,115 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   function renderContextView() {
-    return renderStructuredPanel(
-      t.context,
-      t.contextLead,
-      t.contextPointLabel,
-      [t.contextPoint1, t.contextPoint2, t.contextPoint3],
-      t.contextTakeaway
+    if (contextLoading) {
+      return (
+        <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.loadingContext}
+            </p>
+            <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingContextText}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (contextError) {
+      return (
+        <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.context}
+            </p>
+            <p className="text-[1.08rem] leading-9 text-stone-800">{contextError}</p>
+
+            <button
+              type="button"
+              onClick={() => loadContext(true, appLanguage)}
+              className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+            >
+              {t.tryAgain}
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (!contextData) {
+      return renderStructuredPanel(
+        t.context,
+        t.contextLead,
+        t.contextPointLabel,
+        [t.contextPoint1, t.contextPoint2, t.contextPoint3],
+        t.contextTakeaway
+      )
+    }
+
+    return (
+      <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            {t.context}
+          </p>
+
+          <p className="text-[1rem] leading-8 text-stone-800">{contextData.lead}</p>
+
+          <div className="mt-5 space-y-4">
+            {contextData.points.map((point, index) => (
+              <div
+                key={`${point.title}-${index}`}
+                className="rounded-[20px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  {point.title}
+                </p>
+                <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{point.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+              {t.takeaway}
+            </p>
+            <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{contextData.takeaway}</p>
+          </div>
+
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={handleContextBackToTop}
+              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.backToTop}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyContext}
+              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {contextCopyStatus === 'copied'
+                ? t.copiedAnalysis
+                : contextCopyStatus === 'failed'
+                  ? t.copyFailed
+                  : t.copyAnalysis}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShareContext}
+              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.shareAnalysis}
+            </button>
+          </div>
+
+          {contextShareStatus && (
+            <p className="mt-3 text-center text-sm text-stone-500">{contextShareStatus}</p>
+          )}
+        </div>
+      </div>
     )
   }
 
