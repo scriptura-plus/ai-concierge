@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 type ComparePoint = {
   title: string;
+  labelA: string;
+  quoteA: string;
+  labelB: string;
+  quoteB: string;
   text: string;
 };
 
@@ -46,7 +50,21 @@ This is NOT preaching.
 This is a focused comparison of translation wording choices and the meaning shifts they create.
 
 CORE PRINCIPLE:
-Look for real translation-sensitive differences such as:
+This mode must SHOW the comparison, not merely describe it.
+
+That means each comparison point must include:
+- two short compared translation fragments
+- short labels naming the translation line or version family
+- a compact explanation of why the difference matters
+
+LEGAL / FORMAT DISCIPLINE:
+- Use only SHORT micro-quotations
+- Each quoted fragment should normally be about 2-8 words
+- Do not reproduce long verse quotations
+- Do not paste multiple full translations
+- Only quote the exact small wording units needed for comparison
+
+WHAT TO LOOK FOR:
 - wording choice
 - explanatory vs direct phrasing
 - formal vs dynamic rendering
@@ -64,6 +82,7 @@ DO:
 - Show why the difference matters for reading
 - Be compact and disciplined
 - Keep the whole output readable on a mobile screen
+- Make the compared fragments feel visibly different
 
 DO NOT:
 - Invent differences that are not meaningful
@@ -71,8 +90,8 @@ DO NOT:
 - Produce vague filler
 - Turn this into a sermon
 - Over-explain
-- Use bullet points in the output JSON text
 - Use markdown
+- Use long quotations
 
 FORMAT:
 Return ONE JSON object with this exact structure:
@@ -81,6 +100,10 @@ Return ONE JSON object with this exact structure:
   "points": [
     {
       "title": "short sharp label",
+      "labelA": "short source label",
+      "quoteA": "very short quotation fragment",
+      "labelB": "short source label",
+      "quoteB": "very short quotation fragment",
       "text": "3-5 sentences"
     }
   ],
@@ -92,6 +115,8 @@ RULES FOR CONTENT:
 - points: produce exactly 4 points
 - each point must identify one meaningful comparison axis
 - each point title should be compact and distinctive
+- each point must include two visible compared fragments
+- labels can be things like "NWT", "ESV/NASB", "Formal", "Dynamic", etc.
 - takeaway: gather the result into one clear final reading
 - every paragraph must be precise and readable
 - no markdown
@@ -100,7 +125,7 @@ RULES FOR CONTENT:
 
 QUALITY TEST:
 The reader should feel:
-"I now understand what kind of translation pressure lives inside this verse."
+"I can now SEE the translation difference, not just read a description of it."
 
 `.trim();
 }
@@ -117,6 +142,10 @@ function isValidComparePayload(data: any): data is ComparePayload {
         item &&
         typeof item === "object" &&
         typeof item.title === "string" &&
+        typeof item.labelA === "string" &&
+        typeof item.quoteA === "string" &&
+        typeof item.labelB === "string" &&
+        typeof item.quoteB === "string" &&
         typeof item.text === "string"
     ) &&
     typeof data.takeaway === "string"
@@ -132,9 +161,21 @@ function cleanComparePayload(data: any): ComparePayload | null {
   const points = data.points
     .map((item: any) => ({
       title: String(item.title ?? "").trim(),
+      labelA: String(item.labelA ?? "").trim(),
+      quoteA: String(item.quoteA ?? "").trim(),
+      labelB: String(item.labelB ?? "").trim(),
+      quoteB: String(item.quoteB ?? "").trim(),
       text: String(item.text ?? "").trim(),
     }))
-    .filter((item: ComparePoint) => item.title && item.text)
+    .filter(
+      (item: ComparePoint) =>
+        item.title &&
+        item.labelA &&
+        item.quoteA &&
+        item.labelB &&
+        item.quoteB &&
+        item.text
+    )
     .slice(0, 4);
 
   if (!lead || !takeaway || points.length === 0) {
@@ -219,7 +260,7 @@ export async function POST(req: Request) {
             content: prompt,
           },
         ],
-        max_output_tokens: 2600,
+        max_output_tokens: 3000,
       }),
     });
 
