@@ -120,7 +120,7 @@ const UI_TEXT: Record<
     translating: string
 
     insights: string
-    compare: string
+    translations: string
     context: string
     lens: string
 
@@ -151,9 +151,9 @@ const UI_TEXT: Record<
     articleShared: string
     shareUnavailableArticleCopied: string
 
-    compareLead: string
-    compareTakeaway: string
-    compareDiffLabel: string
+    translationsLead: string
+    translationsTakeaway: string
+    translationsDiffLabel: string
 
     contextLead: string
     contextTakeaway: string
@@ -179,9 +179,9 @@ const UI_TEXT: Record<
     lensLeadDefault: string
     lensTakeawayDefault: string
 
-    comparePoint1: string
-    comparePoint2: string
-    comparePoint3: string
+    translationsPoint1: string
+    translationsPoint2: string
+    translationsPoint3: string
 
     contextPoint1: string
     contextPoint2: string
@@ -203,9 +203,9 @@ const UI_TEXT: Record<
     loadingPhraseLensText: string
     phraseLensUnavailable: string
 
-    loadingCompare: string
-    loadingCompareText: string
-    compareUnavailable: string
+    loadingTranslations: string
+    loadingTranslationsText: string
+    translationsUnavailable: string
 
     loadingContext: string
     loadingContextText: string
@@ -230,7 +230,7 @@ const UI_TEXT: Record<
     russian: 'Russian',
     translating: 'Translating...',
     insights: 'Insights',
-    compare: 'Compare',
+    translations: 'Translations',
     context: 'Context',
     lens: 'Lens',
     loadingInsight: 'Loading insight',
@@ -255,11 +255,11 @@ const UI_TEXT: Record<
     shareArticle: 'Share article',
     articleShared: 'Article shared',
     shareUnavailableArticleCopied: 'Share unavailable — article copied',
-    compareLead:
+    translationsLead:
       'This mode will compare translation choices and surface where wording moves the reader’s attention in different directions.',
-    compareTakeaway:
-      'Compare should feel like a reading tool, not a raw list of translations.',
-    compareDiffLabel: 'Difference',
+    translationsTakeaway:
+      'Translations should feel like a reading tool, not a raw list of versions.',
+    translationsDiffLabel: 'Difference',
     contextLead:
       'This mode will surface only the context that materially changes the reading of the verse.',
     contextTakeaway:
@@ -280,10 +280,10 @@ const UI_TEXT: Record<
     takeaway: 'Takeaway',
     lensLeadDefault: 'Choose a focused lens to read this verse through one angle.',
     lensTakeawayDefault: 'Lens is the focused-reading family, not just a reroll button.',
-    comparePoint1: 'A short lead will name the main translation tension in the verse.',
-    comparePoint2:
+    translationsPoint1: 'A short lead will name the main translation tension in the verse.',
+    translationsPoint2:
       'The final version will show 3–5 compact comparison points instead of one dense block.',
-    comparePoint3:
+    translationsPoint3:
       'A short takeaway will explain why those differences matter for reading the verse.',
     contextPoint1:
       'The final version will identify the main context type that matters most here.',
@@ -304,10 +304,10 @@ const UI_TEXT: Record<
     loadingPhraseLens: 'Loading Why This Phrase lens',
     loadingPhraseLensText: 'Reading the verse through the force of its exact phrasing…',
     phraseLensUnavailable: 'Unable to load Why This Phrase lens.',
-    loadingCompare: 'Loading Compare mode',
-    loadingCompareText:
+    loadingTranslations: 'Loading Translations mode',
+    loadingTranslationsText:
       'Comparing translation pressure, wording choices, and shifts in emphasis…',
-    compareUnavailable: 'Unable to load Compare mode.',
+    translationsUnavailable: 'Unable to load Translations mode.',
     loadingContext: 'Loading Context mode',
     loadingContextText:
       'Tracing the immediate forces, flow, and setting that sharpen the verse…',
@@ -329,7 +329,7 @@ const UI_TEXT: Record<
     russian: 'Русский',
     translating: 'Перевод...',
     insights: 'Инсайты',
-    compare: 'Сравнение',
+    translations: 'Переводы',
     context: 'Контекст',
     lens: 'Линза',
     loadingInsight: 'Загрузка инсайта',
@@ -354,11 +354,11 @@ const UI_TEXT: Record<
     shareArticle: 'Поделиться статьёй',
     articleShared: 'Статья отправлена',
     shareUnavailableArticleCopied: 'Поделиться нельзя — статья скопирована',
-    compareLead:
+    translationsLead:
       'Этот режим будет сравнивать переводческие решения и показывать, как формулировка направляет внимание читателя в разные стороны.',
-    compareTakeaway:
-      'Сравнение должно ощущаться как инструмент чтения, а не как сырой список переводов.',
-    compareDiffLabel: 'Различие',
+    translationsTakeaway:
+      '«Переводы» должны ощущаться как инструмент чтения, а не как сырой список версий.',
+    translationsDiffLabel: 'Различие',
     contextLead:
       'Этот режим будет показывать только тот контекст, который реально меняет чтение стиха.',
     contextTakeaway:
@@ -380,11 +380,11 @@ const UI_TEXT: Record<
     lensLeadDefault:
       'Выберите сфокусированную линзу, чтобы посмотреть на этот стих под одним углом.',
     lensTakeawayDefault: '«Линза» — это семейство сфокусированного чтения, а не просто кнопка reroll.',
-    comparePoint1:
+    translationsPoint1:
       'Короткий lead будет называть главное переводческое напряжение в стихе.',
-    comparePoint2:
+    translationsPoint2:
       'Финальная версия покажет 3–5 компактных различий вместо одного плотного блока.',
-    comparePoint3:
+    translationsPoint3:
       'Короткий вывод объяснит, почему эти различия важны для чтения стиха.',
     contextPoint1:
       'Финальная версия определит, какой тип контекста здесь важнее всего.',
@@ -406,10 +406,10 @@ const UI_TEXT: Record<
     loadingPhraseLensText:
       'Смотрим на стих через силу его точной формулировки…',
     phraseLensUnavailable: 'Не удалось загрузить линзу «Почему именно эта фраза».',
-    loadingCompare: 'Загрузка режима «Сравнение»',
-    loadingCompareText:
+    loadingTranslations: 'Загрузка режима «Переводы»',
+    loadingTranslationsText:
       'Сравниваем переводческое давление, выбор формулировок и сдвиги акцента…',
-    compareUnavailable: 'Не удалось загрузить режим «Сравнение».',
+    translationsUnavailable: 'Не удалось загрузить режим «Переводы».',
     loadingContext: 'Загрузка режима «Контекст»',
     loadingContextText:
       'Отслеживаем ближайшие силы, ход мысли и обстановку, которые заостряют чтение стиха…',
@@ -431,7 +431,7 @@ const UI_TEXT: Record<
     russian: 'Ruso',
     translating: 'Traduciendo...',
     insights: 'Ideas',
-    compare: 'Comparar',
+    translations: 'Traducciones',
     context: 'Contexto',
     lens: 'Lente',
     loadingInsight: 'Cargando idea',
@@ -456,11 +456,11 @@ const UI_TEXT: Record<
     shareArticle: 'Compartir artículo',
     articleShared: 'Artículo compartido',
     shareUnavailableArticleCopied: 'No se puede compartir — artículo copiado',
-    compareLead:
+    translationsLead:
       'Este modo comparará decisiones de traducción y mostrará cómo la redacción dirige la atención del lector en distintas direcciones.',
-    compareTakeaway:
-      'Comparar debe sentirse como una herramienta de lectura, no como una lista bruta de traducciones.',
-    compareDiffLabel: 'Diferencia',
+    translationsTakeaway:
+      'Traducciones debe sentirse como una herramienta de lectura, no como una lista bruta de versiones.',
+    translationsDiffLabel: 'Diferencia',
     contextLead:
       'Este modo mostrará solo el contexto que realmente cambia la lectura del versículo.',
     contextTakeaway:
@@ -482,11 +482,11 @@ const UI_TEXT: Record<
     lensLeadDefault:
       'Elige una lente enfocada para leer este versículo desde un solo ángulo.',
     lensTakeawayDefault: 'Lente es la familia de lectura enfocada, no solo un botón de repetir.',
-    comparePoint1:
+    translationsPoint1:
       'Un lead breve nombrará la tensión principal de traducción en el versículo.',
-    comparePoint2:
+    translationsPoint2:
       'La versión final mostrará 3–5 puntos de comparación compactos en vez de un bloque denso.',
-    comparePoint3:
+    translationsPoint3:
       'Una conclusión breve explicará por qué esas diferencias importan para leer el versículo.',
     contextPoint1:
       'La versión final identificará qué tipo de contexto importa más aquí.',
@@ -508,10 +508,10 @@ const UI_TEXT: Record<
     loadingPhraseLensText:
       'Leyendo el versículo a través de la fuerza de su formulación exacta…',
     phraseLensUnavailable: 'No se pudo cargar la lente Por qué esta frase.',
-    loadingCompare: 'Cargando modo Comparar',
-    loadingCompareText:
+    loadingTranslations: 'Cargando modo Traducciones',
+    loadingTranslationsText:
       'Comparando presión de traducción, elecciones de redacción y cambios de énfasis…',
-    compareUnavailable: 'No se pudo cargar el modo Comparar.',
+    translationsUnavailable: 'No se pudo cargar el modo Traducciones.',
     loadingContext: 'Cargando modo Contexto',
     loadingContextText:
       'Siguiendo las fuerzas inmediatas, el flujo y el marco que afinan la lectura del versículo…',
@@ -533,7 +533,7 @@ const UI_TEXT: Record<
     russian: 'Russe',
     translating: 'Traduction...',
     insights: 'Insights',
-    compare: 'Comparer',
+    translations: 'Traductions',
     context: 'Contexte',
     lens: 'Lentille',
     loadingInsight: 'Chargement de l’insight',
@@ -558,11 +558,11 @@ const UI_TEXT: Record<
     shareArticle: 'Partager l’article',
     articleShared: 'Article partagé',
     shareUnavailableArticleCopied: 'Partage indisponible — article copié',
-    compareLead:
+    translationsLead:
       'Ce mode comparera les choix de traduction et montrera comment la formulation déplace l’attention du lecteur.',
-    compareTakeaway:
-      'Comparer doit ressembler à un outil de lecture, pas à une simple liste brute.',
-    compareDiffLabel: 'Différence',
+    translationsTakeaway:
+      'Traductions doit ressembler à un outil de lecture, pas à une simple liste brute.',
+    translationsDiffLabel: 'Différence',
     contextLead:
       'Ce mode ne montrera que le contexte qui change réellement la lecture du verset.',
     contextTakeaway:
@@ -583,10 +583,10 @@ const UI_TEXT: Record<
     takeaway: 'Conclusion',
     lensLeadDefault: 'Choisissez une lentille ciblée pour lire ce verset sous un angle précis.',
     lensTakeawayDefault: 'La lentille est une famille de lecture ciblée, pas juste un reroll.',
-    comparePoint1: 'Un court lead nommera la tension principale de traduction.',
-    comparePoint2:
+    translationsPoint1: 'Un court lead nommera la tension principale de traduction.',
+    translationsPoint2:
       'La version finale montrera 3–5 points compacts au lieu d’un bloc dense.',
-    comparePoint3:
+    translationsPoint3:
       'Une courte conclusion expliquera pourquoi ces différences comptent.',
     contextPoint1:
       'La version finale identifiera le type de contexte le plus important ici.',
@@ -608,10 +608,10 @@ const UI_TEXT: Record<
     loadingPhraseLensText:
       'Lecture du verset à travers la force de sa formulation exacte…',
     phraseLensUnavailable: 'Impossible de charger la lentille Pourquoi cette phrase.',
-    loadingCompare: 'Chargement du mode Comparer',
-    loadingCompareText:
+    loadingTranslations: 'Chargement du mode Traductions',
+    loadingTranslationsText:
       'Comparaison de la pression de traduction, des choix de formulation et des déplacements d’accent…',
-    compareUnavailable: 'Impossible de charger le mode Comparer.',
+    translationsUnavailable: 'Impossible de charger le mode Traductions.',
     loadingContext: 'Chargement du mode Contexte',
     loadingContextText:
       'Repérage des forces immédiates, du mouvement et du cadre qui affinent la lecture du verset…',
@@ -633,7 +633,7 @@ const UI_TEXT: Record<
     russian: 'Russisch',
     translating: 'Übersetzung...',
     insights: 'Insights',
-    compare: 'Vergleich',
+    translations: 'Übersetzungen',
     context: 'Kontext',
     lens: 'Linse',
     loadingInsight: 'Insight wird geladen',
@@ -658,11 +658,11 @@ const UI_TEXT: Record<
     shareArticle: 'Artikel teilen',
     articleShared: 'Artikel geteilt',
     shareUnavailableArticleCopied: 'Teilen nicht verfügbar — Artikel kopiert',
-    compareLead:
+    translationsLead:
       'Dieser Modus vergleicht Übersetzungsentscheidungen und zeigt, wie Formulierungen die Aufmerksamkeit verschieben.',
-    compareTakeaway:
-      'Vergleich sollte sich wie ein Lesewerkzeug anfühlen, nicht wie eine rohe Liste.',
-    compareDiffLabel: 'Unterschied',
+    translationsTakeaway:
+      'Übersetzungen sollte sich wie ein Lesewerkzeug anfühlen, nicht wie eine rohe Liste.',
+    translationsDiffLabel: 'Unterschied',
     contextLead:
       'Dieser Modus zeigt nur den Kontext, der die Lesart des Verses wirklich verändert.',
     contextTakeaway:
@@ -683,11 +683,11 @@ const UI_TEXT: Record<
     takeaway: 'Fazit',
     lensLeadDefault: 'Wähle eine fokussierte Linse, um diesen Vers aus einem Blickwinkel zu lesen.',
     lensTakeawayDefault: 'Die Linse ist eine fokussierte Lesefamilie, nicht nur ein Reroll.',
-    comparePoint1:
+    translationsPoint1:
       'Ein kurzer Lead benennt die wichtigste Übersetzungsspannung im Vers.',
-    comparePoint2:
+    translationsPoint2:
       'Die endgültige Version zeigt 3–5 kompakte Vergleichspunkte statt eines dichten Blocks.',
-    comparePoint3:
+    translationsPoint3:
       'Ein kurzes Fazit erklärt, warum diese Unterschiede für die Lesart wichtig sind.',
     contextPoint1:
       'Die endgültige Version identifiziert den wichtigsten Kontexttyp an dieser Stelle.',
@@ -709,10 +709,10 @@ const UI_TEXT: Record<
     loadingPhraseLensText:
       'Der Vers wird durch die Kraft seiner genauen Formulierung gelesen…',
     phraseLensUnavailable: 'Linse Warum diese Formulierung konnte nicht geladen werden.',
-    loadingCompare: 'Vergleichsmodus wird geladen',
-    loadingCompareText:
+    loadingTranslations: 'Übersetzungsmodus wird geladen',
+    loadingTranslationsText:
       'Übersetzungsdruck, Formulierungswahl und Akzentverschiebungen werden verglichen…',
-    compareUnavailable: 'Vergleichsmodus konnte nicht geladen werden.',
+    translationsUnavailable: 'Übersetzungsmodus konnte nicht geladen werden.',
     loadingContext: 'Kontextmodus wird geladen',
     loadingContextText:
       'Unmittelbare Kräfte, Bewegungen und Rahmen werden verfolgt, die die Lesart des Verses schärfen…',
@@ -1199,7 +1199,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       if (requestId !== compareRequestIdRef.current) return
 
       if (!res.ok || !data.compare || !Array.isArray(data.compare.points)) {
-        setCompareError(data.error || UI_TEXT[language].compareUnavailable)
+        setCompareError(data.error || UI_TEXT[language].translationsUnavailable)
         setCompareByLanguage((prev) => ({ ...prev, [language]: null }))
         return
       }
@@ -1207,7 +1207,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setCompareByLanguage((prev) => ({ ...prev, [language]: data.compare as ComparePayload }))
     } catch {
       if (requestId !== compareRequestIdRef.current) return
-      setCompareError(UI_TEXT[language].compareUnavailable)
+      setCompareError(UI_TEXT[language].translationsUnavailable)
       setCompareByLanguage((prev) => ({ ...prev, [language]: null }))
     } finally {
       if (requestId === compareRequestIdRef.current) {
@@ -2094,9 +2094,9 @@ export default function VerseDetailPage({ params }: PageProps) {
         <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
           <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
             <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.loadingCompare}
+              {t.loadingTranslations}
             </p>
-            <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingCompareText}</p>
+            <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingTranslationsText}</p>
           </div>
         </div>
       )
@@ -2107,7 +2107,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
           <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
             <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.compare}
+              {t.translations}
             </p>
             <p className="text-[1.08rem] leading-9 text-stone-800">{compareError}</p>
 
@@ -2125,11 +2125,11 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     if (!compareData) {
       return renderStructuredPanel(
-        t.compare,
-        t.compareLead,
-        t.compareDiffLabel,
-        [t.comparePoint1, t.comparePoint2, t.comparePoint3],
-        t.compareTakeaway
+        t.translations,
+        t.translationsLead,
+        t.translationsDiffLabel,
+        [t.translationsPoint1, t.translationsPoint2, t.translationsPoint3],
+        t.translationsTakeaway
       )
     }
 
@@ -2137,7 +2137,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       <div className="tab-panel-enter card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
           <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-            {t.compare}
+            {t.translations}
           </p>
 
           <p className="text-[1rem] leading-8 text-stone-800">{compareData.lead}</p>
@@ -2552,7 +2552,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             setActiveTab('insights')
             setLensSheetOpen(false)
           })}
-          {renderTabButton(t.compare, activeTab === 'compare', () => {
+          {renderTabButton(t.translations, activeTab === 'compare', () => {
             setActiveTab('compare')
             setLensSheetOpen(false)
             setActiveArticleKey('')
