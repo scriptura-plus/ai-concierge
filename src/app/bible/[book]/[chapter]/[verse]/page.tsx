@@ -672,10 +672,12 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
-  function renderPlaceholderPanel(
+  function renderStructuredPanel(
     title: string,
     lead: string,
+    labelPrefix: string,
     points: string[],
+    takeaway: string,
     extraAction?: React.ReactNode
   ) {
     return (
@@ -697,11 +699,45 @@ export default function VerseDetailPage({ params }: PageProps) {
                 className="rounded-[20px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Point {index + 1}
+                  {labelPrefix} {index + 1}
                 </p>
                 <p className="mt-2 text-[0.98rem] leading-7 text-stone-800">{point}</p>
               </div>
             ))}
+          </div>
+
+          <div className="mt-6 rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+              Takeaway
+            </p>
+            <p className="mt-2 text-[0.98rem] leading-7 text-stone-800">{takeaway}</p>
+          </div>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Deepen
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Comment
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Copy
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Share
+            </button>
           </div>
         </div>
       </div>
@@ -977,26 +1013,30 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   function renderCompareView() {
-    return renderPlaceholderPanel(
+    return renderStructuredPanel(
       'Compare',
       'This mode will compare translation choices and surface where wording moves the reader’s attention in different directions.',
+      'Difference',
       [
         'A short lead will name the main translation tension in the verse.',
         'The final version will show 3–5 compact comparison points instead of one dense block.',
         'A short takeaway will explain why those differences matter for reading the verse.',
-      ]
+      ],
+      'Compare should feel like a reading tool, not a raw list of translations.'
     )
   }
 
   function renderContextView() {
-    return renderPlaceholderPanel(
+    return renderStructuredPanel(
       'Context',
       'This mode will surface only the context that materially changes the reading of the verse.',
+      'Context point',
       [
         'The final version will identify the main context type that matters most here.',
         'It will present 3–5 compact context points, not a heavy encyclopedia panel.',
         'A final takeaway will explain how context changes the force of the verse.',
-      ]
+      ],
+      'Context should clarify why the verse sounds the way it does inside its real setting.'
     )
   }
 
@@ -1044,10 +1084,21 @@ export default function VerseDetailPage({ params }: PageProps) {
                 'This screen is ready; the lens content comes next.',
               ]
 
-    return renderPlaceholderPanel(
+    const takeaway =
+      selectedLens === 'word'
+        ? 'Word should reveal hidden textual weight without turning into a dry lexicon.'
+        : selectedLens === 'tension'
+          ? 'Tension should surface real internal pressure in the verse, not invented drama.'
+          : selectedLens === 'phrase'
+            ? 'Why This Phrase should explain why the wording itself carries meaning.'
+            : 'Another Lens is the focused-reading family, not just a reroll button.'
+
+    return renderStructuredPanel(
       `Lens: ${lensLabel}`,
       lead,
+      'Lens point',
       points,
+      takeaway,
       <button
         type="button"
         onClick={() => setLensSheetOpen(true)}
