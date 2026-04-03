@@ -190,6 +190,10 @@ const UI_TEXT: Record<
     loadingTensionLensText: string
     tensionLensUnavailable: string
 
+    loadingPhraseLens: string
+    loadingPhraseLensText: string
+    phraseLensUnavailable: string
+
     tryAgain: string
     lensLabel: string
   }
@@ -335,6 +339,11 @@ const UI_TEXT: Record<
     loadingTensionLensText:
       'Reading the verse through its pressure points, contrasts, and surprises…',
     tensionLensUnavailable: 'Unable to load Tension lens.',
+
+    loadingPhraseLens: 'Loading Why This Phrase lens',
+    loadingPhraseLensText:
+      'Reading the verse through the force of its exact phrasing…',
+    phraseLensUnavailable: 'Unable to load Why This Phrase lens.',
 
     tryAgain: 'Try again',
     lensLabel: 'Lens',
@@ -484,6 +493,11 @@ const UI_TEXT: Record<
       'Смотрим на стих через его точки напряжения, контрасты и неожиданные повороты…',
     tensionLensUnavailable: 'Не удалось загрузить линзу «Напряжение».',
 
+    loadingPhraseLens: 'Загрузка линзы «Почему именно эта фраза»',
+    loadingPhraseLensText:
+      'Смотрим на стих через силу его точной формулировки…',
+    phraseLensUnavailable: 'Не удалось загрузить линзу «Почему именно эта фраза».',
+
     tryAgain: 'Попробовать снова',
     lensLabel: 'Линза',
   },
@@ -632,6 +646,11 @@ const UI_TEXT: Record<
       'Leyendo el versículo a través de sus tensiones, contrastes y sorpresas…',
     tensionLensUnavailable: 'No se pudo cargar la lente Tensión.',
 
+    loadingPhraseLens: 'Cargando lente Por qué esta frase',
+    loadingPhraseLensText:
+      'Leyendo el versículo a través de la fuerza de su formulación exacta…',
+    phraseLensUnavailable: 'No se pudo cargar la lente Por qué esta frase.',
+
     tryAgain: 'Intentar de nuevo',
     lensLabel: 'Lente',
   },
@@ -648,6 +667,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [insights, setInsights] = useState<InsightItem[]>([])
   const [wordLensCards, setWordLensCards] = useState<InsightItem[]>([])
   const [tensionLensCards, setTensionLensCards] = useState<InsightItem[]>([])
+  const [phraseLensCards, setPhraseLensCards] = useState<InsightItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const [loading, setLoading] = useState(true)
@@ -658,6 +678,8 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [wordLensError, setWordLensError] = useState('')
   const [tensionLensLoading, setTensionLensLoading] = useState(false)
   const [tensionLensError, setTensionLensError] = useState('')
+  const [phraseLensLoading, setPhraseLensLoading] = useState(false)
+  const [phraseLensError, setPhraseLensError] = useState('')
 
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en')
   const [translationLoading, setTranslationLoading] = useState(false)
@@ -740,8 +762,10 @@ export default function VerseDetailPage({ params }: PageProps) {
       setInsights([])
       setWordLensCards([])
       setTensionLensCards([])
+      setPhraseLensCards([])
       setWordLensError('')
       setTensionLensError('')
+      setPhraseLensError('')
       setCurrentIndex(0)
       setTranslationLoading(false)
       setTranslationError('')
@@ -811,8 +835,11 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (activeTab === 'another-lens' && selectedLens === 'tension') {
       return tensionLensCards
     }
+    if (activeTab === 'another-lens' && selectedLens === 'phrase') {
+      return phraseLensCards
+    }
     return insights
-  }, [activeTab, selectedLens, wordLensCards, tensionLensCards, insights])
+  }, [activeTab, selectedLens, wordLensCards, tensionLensCards, phraseLensCards, insights])
 
   const currentInsight = useMemo(() => currentCards[currentIndex], [currentCards, currentIndex])
 
@@ -1323,6 +1350,43 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function loadPhraseLens(force = false) {
+    if (!formattedReference || !verseText) return
+    if (!force && phraseLensCards.length > 0) return
+
+    setPhraseLensLoading(true)
+    setPhraseLensError('')
+    setCurrentIndex(0)
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/phrase-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: appLanguage,
+        }),
+      })
+
+      const data: LensApiResponse = await res.json()
+
+      if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
+        setPhraseLensError(data.error || t.phraseLensUnavailable)
+        setPhraseLensCards([])
+        return
+      }
+
+      setPhraseLensCards(data.cards)
+    } catch {
+      setPhraseLensError(t.phraseLensUnavailable)
+      setPhraseLensCards([])
+    } finally {
+      setPhraseLensLoading(false)
+    }
+  }
+
   async function handleSelectLens(lens: LensKind) {
     setSelectedLens(lens)
     setLensSheetOpen(false)
@@ -1338,6 +1402,10 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     if (lens === 'tension') {
       await loadTensionLens()
+    }
+
+    if (lens === 'phrase') {
+      await loadPhraseLens()
     }
   }
 
@@ -2019,31 +2087,62 @@ export default function VerseDetailPage({ params }: PageProps) {
       return renderLiveLensCardView()
     }
 
-    const lensLabel = selectedLens === 'phrase' ? t.phrase : t.lensTitle
+    if (selectedLens === 'phrase') {
+      if (phraseLensLoading) {
+        return (
+          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {t.loadingPhraseLens}
+              </p>
+              <p className="text-[1.08rem] leading-9 text-stone-800">
+                {t.loadingPhraseLensText}
+              </p>
+            </div>
+          </div>
+        )
+      }
 
-    const lead = selectedLens === 'phrase' ? t.lensLeadPhrase : t.lensLeadDefault
+      if (phraseLensError) {
+        return (
+          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-stone-500">
+                  {t.lensLabel}: {t.phrase}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setLensSheetOpen(true)}
+                  className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+                >
+                  {t.change}
+                </button>
+              </div>
 
-    const points =
-      selectedLens === 'phrase'
-        ? [t.lensPoint1Phrase, t.lensPoint2Phrase, t.lensPoint3Phrase]
-        : [t.lensPoint1Default, t.lensPoint2Default, t.lensPoint3Default]
+              <p className="text-[1.08rem] leading-9 text-stone-800">{phraseLensError}</p>
 
-    const takeaway =
-      selectedLens === 'phrase' ? t.lensTakeawayPhrase : t.lensTakeawayDefault
+              <button
+                type="button"
+                onClick={() => loadPhraseLens(true)}
+                className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+              >
+                {t.tryAgain}
+              </button>
+            </div>
+          </div>
+        )
+      }
+
+      return renderLiveLensCardView()
+    }
 
     return renderStructuredPanel(
-      `${t.anotherLens}: ${lensLabel}`,
-      lead,
+      t.anotherLens,
+      t.lensLeadDefault,
       t.lensPointLabel,
-      points,
-      takeaway,
-      <button
-        type="button"
-        onClick={() => setLensSheetOpen(true)}
-        className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-      >
-        {t.change}
-      </button>
+      [t.lensPoint1Default, t.lensPoint2Default, t.lensPoint3Default],
+      t.lensTakeawayDefault
     )
   }
 
