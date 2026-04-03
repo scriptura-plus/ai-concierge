@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { runModel } from "@/lib/ai/run-model";
 
 type SupportedLanguage = "en" | "ru" | "es" | "fr" | "de";
 
@@ -10,10 +11,44 @@ type ArticlePayload = {
 };
 
 function languageInstruction(targetLanguage: SupportedLanguage) {
-  if (targetLanguage === "ru") return "Write the full output in Russian.";
-  if (targetLanguage === "es") return "Write the full output in Spanish.";
-  if (targetLanguage === "fr") return "Write the full output in French.";
-  if (targetLanguage === "de") return "Write the full output in German.";
+  if (targetLanguage === "ru") {
+    return `
+Write the full output in Russian.
+Every field must be in Russian:
+- title
+- lead
+- every body paragraph
+- quote if present
+
+Do not use English for the final answer.
+Do not leave headings or prose in English.
+`;
+  }
+
+  if (targetLanguage === "es") {
+    return `
+Write the full output in Spanish.
+Every field must be in Spanish.
+Do not use English for the final answer.
+`;
+  }
+
+  if (targetLanguage === "fr") {
+    return `
+Write the full output in French.
+Every field must be in French.
+Do not use English for the final answer.
+`;
+  }
+
+  if (targetLanguage === "de") {
+    return `
+Write the full output in German.
+Every field must be in German.
+Do not use English for the final answer.
+`;
+  }
+
   return "Write the full output in English.";
 }
 
@@ -66,24 +101,6 @@ STYLE:
 `.trim();
 }
 
-function extractOpenAIText(data: any): string {
-  if (typeof data?.output_text === "string" && data.output_text.trim()) {
-    return data.output_text.trim();
-  }
-
-  const pieces =
-    data?.output
-      ?.flatMap((item: any) => item?.content ?? [])
-      ?.map((part: any) => {
-        if (typeof part?.text === "string") return part.text;
-        if (typeof part?.output_text === "string") return part.output_text;
-        return "";
-      })
-      ?.filter(Boolean) ?? [];
-
-  return pieces.join("").trim();
-}
-
 function extractJsonObject(raw: string): string | null {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
@@ -118,6 +135,23 @@ function parseArticle(raw: string): ArticlePayload | null {
   }
 }
 
+function looksRussian(text: string): boolean {
+  const sample = text.slice(0, 700);
+  const cyrillicMatches = sample.match(/[А-Яа-яЁё]/g) ?? [];
+  return cyrillicMatches.length >= 12;
+}
+
+function articleLooksRussian(article: ArticlePayload): boolean {
+  const joined = [
+    article.title,
+    article.lead,
+    ...article.body,
+    article.quote ?? "",
+  ].join(" ");
+
+  return looksRussian(joined);
+}
+
 export async function POST(req: Request) {
   try {
     const {
@@ -127,15 +161,6 @@ export async function POST(req: Request) {
       insightText,
       targetLanguage,
     } = await req.json();
-
-    const apiKey = process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "OPENAI_API_KEY is missing." },
-        { status: 500 }
-      );
-    }
 
     const safeReference = String(reference ?? "").trim() || "Unknown reference";
     const safeVerseText = String(verseText ?? "").trim();
@@ -165,41 +190,46 @@ export async function POST(req: Request) {
       safeLanguage
     );
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-5.4-mini",
-        input: [{ role: "user", content: prompt }],
-        max_output_tokens: 2600,
-      }),
+    const result = await runModel({
+      prompt,
+      model: "gpt-5.4-mini",
+      maxOutputTokens: 2600,
     });
 
-    const responseText = await response.text();
-
-    if (!response.ok) {
+    if (!result.ok) {
       return NextResponse.json(
-        { error: "OpenAI request failed.", raw: responseText || "Empty OpenAI error response" },
+        {
+          error: result.error,
+          raw: result.raw || "",
+        },
         { status: 500 }
       );
     }
 
-    const data = JSON.parse(responseText);
-    const rawText = extractOpenAIText(data);
+    const rawText = result.rawText;
 
     let article = parseArticle(rawText);
 
     if (!article) {
       const extracted = extractJsonObject(rawText);
-      if (extracted) article = parseArticle(extracted);
+      if (extracted) {
+        article = parseArticle(extracted);
+      }
     }
 
     if (!article) {
       return NextResponse.json(
         { error: "Failed to parse article JSON.", raw: rawText || "Empty model response" },
+        { status: 500 }
+      );
+    }
+
+    if (safeLanguage === "ru" && !articleLooksRussian(article)) {
+      return NextResponse.json(
+        {
+          error: "Model did not return Russian content for article mode.",
+          raw: rawText || "Empty model response",
+        },
         { status: 500 }
       );
     }
