@@ -55,6 +55,10 @@ type LensApiResponse = {
 
 type ComparePoint = {
   title: string
+  labelA: string
+  quoteA: string
+  labelB: string
+  quoteB: string
   text: string
 }
 
@@ -215,6 +219,11 @@ const UI_TEXT: Record<
     loadingCompareText: string
     compareUnavailable: string
 
+    backToTop: string
+    copiedAnalysis: string
+    copyAnalysis: string
+    shareAnalysis: string
+
     tryAgain: string
     lensLabel: string
   }
@@ -232,7 +241,7 @@ const UI_TEXT: Record<
     insights: 'Insights',
     compare: 'Compare',
     context: 'Context',
-    anotherLens: 'Another Lens',
+    anotherLens: 'Lens',
 
     loadingInsight: 'Loading insight',
     loadingInsightText: 'Please wait while the insight cards are generated.',
@@ -273,7 +282,7 @@ const UI_TEXT: Record<
       'Context should clarify why the verse sounds the way it does inside its real setting.',
     contextPointLabel: 'Context point',
 
-    lensTitle: 'Another Lens',
+    lensTitle: 'Lens',
     chooseFocusedLens: 'Choose a focused lens',
     readThisVerseOneAngle: 'Read this verse through one angle.',
     close: 'Close',
@@ -304,8 +313,7 @@ const UI_TEXT: Record<
       'Tension should surface real internal pressure in the verse, not invented drama.',
     lensTakeawayPhrase:
       'Why This Phrase should explain why the wording itself carries meaning.',
-    lensTakeawayDefault:
-      'Another Lens is the focused-reading family, not just a reroll button.',
+    lensTakeawayDefault: 'Lens is the focused-reading family, not just a reroll button.',
 
     point: 'Point',
     difference: 'Difference',
@@ -371,6 +379,11 @@ const UI_TEXT: Record<
       'Comparing translation pressure, wording choices, and shifts in emphasis…',
     compareUnavailable: 'Unable to load Compare mode.',
 
+    backToTop: 'Back to top',
+    copiedAnalysis: 'Analysis copied',
+    copyAnalysis: 'Copy analysis',
+    shareAnalysis: 'Share analysis',
+
     tryAgain: 'Try again',
     lensLabel: 'Lens',
   },
@@ -387,7 +400,7 @@ const UI_TEXT: Record<
     insights: 'Инсайты',
     compare: 'Сравнение',
     context: 'Контекст',
-    anotherLens: 'Другая линза',
+    anotherLens: 'Линза',
 
     loadingInsight: 'Загрузка инсайта',
     loadingInsightText: 'Подождите, пока генерируются карточки инсайтов.',
@@ -428,7 +441,7 @@ const UI_TEXT: Record<
       'Контекст должен объяснять, почему стих звучит именно так в своей реальной среде.',
     contextPointLabel: 'Пункт контекста',
 
-    lensTitle: 'Другая линза',
+    lensTitle: 'Линза',
     chooseFocusedLens: 'Выберите сфокусированную линзу',
     readThisVerseOneAngle: 'Посмотрите на этот стих под одним углом.',
     close: 'Закрыть',
@@ -460,8 +473,7 @@ const UI_TEXT: Record<
       'Линза «Напряжение» должна находить реальное внутреннее напряжение стиха, а не выдуманную драму.',
     lensTakeawayPhrase:
       'Линза «Почему именно эта фраза» должна объяснять, почему сама формулировка несёт смысл.',
-    lensTakeawayDefault:
-      '«Другая линза» — это семейство сфокусированного чтения, а не просто кнопка reroll.',
+    lensTakeawayDefault: '«Линза» — это семейство сфокусированного чтения, а не просто кнопка reroll.',
 
     point: 'Пункт',
     difference: 'Различие',
@@ -529,6 +541,11 @@ const UI_TEXT: Record<
       'Сравниваем переводческое давление, выбор формулировок и сдвиги акцента…',
     compareUnavailable: 'Не удалось загрузить режим «Сравнение».',
 
+    backToTop: 'Наверх',
+    copiedAnalysis: 'Анализ скопирован',
+    copyAnalysis: 'Копировать анализ',
+    shareAnalysis: 'Поделиться анализом',
+
     tryAgain: 'Попробовать снова',
     lensLabel: 'Линза',
   },
@@ -545,7 +562,7 @@ const UI_TEXT: Record<
     insights: 'Ideas',
     compare: 'Comparar',
     context: 'Contexto',
-    anotherLens: 'Otra lente',
+    anotherLens: 'Lente',
 
     loadingInsight: 'Cargando idea',
     loadingInsightText: 'Espera mientras se generan las tarjetas de ideas.',
@@ -586,7 +603,7 @@ const UI_TEXT: Record<
       'El contexto debe aclarar por qué el versículo suena así dentro de su escenario real.',
     contextPointLabel: 'Punto de contexto',
 
-    lensTitle: 'Otra lente',
+    lensTitle: 'Lente',
     chooseFocusedLens: 'Elige una lente enfocada',
     readThisVerseOneAngle: 'Lee este versículo desde un solo ángulo.',
     close: 'Cerrar',
@@ -618,8 +635,7 @@ const UI_TEXT: Record<
       'Tensión debe mostrar presión interna real en el versículo, no drama inventado.',
     lensTakeawayPhrase:
       'Por qué esta frase debe explicar por qué la formulación misma lleva significado.',
-    lensTakeawayDefault:
-      'Otra lente es la familia de lectura enfocada, no solo un botón de repetir.',
+    lensTakeawayDefault: 'Lente es la familia de lectura enfocada, no solo un botón de repetir.',
 
     point: 'Punto',
     difference: 'Diferencia',
@@ -687,6 +703,11 @@ const UI_TEXT: Record<
       'Comparando presión de traducción, elecciones de redacción y cambios de énfasis…',
     compareUnavailable: 'No se pudo cargar el modo Comparar.',
 
+    backToTop: 'Volver arriba',
+    copiedAnalysis: 'Análisis copiado',
+    copyAnalysis: 'Copiar análisis',
+    shareAnalysis: 'Compartir análisis',
+
     tryAgain: 'Intentar de nuevo',
     lensLabel: 'Lente',
   },
@@ -709,6 +730,8 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [compareData, setCompareData] = useState<ComparePayload | null>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   const [compareError, setCompareError] = useState('')
+  const [compareCopyStatus, setCompareCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [compareShareStatus, setCompareShareStatus] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -805,6 +828,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       setPhraseLensCards([])
       setCompareData(null)
       setCompareError('')
+      setCompareCopyStatus('idle')
+      setCompareShareStatus('')
       setWordLensError('')
       setTensionLensError('')
       setPhraseLensError('')
@@ -1102,6 +1127,28 @@ export default function VerseDetailPage({ params }: PageProps) {
     return `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
   }, [book, chapter, verse])
 
+  const compareShareText = useMemo(() => {
+    if (!compareData || !formattedReference) return ''
+
+    return [
+      formattedReference,
+      '',
+      compareData.lead,
+      '',
+      ...compareData.points.flatMap((point) => [
+        point.title,
+        `${point.labelA}: "${point.quoteA}"`,
+        `${point.labelB}: "${point.quoteB}"`,
+        point.text,
+        '',
+      ]),
+      t.takeaway,
+      compareData.takeaway,
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [compareData, formattedReference, t.takeaway])
+
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
     const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
@@ -1309,6 +1356,50 @@ export default function VerseDetailPage({ params }: PageProps) {
       }
     } catch {
       setShareStatus('')
+    }
+  }
+
+  function handleCompareBackToTop() {
+    if (articleTopRef.current) {
+      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  async function handleCopyCompare() {
+    if (!compareShareText) return
+
+    try {
+      await navigator.clipboard.writeText(compareShareText)
+      setCompareCopyStatus('copied')
+      setCompareShareStatus('')
+
+      if (copyTimerRef.current) {
+        window.clearTimeout(copyTimerRef.current)
+      }
+
+      copyTimerRef.current = window.setTimeout(() => {
+        setCompareCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setCompareCopyStatus('failed')
+    }
+  }
+
+  async function handleShareCompare() {
+    if (!compareShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: compareShareText })
+        setCompareShareStatus(t.sharedAsText)
+        setCompareCopyStatus('idle')
+      } else {
+        await navigator.clipboard.writeText(compareShareText)
+        setCompareShareStatus(t.shareUnavailableCopiedInstead)
+        setCompareCopyStatus('idle')
+      }
+    } catch {
+      setCompareShareStatus('')
     }
   }
 
@@ -2086,16 +2177,33 @@ export default function VerseDetailPage({ params }: PageProps) {
 
           <p className="text-[1rem] leading-8 text-stone-800">{compareData.lead}</p>
 
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 space-y-4">
             {compareData.points.map((point, index) => (
               <div
                 key={`${point.title}-${index}`}
-                className="rounded-[18px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
+                className="rounded-[20px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
               >
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
                   {point.title}
                 </p>
-                <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{point.text}</p>
+
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-[16px] border border-stone-300/60 bg-[#fffaf1] px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
+                      {point.labelA}
+                    </p>
+                    <p className="mt-1 text-[1rem] leading-7 text-stone-900">“{point.quoteA}”</p>
+                  </div>
+
+                  <div className="rounded-[16px] border border-stone-300/60 bg-[#fffaf1] px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
+                      {point.labelB}
+                    </p>
+                    <p className="mt-1 text-[1rem] leading-7 text-stone-900">“{point.quoteB}”</p>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-[0.97rem] leading-7 text-stone-800">{point.text}</p>
               </div>
             ))}
           </div>
@@ -2106,6 +2214,40 @@ export default function VerseDetailPage({ params }: PageProps) {
             </p>
             <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{compareData.takeaway}</p>
           </div>
+
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={handleCompareBackToTop}
+              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.backToTop}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyCompare}
+              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {compareCopyStatus === 'copied'
+                ? t.copiedAnalysis
+                : compareCopyStatus === 'failed'
+                  ? t.copyFailed
+                  : t.copyAnalysis}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShareCompare}
+              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.shareAnalysis}
+            </button>
+          </div>
+
+          {compareShareStatus && (
+            <p className="mt-3 text-center text-sm text-stone-500">{compareShareStatus}</p>
+          )}
         </div>
       </div>
     )
