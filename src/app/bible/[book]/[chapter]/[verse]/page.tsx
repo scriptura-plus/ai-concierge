@@ -53,6 +53,23 @@ type LensApiResponse = {
   raw?: string
 }
 
+type ComparePoint = {
+  title: string
+  text: string
+}
+
+type ComparePayload = {
+  lead: string
+  points: ComparePoint[]
+  takeaway: string
+}
+
+type CompareApiResponse = {
+  compare?: ComparePayload
+  error?: string
+  raw?: string
+}
+
 type AppLanguage = 'en' | 'ru' | 'es'
 type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
 type TopTab = 'insights' | 'compare' | 'context' | 'another-lens'
@@ -193,6 +210,10 @@ const UI_TEXT: Record<
     loadingPhraseLens: string
     loadingPhraseLensText: string
     phraseLensUnavailable: string
+
+    loadingCompare: string
+    loadingCompareText: string
+    compareUnavailable: string
 
     tryAgain: string
     lensLabel: string
@@ -344,6 +365,11 @@ const UI_TEXT: Record<
     loadingPhraseLensText:
       'Reading the verse through the force of its exact phrasing…',
     phraseLensUnavailable: 'Unable to load Why This Phrase lens.',
+
+    loadingCompare: 'Loading Compare mode',
+    loadingCompareText:
+      'Comparing translation pressure, wording choices, and shifts in emphasis…',
+    compareUnavailable: 'Unable to load Compare mode.',
 
     tryAgain: 'Try again',
     lensLabel: 'Lens',
@@ -498,6 +524,11 @@ const UI_TEXT: Record<
       'Смотрим на стих через силу его точной формулировки…',
     phraseLensUnavailable: 'Не удалось загрузить линзу «Почему именно эта фраза».',
 
+    loadingCompare: 'Загрузка режима «Сравнение»',
+    loadingCompareText:
+      'Сравниваем переводческое давление, выбор формулировок и сдвиги акцента…',
+    compareUnavailable: 'Не удалось загрузить режим «Сравнение».',
+
     tryAgain: 'Попробовать снова',
     lensLabel: 'Линза',
   },
@@ -651,6 +682,11 @@ const UI_TEXT: Record<
       'Leyendo el versículo a través de la fuerza de su formulación exacta…',
     phraseLensUnavailable: 'No se pudo cargar la lente Por qué esta frase.',
 
+    loadingCompare: 'Cargando modo Comparar',
+    loadingCompareText:
+      'Comparando presión de traducción, elecciones de redacción y cambios de énfasis…',
+    compareUnavailable: 'No se pudo cargar el modo Comparar.',
+
     tryAgain: 'Intentar de nuevo',
     lensLabel: 'Lente',
   },
@@ -669,6 +705,10 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [tensionLensCards, setTensionLensCards] = useState<InsightItem[]>([])
   const [phraseLensCards, setPhraseLensCards] = useState<InsightItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
+
+  const [compareData, setCompareData] = useState<ComparePayload | null>(null)
+  const [compareLoading, setCompareLoading] = useState(false)
+  const [compareError, setCompareError] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -763,6 +803,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       setWordLensCards([])
       setTensionLensCards([])
       setPhraseLensCards([])
+      setCompareData(null)
+      setCompareError('')
       setWordLensError('')
       setTensionLensError('')
       setPhraseLensError('')
@@ -829,15 +871,9 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [activeArticleKey])
 
   const currentCards = useMemo(() => {
-    if (activeTab === 'another-lens' && selectedLens === 'word') {
-      return wordLensCards
-    }
-    if (activeTab === 'another-lens' && selectedLens === 'tension') {
-      return tensionLensCards
-    }
-    if (activeTab === 'another-lens' && selectedLens === 'phrase') {
-      return phraseLensCards
-    }
+    if (activeTab === 'another-lens' && selectedLens === 'word') return wordLensCards
+    if (activeTab === 'another-lens' && selectedLens === 'tension') return tensionLensCards
+    if (activeTab === 'another-lens' && selectedLens === 'phrase') return phraseLensCards
     return insights
   }, [activeTab, selectedLens, wordLensCards, tensionLensCards, phraseLensCards, insights])
 
@@ -1387,6 +1423,42 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function loadCompare(force = false) {
+    if (!formattedReference || !verseText) return
+    if (!force && compareData) return
+
+    setCompareLoading(true)
+    setCompareError('')
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: appLanguage,
+        }),
+      })
+
+      const data: CompareApiResponse = await res.json()
+
+      if (!res.ok || !data.compare || !Array.isArray(data.compare.points)) {
+        setCompareError(data.error || t.compareUnavailable)
+        setCompareData(null)
+        return
+      }
+
+      setCompareData(data.compare)
+    } catch {
+      setCompareError(t.compareUnavailable)
+      setCompareData(null)
+    } finally {
+      setCompareLoading(false)
+    }
+  }
+
   async function handleSelectLens(lens: LensKind) {
     setSelectedLens(lens)
     setLensSheetOpen(false)
@@ -1396,17 +1468,9 @@ export default function VerseDetailPage({ params }: PageProps) {
     setArticleCopyStatus('idle')
     setCurrentIndex(0)
 
-    if (lens === 'word') {
-      await loadWordLens()
-    }
-
-    if (lens === 'tension') {
-      await loadTensionLens()
-    }
-
-    if (lens === 'phrase') {
-      await loadPhraseLens()
-    }
+    if (lens === 'word') await loadWordLens()
+    if (lens === 'tension') await loadTensionLens()
+    if (lens === 'phrase') await loadPhraseLens()
   }
 
   function renderTabButton(label: string, isActive: boolean, onClick: () => void) {
@@ -1969,12 +2033,81 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   function renderCompareView() {
-    return renderStructuredPanel(
-      t.compare,
-      t.compareLead,
-      t.difference,
-      [t.comparePoint1, t.comparePoint2, t.comparePoint3],
-      t.compareTakeaway
+    if (compareLoading) {
+      return (
+        <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.loadingCompare}
+            </p>
+            <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingCompareText}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (compareError) {
+      return (
+        <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.compare}
+            </p>
+            <p className="text-[1.08rem] leading-9 text-stone-800">{compareError}</p>
+
+            <button
+              type="button"
+              onClick={() => loadCompare(true)}
+              className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+            >
+              {t.tryAgain}
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (!compareData) {
+      return renderStructuredPanel(
+        t.compare,
+        t.compareLead,
+        t.difference,
+        [t.comparePoint1, t.comparePoint2, t.comparePoint3],
+        t.compareTakeaway
+      )
+    }
+
+    return (
+      <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            {t.compare}
+          </p>
+
+          <p className="text-[1rem] leading-8 text-stone-800">{compareData.lead}</p>
+
+          <div className="mt-5 space-y-3">
+            {compareData.points.map((point, index) => (
+              <div
+                key={`${point.title}-${index}`}
+                className="rounded-[18px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  {point.title}
+                </p>
+                <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{point.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+              {t.takeaway}
+            </p>
+            <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{compareData.takeaway}</p>
+          </div>
+        </div>
+      </div>
     )
   }
 
@@ -2227,10 +2360,11 @@ export default function VerseDetailPage({ params }: PageProps) {
             setActiveTab('insights')
             setLensSheetOpen(false)
           })}
-          {renderTabButton(t.compare, activeTab === 'compare', () => {
+          {renderTabButton(t.compare, activeTab === 'compare', async () => {
             setActiveTab('compare')
             setLensSheetOpen(false)
             setActiveArticleKey('')
+            await loadCompare()
           })}
           {renderTabButton(t.context, activeTab === 'context', () => {
             setActiveTab('context')
