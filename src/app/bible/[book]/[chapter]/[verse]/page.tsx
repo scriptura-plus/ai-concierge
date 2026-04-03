@@ -735,6 +735,39 @@ export default function VerseDetailPage({ params }: PageProps) {
           </button>
         </div>
 
+        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            className="rounded-full border border-stone-400 bg-[#e8dcc0] px-4 py-2 text-sm font-medium text-stone-900"
+          >
+            Insights
+          </button>
+
+          <button
+            type="button"
+            disabled
+            className="rounded-full border border-stone-200 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-400"
+          >
+            Compare
+          </button>
+
+          <button
+            type="button"
+            disabled
+            className="rounded-full border border-stone-200 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-400"
+          >
+            Context
+          </button>
+
+          <button
+            type="button"
+            disabled
+            className="rounded-full border border-stone-200 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-400"
+          >
+            Another Lens
+          </button>
+        </div>
+
         {!loading && insights.length > 0 && !activeArticleKey && (
           <p className="mb-4 text-sm font-medium text-stone-500">
             {currentIndex + 1} / {insights.length}
