@@ -208,112 +208,89 @@ const UI_TEXT: Record<
     german: 'German',
     russian: 'Russian',
     translating: 'Translating...',
-
     insights: 'Insights',
     compare: 'Compare',
     context: 'Context',
     lens: 'Lens',
-
     loadingInsight: 'Loading insight',
     loadingInsightText: 'Please wait while the insight cards are generated.',
     unableToLoad: 'Unable to load',
     rawModelOutput: 'Raw model output',
     noInsight: 'No insight',
     noInsightText: 'No insight is available for this verse yet.',
-
     previous: 'Previous',
     next: 'Next',
-
     copy: 'Copy',
     copied: 'Copied',
     copyFailed: 'Copy failed',
     share: 'Share',
-
     unfold: 'Unfold',
     generating: 'Generating...',
     openArticle: 'Open article',
     articleReady: 'Article ready',
-
     article: 'Article',
     backToCards: 'Back to cards',
     copyArticle: 'Copy article',
     shareArticle: 'Share article',
     articleShared: 'Article shared',
     shareUnavailableArticleCopied: 'Share unavailable — article copied',
-
     compareLead:
       'This mode will compare translation choices and surface where wording moves the reader’s attention in different directions.',
     compareTakeaway:
       'Compare should feel like a reading tool, not a raw list of translations.',
     compareDiffLabel: 'Difference',
-
     contextLead:
       'This mode will surface only the context that materially changes the reading of the verse.',
     contextTakeaway:
       'Context should clarify why the verse sounds the way it does inside its real setting.',
     contextPointLabel: 'Context point',
-
     lensTitle: 'Lens',
     chooseFocusedLens: 'Choose a focused lens',
     readThisVerseOneAngle: 'Read this verse through one angle.',
     close: 'Close',
     change: 'Change',
-
     word: 'Word',
     tension: 'Tension',
     phrase: 'Why This Phrase',
-
     wordHelper: 'Hidden weight of words',
     tensionHelper: 'What’s surprising here',
     phraseHelper: 'Why it is said this way',
-
     lensPointLabel: 'Lens point',
     takeaway: 'Takeaway',
-
     lensLeadDefault: 'Choose a focused lens to read this verse through one angle.',
     lensTakeawayDefault: 'Lens is the focused-reading family, not just a reroll button.',
-
     comparePoint1: 'A short lead will name the main translation tension in the verse.',
     comparePoint2:
       'The final version will show 3–5 compact comparison points instead of one dense block.',
     comparePoint3:
       'A short takeaway will explain why those differences matter for reading the verse.',
-
     contextPoint1:
       'The final version will identify the main context type that matters most here.',
     contextPoint2:
       'It will present 3–5 compact context points, not a heavy encyclopedia panel.',
     contextPoint3:
       'A final takeaway will explain how context changes the force of the verse.',
-
     sharedAsImage: 'Shared as image',
     sharedAsText: 'Shared as text',
     shareUnavailableCopiedInstead: 'Share unavailable — copied instead',
-
     loadingWordLens: 'Loading Word lens',
     loadingWordLensText: 'Reading the verse through the hidden weight of its words…',
     wordLensUnavailable: 'Unable to load Word lens.',
-
     loadingTensionLens: 'Loading Tension lens',
     loadingTensionLensText:
       'Reading the verse through its pressure points, contrasts, and surprises…',
     tensionLensUnavailable: 'Unable to load Tension lens.',
-
     loadingPhraseLens: 'Loading Why This Phrase lens',
-    loadingPhraseLensText:
-      'Reading the verse through the force of its exact phrasing…',
+    loadingPhraseLensText: 'Reading the verse through the force of its exact phrasing…',
     phraseLensUnavailable: 'Unable to load Why This Phrase lens.',
-
     loadingCompare: 'Loading Compare mode',
     loadingCompareText:
       'Comparing translation pressure, wording choices, and shifts in emphasis…',
     compareUnavailable: 'Unable to load Compare mode.',
-
     backToTop: 'Back to top',
     copiedAnalysis: 'Analysis copied',
     copyAnalysis: 'Copy analysis',
     shareAnalysis: 'Share analysis',
-
     tryAgain: 'Try again',
     lensLabel: 'Lens',
   },
@@ -326,114 +303,92 @@ const UI_TEXT: Record<
     german: 'Немецкий',
     russian: 'Русский',
     translating: 'Перевод...',
-
     insights: 'Инсайты',
     compare: 'Сравнение',
     context: 'Контекст',
     lens: 'Линза',
-
     loadingInsight: 'Загрузка инсайта',
     loadingInsightText: 'Подождите, пока генерируются карточки инсайтов.',
     unableToLoad: 'Не удалось загрузить',
     rawModelOutput: 'Сырой вывод модели',
     noInsight: 'Нет инсайта',
     noInsightText: 'Для этого стиха пока нет доступного инсайта.',
-
     previous: 'Назад',
     next: 'Далее',
-
     copy: 'Копировать',
     copied: 'Скопировано',
     copyFailed: 'Ошибка копирования',
     share: 'Поделиться',
-
     unfold: 'Развернуть',
     generating: 'Генерация...',
     openArticle: 'Открыть статью',
     articleReady: 'Статья готова',
-
     article: 'Статья',
     backToCards: 'Назад к карточкам',
     copyArticle: 'Копировать статью',
     shareArticle: 'Поделиться статьёй',
     articleShared: 'Статья отправлена',
     shareUnavailableArticleCopied: 'Поделиться нельзя — статья скопирована',
-
     compareLead:
       'Этот режим будет сравнивать переводческие решения и показывать, как формулировка направляет внимание читателя в разные стороны.',
     compareTakeaway:
       'Сравнение должно ощущаться как инструмент чтения, а не как сырой список переводов.',
     compareDiffLabel: 'Различие',
-
     contextLead:
       'Этот режим будет показывать только тот контекст, который реально меняет чтение стиха.',
     contextTakeaway:
       'Контекст должен объяснять, почему стих звучит именно так в своей реальной среде.',
     contextPointLabel: 'Пункт контекста',
-
     lensTitle: 'Линза',
     chooseFocusedLens: 'Выберите сфокусированную линзу',
     readThisVerseOneAngle: 'Посмотрите на этот стих под одним углом.',
     close: 'Закрыть',
     change: 'Изменить',
-
     word: 'Слово',
     tension: 'Напряжение',
     phrase: 'Почему именно эта фраза',
-
     wordHelper: 'Скрытый вес слов',
     tensionHelper: 'Что здесь неожиданно',
     phraseHelper: 'Почему это сказано именно так',
-
     lensPointLabel: 'Пункт линзы',
     takeaway: 'Вывод',
-
     lensLeadDefault:
       'Выберите сфокусированную линзу, чтобы посмотреть на этот стих под одним углом.',
     lensTakeawayDefault: '«Линза» — это семейство сфокусированного чтения, а не просто кнопка reroll.',
-
     comparePoint1:
       'Короткий lead будет называть главное переводческое напряжение в стихе.',
     comparePoint2:
       'Финальная версия покажет 3–5 компактных различий вместо одного плотного блока.',
     comparePoint3:
       'Короткий вывод объяснит, почему эти различия важны для чтения стиха.',
-
     contextPoint1:
       'Финальная версия определит, какой тип контекста здесь важнее всего.',
     contextPoint2:
       'Она покажет 3–5 компактных пунктов контекста, а не тяжёлую энциклопедическую панель.',
     contextPoint3:
       'Итоговый вывод объяснит, как контекст меняет силу звучания стиха.',
-
     sharedAsImage: 'Отправлено как изображение',
     sharedAsText: 'Отправлено как текст',
     shareUnavailableCopiedInstead: 'Поделиться нельзя — текст скопирован',
-
     loadingWordLens: 'Загрузка линзы «Слово»',
     loadingWordLensText: 'Смотрим на стих через скрытый вес его слов…',
     wordLensUnavailable: 'Не удалось загрузить линзу «Слово».',
-
     loadingTensionLens: 'Загрузка линзы «Напряжение»',
     loadingTensionLensText:
       'Смотрим на стих через его точки напряжения, контрасты и неожиданные повороты…',
     tensionLensUnavailable: 'Не удалось загрузить линзу «Напряжение».',
-
     loadingPhraseLens: 'Загрузка линзы «Почему именно эта фраза»',
     loadingPhraseLensText:
       'Смотрим на стих через силу его точной формулировки…',
     phraseLensUnavailable: 'Не удалось загрузить линзу «Почему именно эта фраза».',
-
     loadingCompare: 'Загрузка режима «Сравнение»',
     loadingCompareText:
       'Сравниваем переводческое давление, выбор формулировок и сдвиги акцента…',
     compareUnavailable: 'Не удалось загрузить режим «Сравнение».',
-
     backToTop: 'Наверх',
     copiedAnalysis: 'Анализ скопирован',
     copyAnalysis: 'Копировать анализ',
     shareAnalysis: 'Поделиться анализом',
-
     tryAgain: 'Попробовать снова',
     lensLabel: 'Линза',
   },
@@ -446,114 +401,92 @@ const UI_TEXT: Record<
     german: 'Alemán',
     russian: 'Ruso',
     translating: 'Traduciendo...',
-
     insights: 'Ideas',
     compare: 'Comparar',
     context: 'Contexto',
     lens: 'Lente',
-
     loadingInsight: 'Cargando idea',
     loadingInsightText: 'Espera mientras se generan las tarjetas de ideas.',
     unableToLoad: 'No se pudo cargar',
     rawModelOutput: 'Salida bruta del modelo',
     noInsight: 'Sin idea',
     noInsightText: 'Todavía no hay una idea disponible para este versículo.',
-
     previous: 'Anterior',
     next: 'Siguiente',
-
     copy: 'Copiar',
     copied: 'Copiado',
     copyFailed: 'Error al copiar',
     share: 'Compartir',
-
     unfold: 'Desarrollar',
     generating: 'Generando...',
     openArticle: 'Abrir artículo',
     articleReady: 'Artículo listo',
-
     article: 'Artículo',
     backToCards: 'Volver a tarjetas',
     copyArticle: 'Copiar artículo',
     shareArticle: 'Compartir artículo',
     articleShared: 'Artículo compartido',
     shareUnavailableArticleCopied: 'No se puede compartir — artículo copiado',
-
     compareLead:
       'Este modo comparará decisiones de traducción y mostrará cómo la redacción dirige la atención del lector en distintas direcciones.',
     compareTakeaway:
       'Comparar debe sentirse como una herramienta de lectura, no como una lista bruta de traducciones.',
     compareDiffLabel: 'Diferencia',
-
     contextLead:
       'Este modo mostrará solo el contexto que realmente cambia la lectura del versículo.',
     contextTakeaway:
       'El contexto debe aclarar por qué el versículo suena así dentro de su escenario real.',
     contextPointLabel: 'Punto de contexto',
-
     lensTitle: 'Lente',
     chooseFocusedLens: 'Elige una lente enfocada',
     readThisVerseOneAngle: 'Lee este versículo desde un solo ángulo.',
     close: 'Cerrar',
     change: 'Cambiar',
-
     word: 'Palabra',
     tension: 'Tensión',
     phrase: 'Por qué esta frase',
-
     wordHelper: 'Peso oculto de las palabras',
     tensionHelper: 'Qué sorprende aquí',
     phraseHelper: 'Por qué se dice así',
-
     lensPointLabel: 'Punto de lente',
     takeaway: 'Conclusión',
-
     lensLeadDefault:
       'Elige una lente enfocada para leer este versículo desde un solo ángulo.',
     lensTakeawayDefault: 'Lente es la familia de lectura enfocada, no solo un botón de repetir.',
-
     comparePoint1:
       'Un lead breve nombrará la tensión principal de traducción en el versículo.',
     comparePoint2:
       'La versión final mostrará 3–5 puntos de comparación compactos en vez de un bloque denso.',
     comparePoint3:
       'Una conclusión breve explicará por qué esas diferencias importan para leer el versículo.',
-
     contextPoint1:
       'La versión final identificará qué tipo de contexto importa más aquí.',
     contextPoint2:
       'Presentará 3–5 puntos de contexto compactos, no un panel enciclopédico pesado.',
     contextPoint3:
       'Una conclusión final explicará cómo el contexto cambia la fuerza del versículo.',
-
     sharedAsImage: 'Compartido como imagen',
     sharedAsText: 'Compartido como texto',
     shareUnavailableCopiedInstead: 'No se puede compartir — copiado en su lugar',
-
     loadingWordLens: 'Cargando lente Palabra',
     loadingWordLensText: 'Leyendo el versículo a través del peso oculto de sus palabras…',
     wordLensUnavailable: 'No se pudo cargar la lente Palabra.',
-
     loadingTensionLens: 'Cargando lente Tensión',
     loadingTensionLensText:
       'Leyendo el versículo a través de sus tensiones, contrastes y sorpresas…',
     tensionLensUnavailable: 'No se pudo cargar la lente Tensión.',
-
     loadingPhraseLens: 'Cargando lente Por qué esta frase',
     loadingPhraseLensText:
       'Leyendo el versículo a través de la fuerza de su formulación exacta…',
     phraseLensUnavailable: 'No se pudo cargar la lente Por qué esta frase.',
-
     loadingCompare: 'Cargando modo Comparar',
     loadingCompareText:
       'Comparando presión de traducción, elecciones de redacción y cambios de énfasis…',
     compareUnavailable: 'No se pudo cargar el modo Comparar.',
-
     backToTop: 'Volver arriba',
     copiedAnalysis: 'Análisis copiado',
     copyAnalysis: 'Copiar análisis',
     shareAnalysis: 'Compartir análisis',
-
     tryAgain: 'Intentar de nuevo',
     lensLabel: 'Lente',
   },
@@ -566,112 +499,90 @@ const UI_TEXT: Record<
     german: 'Allemand',
     russian: 'Russe',
     translating: 'Traduction...',
-
     insights: 'Insights',
     compare: 'Comparer',
     context: 'Contexte',
     lens: 'Lentille',
-
     loadingInsight: 'Chargement de l’insight',
     loadingInsightText: 'Veuillez patienter pendant la génération des cartes.',
     unableToLoad: 'Impossible de charger',
     rawModelOutput: 'Sortie brute du modèle',
     noInsight: 'Aucun insight',
     noInsightText: 'Aucun insight n’est disponible pour ce verset.',
-
     previous: 'Précédent',
     next: 'Suivant',
-
     copy: 'Copier',
     copied: 'Copié',
     copyFailed: 'Échec de copie',
     share: 'Partager',
-
     unfold: 'Déplier',
     generating: 'Génération...',
     openArticle: 'Ouvrir l’article',
     articleReady: 'Article prêt',
-
     article: 'Article',
     backToCards: 'Retour aux cartes',
     copyArticle: 'Copier l’article',
     shareArticle: 'Partager l’article',
     articleShared: 'Article partagé',
     shareUnavailableArticleCopied: 'Partage indisponible — article copié',
-
     compareLead:
       'Ce mode comparera les choix de traduction et montrera comment la formulation déplace l’attention du lecteur.',
     compareTakeaway:
       'Comparer doit ressembler à un outil de lecture, pas à une simple liste brute.',
     compareDiffLabel: 'Différence',
-
     contextLead:
       'Ce mode ne montrera que le contexte qui change réellement la lecture du verset.',
     contextTakeaway:
       'Le contexte doit expliquer pourquoi le verset sonne ainsi dans son cadre réel.',
     contextPointLabel: 'Point de contexte',
-
     lensTitle: 'Lentille',
     chooseFocusedLens: 'Choisissez une lentille ciblée',
     readThisVerseOneAngle: 'Lisez ce verset sous un angle précis.',
     close: 'Fermer',
     change: 'Changer',
-
     word: 'Mot',
     tension: 'Tension',
     phrase: 'Pourquoi cette phrase',
-
     wordHelper: 'Poids caché des mots',
     tensionHelper: 'Ce qui surprend ici',
     phraseHelper: 'Pourquoi c’est dit ainsi',
-
     lensPointLabel: 'Point de lentille',
     takeaway: 'Conclusion',
-
     lensLeadDefault: 'Choisissez une lentille ciblée pour lire ce verset sous un angle précis.',
     lensTakeawayDefault: 'La lentille est une famille de lecture ciblée, pas juste un reroll.',
-
     comparePoint1: 'Un court lead nommera la tension principale de traduction.',
     comparePoint2:
       'La version finale montrera 3–5 points compacts au lieu d’un bloc dense.',
     comparePoint3:
       'Une courte conclusion expliquera pourquoi ces différences comptent.',
-
     contextPoint1:
       'La version finale identifiera le type de contexte le plus important ici.',
     contextPoint2:
       'Elle montrera 3–5 points de contexte compacts, pas un panneau encyclopédique lourd.',
     contextPoint3:
       'Une conclusion finale expliquera comment le contexte change la force du verset.',
-
     sharedAsImage: 'Partagé comme image',
     sharedAsText: 'Partagé comme texte',
     shareUnavailableCopiedInstead: 'Partage indisponible — copié à la place',
-
     loadingWordLens: 'Chargement de la lentille Mot',
     loadingWordLensText: 'Lecture du verset à travers le poids caché de ses mots…',
     wordLensUnavailable: 'Impossible de charger la lentille Mot.',
-
     loadingTensionLens: 'Chargement de la lentille Tension',
     loadingTensionLensText:
       'Lecture du verset à travers ses tensions, contrastes et surprises…',
     tensionLensUnavailable: 'Impossible de charger la lentille Tension.',
-
     loadingPhraseLens: 'Chargement de la lentille Pourquoi cette phrase',
     loadingPhraseLensText:
       'Lecture du verset à travers la force de sa formulation exacte…',
     phraseLensUnavailable: 'Impossible de charger la lentille Pourquoi cette phrase.',
-
     loadingCompare: 'Chargement du mode Comparer',
     loadingCompareText:
       'Comparaison de la pression de traduction, des choix de formulation et des déplacements d’accent…',
     compareUnavailable: 'Impossible de charger le mode Comparer.',
-
     backToTop: 'Haut de page',
     copiedAnalysis: 'Analyse copiée',
     copyAnalysis: 'Copier l’analyse',
     shareAnalysis: 'Partager l’analyse',
-
     tryAgain: 'Réessayer',
     lensLabel: 'Lentille',
   },
@@ -684,136 +595,102 @@ const UI_TEXT: Record<
     german: 'Deutsch',
     russian: 'Russisch',
     translating: 'Übersetzung...',
-
     insights: 'Insights',
     compare: 'Vergleich',
     context: 'Kontext',
     lens: 'Linse',
-
     loadingInsight: 'Insight wird geladen',
     loadingInsightText: 'Bitte warten, während die Karten erzeugt werden.',
     unableToLoad: 'Konnte nicht geladen werden',
     rawModelOutput: 'Rohausgabe des Modells',
     noInsight: 'Kein Insight',
     noInsightText: 'Für diesen Vers ist noch kein Insight verfügbar.',
-
     previous: 'Zurück',
     next: 'Weiter',
-
     copy: 'Kopieren',
     copied: 'Kopiert',
     copyFailed: 'Kopieren fehlgeschlagen',
     share: 'Teilen',
-
     unfold: 'Entfalten',
     generating: 'Wird erzeugt...',
     openArticle: 'Artikel öffnen',
     articleReady: 'Artikel bereit',
-
     article: 'Artikel',
     backToCards: 'Zurück zu Karten',
     copyArticle: 'Artikel kopieren',
     shareArticle: 'Artikel teilen',
     articleShared: 'Artikel geteilt',
     shareUnavailableArticleCopied: 'Teilen nicht verfügbar — Artikel kopiert',
-
     compareLead:
       'Dieser Modus vergleicht Übersetzungsentscheidungen und zeigt, wie Formulierungen die Aufmerksamkeit verschieben.',
     compareTakeaway:
       'Vergleich sollte sich wie ein Lesewerkzeug anfühlen, nicht wie eine rohe Liste.',
     compareDiffLabel: 'Unterschied',
-
     contextLead:
       'Dieser Modus zeigt nur den Kontext, der die Lesart des Verses wirklich verändert.',
     contextTakeaway:
       'Der Kontext soll erklären, warum der Vers in seinem echten Rahmen so klingt.',
     contextPointLabel: 'Kontextpunkt',
-
     lensTitle: 'Linse',
     chooseFocusedLens: 'Wähle eine fokussierte Linse',
     readThisVerseOneAngle: 'Lies diesen Vers aus einem bestimmten Blickwinkel.',
     close: 'Schließen',
     change: 'Ändern',
-
     word: 'Wort',
     tension: 'Spannung',
     phrase: 'Warum diese Formulierung',
-
     wordHelper: 'Verstecktes Gewicht der Wörter',
     tensionHelper: 'Was hier überrascht',
     phraseHelper: 'Warum es so gesagt wird',
-
     lensPointLabel: 'Linsenpunkt',
     takeaway: 'Fazit',
-
     lensLeadDefault: 'Wähle eine fokussierte Linse, um diesen Vers aus einem Blickwinkel zu lesen.',
     lensTakeawayDefault: 'Die Linse ist eine fokussierte Lesefamilie, nicht nur ein Reroll.',
-
     comparePoint1:
       'Ein kurzer Lead benennt die wichtigste Übersetzungsspannung im Vers.',
     comparePoint2:
       'Die endgültige Version zeigt 3–5 kompakte Vergleichspunkte statt eines dichten Blocks.',
     comparePoint3:
       'Ein kurzes Fazit erklärt, warum diese Unterschiede für die Lesart wichtig sind.',
-
     contextPoint1:
       'Die endgültige Version identifiziert den wichtigsten Kontexttyp an dieser Stelle.',
     contextPoint2:
       'Sie zeigt 3–5 kompakte Kontextpunkte statt eines schweren enzyklopädischen Panels.',
     contextPoint3:
       'Ein abschließendes Fazit erklärt, wie der Kontext die Wirkung des Verses verändert.',
-
     sharedAsImage: 'Als Bild geteilt',
     sharedAsText: 'Als Text geteilt',
     shareUnavailableCopiedInstead: 'Teilen nicht verfügbar — stattdessen kopiert',
-
     loadingWordLens: 'Wort-Linse wird geladen',
     loadingWordLensText: 'Der Vers wird durch das verborgene Gewicht seiner Wörter gelesen…',
     wordLensUnavailable: 'Wort-Linse konnte nicht geladen werden.',
-
     loadingTensionLens: 'Spannungs-Linse wird geladen',
     loadingTensionLensText:
       'Der Vers wird durch seine Spannungspunkte, Kontraste und Überraschungen gelesen…',
     tensionLensUnavailable: 'Spannungs-Linse konnte nicht geladen werden.',
-
     loadingPhraseLens: 'Linse Warum diese Formulierung wird geladen',
     loadingPhraseLensText:
       'Der Vers wird durch die Kraft seiner genauen Formulierung gelesen…',
     phraseLensUnavailable: 'Linse Warum diese Formulierung konnte nicht geladen werden.',
-
     loadingCompare: 'Vergleichsmodus wird geladen',
     loadingCompareText:
       'Übersetzungsdruck, Formulierungswahl und Akzentverschiebungen werden verglichen…',
     compareUnavailable: 'Vergleichsmodus konnte nicht geladen werden.',
-
     backToTop: 'Nach oben',
     copiedAnalysis: 'Analyse kopiert',
     copyAnalysis: 'Analyse kopieren',
     shareAnalysis: 'Analyse teilen',
-
     tryAgain: 'Erneut versuchen',
     lensLabel: 'Linse',
   },
 }
 
 function emptyLensMap(): Record<AppLanguage, InsightItem[]> {
-  return {
-    en: [],
-    ru: [],
-    es: [],
-    fr: [],
-    de: [],
-  }
+  return { en: [], ru: [], es: [], fr: [], de: [] }
 }
 
 function emptyCompareMap(): Record<AppLanguage, ComparePayload | null> {
-  return {
-    en: null,
-    ru: null,
-    es: null,
-    fr: null,
-    de: null,
-  }
+  return { en: null, ru: null, es: null, fr: null, de: null }
 }
 
 export default function VerseDetailPage({ params }: PageProps) {
@@ -825,10 +702,14 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [translatedVerseTexts, setTranslatedVerseTexts] = useState<Record<string, string>>({})
 
   const [insights, setInsights] = useState<InsightItem[]>([])
-  const [wordLensCardsByLanguage, setWordLensCardsByLanguage] = useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
-  const [tensionLensCardsByLanguage, setTensionLensCardsByLanguage] = useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
-  const [phraseLensCardsByLanguage, setPhraseLensCardsByLanguage] = useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
-  const [compareByLanguage, setCompareByLanguage] = useState<Record<AppLanguage, ComparePayload | null>>(emptyCompareMap())
+  const [wordLensCardsByLanguage, setWordLensCardsByLanguage] =
+    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
+  const [tensionLensCardsByLanguage, setTensionLensCardsByLanguage] =
+    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
+  const [phraseLensCardsByLanguage, setPhraseLensCardsByLanguage] =
+    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
+  const [compareByLanguage, setCompareByLanguage] =
+    useState<Record<AppLanguage, ComparePayload | null>>(emptyCompareMap())
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const [compareLoading, setCompareLoading] = useState(false)
@@ -850,7 +731,6 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en')
   const [translationLoading, setTranslationLoading] = useState(false)
   const [translationError, setTranslationError] = useState('')
-
   const [translatedCards, setTranslatedCards] = useState<Record<string, InsightItem>>({})
 
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -868,7 +748,6 @@ export default function VerseDetailPage({ params }: PageProps) {
   const copyTimerRef = useRef<number | null>(null)
   const exportCardRef = useRef<HTMLDivElement | null>(null)
   const articleTopRef = useRef<HTMLDivElement | null>(null)
-
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
 
@@ -881,7 +760,6 @@ export default function VerseDetailPage({ params }: PageProps) {
       setChapter(resolved.chapter)
       setVerse(resolved.verse)
     }
-
     loadInitial()
   }, [params])
 
@@ -911,9 +789,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   useEffect(() => {
     return () => {
-      if (copyTimerRef.current) {
-        window.clearTimeout(copyTimerRef.current)
-      }
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
     }
   }, [])
 
@@ -954,15 +830,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       try {
         const res = await fetch('/api/insights', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            book,
-            chapter,
-            verse,
-            count: 12,
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ book, chapter, verse, count: 12 }),
         })
 
         const data: InsightsApiResponse = await res.json()
@@ -974,7 +843,6 @@ export default function VerseDetailPage({ params }: PageProps) {
         }
 
         setVerseText(data.verseText || '')
-
         const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
 
         if (receivedInsights.length > 0) {
@@ -1033,28 +901,23 @@ export default function VerseDetailPage({ params }: PageProps) {
   const currentInsight = useMemo(() => currentCards[currentIndex], [currentCards, currentIndex])
 
   const currentModeKey = useMemo(() => {
-    if (activeTab === 'lens') {
-      return `lens:${selectedLens ?? 'none'}`
-    }
+    if (activeTab === 'lens') return `lens:${selectedLens ?? 'none'}`
     return activeTab
   }, [activeTab, selectedLens])
 
-  const currentCardKey = useMemo(() => {
-    if (!currentInsight) return ''
-    return `${currentModeKey}:${appLanguage}:${currentIndex}:${currentInsight.title}:${currentInsight.text}`
-  }, [currentModeKey, appLanguage, currentIndex, currentInsight])
-
   const compareData = useMemo(() => compareByLanguage[appLanguage], [compareByLanguage, appLanguage])
 
-  async function translateCard(targetLanguage: 'ru' | 'es' | 'fr' | 'de', card: InsightItem, cardKey: string) {
+  async function translateCard(
+    targetLanguage: 'ru' | 'es' | 'fr' | 'de',
+    card: InsightItem,
+    cardKey: string
+  ) {
     const existingTranslation = translatedCards[`${targetLanguage}:${cardKey}`]
     if (existingTranslation) return existingTranslation
 
     const res = await fetch('/api/translate-card', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: card.title,
         text: card.text,
@@ -1076,15 +939,17 @@ export default function VerseDetailPage({ params }: PageProps) {
     return data.card
   }
 
-  async function translateVerseText(targetLanguage: 'ru' | 'es' | 'fr' | 'de', text: string, key: string) {
+  async function translateVerseText(
+    targetLanguage: 'ru' | 'es' | 'fr' | 'de',
+    text: string,
+    key: string
+  ) {
     const existing = translatedVerseTexts[`${targetLanguage}:${key}`]
     if (existing) return existing
 
     const res = await fetch('/api/translate-card', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: 'Verse text',
         text,
@@ -1130,14 +995,14 @@ export default function VerseDetailPage({ params }: PageProps) {
       const data: LensApiResponse = await res.json()
 
       if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
-        setWordLensError(data.error || t.wordLensUnavailable)
+        setWordLensError(data.error || UI_TEXT[language].wordLensUnavailable)
         setWordLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
         return
       }
 
       setWordLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
     } catch {
-      setWordLensError(t.wordLensUnavailable)
+      setWordLensError(UI_TEXT[language].wordLensUnavailable)
       setWordLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
     } finally {
       setWordLensLoading(false)
@@ -1167,14 +1032,14 @@ export default function VerseDetailPage({ params }: PageProps) {
       const data: LensApiResponse = await res.json()
 
       if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
-        setTensionLensError(data.error || t.tensionLensUnavailable)
+        setTensionLensError(data.error || UI_TEXT[language].tensionLensUnavailable)
         setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
         return
       }
 
       setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
     } catch {
-      setTensionLensError(t.tensionLensUnavailable)
+      setTensionLensError(UI_TEXT[language].tensionLensUnavailable)
       setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
     } finally {
       setTensionLensLoading(false)
@@ -1204,14 +1069,14 @@ export default function VerseDetailPage({ params }: PageProps) {
       const data: LensApiResponse = await res.json()
 
       if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
-        setPhraseLensError(data.error || t.phraseLensUnavailable)
+        setPhraseLensError(data.error || UI_TEXT[language].phraseLensUnavailable)
         setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
         return
       }
 
       setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
     } catch {
-      setPhraseLensError(t.phraseLensUnavailable)
+      setPhraseLensError(UI_TEXT[language].phraseLensUnavailable)
       setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
     } finally {
       setPhraseLensLoading(false)
@@ -1240,14 +1105,14 @@ export default function VerseDetailPage({ params }: PageProps) {
       const data: CompareApiResponse = await res.json()
 
       if (!res.ok || !data.compare || !Array.isArray(data.compare.points)) {
-        setCompareError(data.error || t.compareUnavailable)
+        setCompareError(data.error || UI_TEXT[language].compareUnavailable)
         setCompareByLanguage((prev) => ({ ...prev, [language]: null }))
         return
       }
 
       setCompareByLanguage((prev) => ({ ...prev, [language]: data.compare as ComparePayload }))
     } catch {
-      setCompareError(t.compareUnavailable)
+      setCompareError(UI_TEXT[language].compareUnavailable)
       setCompareByLanguage((prev) => ({ ...prev, [language]: null }))
     } finally {
       setCompareLoading(false)
@@ -1257,21 +1122,10 @@ export default function VerseDetailPage({ params }: PageProps) {
   useEffect(() => {
     if (!formattedReference || !verseText) return
 
-    if (activeTab === 'compare') {
-      void loadCompare(false, appLanguage)
-    }
-
-    if (activeTab === 'lens' && selectedLens === 'word') {
-      void loadWordLens(false, appLanguage)
-    }
-
-    if (activeTab === 'lens' && selectedLens === 'tension') {
-      void loadTensionLens(false, appLanguage)
-    }
-
-    if (activeTab === 'lens' && selectedLens === 'phrase') {
-      void loadPhraseLens(false, appLanguage)
-    }
+    if (activeTab === 'compare') void loadCompare(false, appLanguage)
+    if (activeTab === 'lens' && selectedLens === 'word') void loadWordLens(false, appLanguage)
+    if (activeTab === 'lens' && selectedLens === 'tension') void loadTensionLens(false, appLanguage)
+    if (activeTab === 'lens' && selectedLens === 'phrase') void loadPhraseLens(false, appLanguage)
   }, [activeTab, selectedLens, appLanguage, formattedReference, verseText])
 
   async function handleSetLanguage(targetLanguage: AppLanguage) {
@@ -1289,21 +1143,22 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     if (activeTab === 'insights') {
-      if (!currentInsight || !currentCardKey) {
+      if (!currentInsight) {
         setAppLanguage(targetLanguage)
         return
       }
+
+      const baseCardKey = `${currentModeKey}:${currentIndex}:${currentInsight.title}:${currentInsight.text}`
 
       setTranslationLoading(true)
 
       try {
         await Promise.all([
-          translateCard(targetLanguage, currentInsight, `${currentModeKey}:${currentIndex}:${currentInsight.title}:${currentInsight.text}`),
+          translateCard(targetLanguage, currentInsight, baseCardKey),
           verseText && verseTranslationKey
             ? translateVerseText(targetLanguage, verseText, verseTranslationKey)
             : Promise.resolve(),
         ])
-
         setAppLanguage(targetLanguage)
       } catch (err) {
         setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
@@ -1379,17 +1234,12 @@ export default function VerseDetailPage({ params }: PageProps) {
   async function handleTouchEnd() {
     const threshold = 50
     const deltaX = touchDeltaXRef.current
-
     touchStartXRef.current = null
     touchDeltaXRef.current = 0
 
     if (Math.abs(deltaX) < threshold) return
-
-    if (deltaX < 0) {
-      await handleNext()
-    } else {
-      await handlePrev()
-    }
+    if (deltaX < 0) await handleNext()
+    else await handlePrev()
   }
 
   const displayedCard = useMemo(() => {
@@ -1411,7 +1261,6 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const compareShareText = useMemo(() => {
     if (!compareData || !formattedReference) return ''
-
     return [
       formattedReference,
       '',
@@ -1449,14 +1298,12 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (!displayedCard || !formattedReference || !displayedVerseText || !articleJobKey) return
 
     const existingJob = articleJobs[articleJobKey]
-
     if (existingJob?.status === 'ready' && existingJob.article) {
       setActiveArticleKey(articleJobKey)
       setArticleShareStatus('')
       setArticleCopyStatus('idle')
       return
     }
-
     if (existingJob?.status === 'generating') return
 
     setArticleJobs((prev) => ({
@@ -1537,10 +1384,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setArticleCopyStatus('copied')
       setArticleShareStatus('')
 
-      if (copyTimerRef.current) {
-        window.clearTimeout(copyTimerRef.current)
-      }
-
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
       copyTimerRef.current = window.setTimeout(() => {
         setArticleCopyStatus('idle')
       }, 1600)
@@ -1584,10 +1428,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setCopyStatus('copied')
       setShareStatus('')
 
-      if (copyTimerRef.current) {
-        window.clearTimeout(copyTimerRef.current)
-      }
-
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
       copyTimerRef.current = window.setTimeout(() => {
         setCopyStatus('idle')
       }, 1600)
@@ -1598,7 +1439,6 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   async function handleShare() {
     if (!displayedCard || !formattedReference) return
-
     setShareStatus('')
 
     try {
@@ -1655,10 +1495,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setCompareCopyStatus('copied')
       setCompareShareStatus('')
 
-      if (copyTimerRef.current) {
-        window.clearTimeout(copyTimerRef.current)
-      }
-
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
       copyTimerRef.current = window.setTimeout(() => {
         setCompareCopyStatus('idle')
       }, 1600)
@@ -1777,7 +1614,116 @@ export default function VerseDetailPage({ params }: PageProps) {
         ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
         : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 
-  function renderLiveLensCardView() {
+  function renderArticleView() {
+    if (!(activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article)) {
+      return null
+    }
+
+    return (
+      <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveArticleKey('')
+                setArticleShareStatus('')
+                setArticleCopyStatus('idle')
+                if (articleTopRef.current) {
+                  articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              }}
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.backToCards}
+            </button>
+
+            <span className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.article}
+            </span>
+          </div>
+
+          <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            {activeArticleJob.reference}
+          </p>
+
+          <h2 className="mb-6 text-center text-[2.15rem] font-semibold leading-tight tracking-tight text-stone-900">
+            {activeArticleJob.article.title}
+          </h2>
+
+          <p className="mb-8 text-[1.1rem] leading-9 text-stone-900">
+            {activeArticleJob.article.lead}
+          </p>
+
+          {activeArticleJob.article.quote ? (
+            <blockquote className="mb-8 border-l-2 border-stone-300 pl-4 text-[1rem] italic leading-8 text-stone-700">
+              {activeArticleJob.article.quote}
+            </blockquote>
+          ) : null}
+
+          <div className="space-y-7 text-[0.98rem] leading-8 text-stone-800">
+            {activeArticleJob.article.body.map((paragraph, index) => (
+              <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
+            ))}
+          </div>
+
+          <div className="mt-10 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handleCopyArticle}
+              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {articleCopyStatus === 'copied'
+                ? t.copied
+                : articleCopyStatus === 'failed'
+                  ? t.copyFailed
+                  : t.copyArticle}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShareArticle}
+              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.shareArticle}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveArticleKey('')
+                setArticleShareStatus('')
+                setArticleCopyStatus('idle')
+                if (articleTopRef.current) {
+                  articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              }}
+              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.backToCards}
+            </button>
+
+            <Link
+              href="/"
+              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-center text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.home}
+            </Link>
+          </div>
+
+          {articleShareStatus && (
+            <p className="mt-3 text-center text-sm text-stone-500">{articleShareStatus}</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  function renderCardStackView() {
+    if (activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article) {
+      return renderArticleView()
+    }
+
     return (
       <div className="tab-panel-enter">
         {!loading && currentCards.length > 0 && !activeArticleKey && (
@@ -1786,231 +1732,159 @@ export default function VerseDetailPage({ params }: PageProps) {
           </p>
         )}
 
-        {activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article ? (
-          <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
+        >
+          {loading ? (
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveArticleKey('')
-                    setArticleShareStatus('')
-                    setArticleCopyStatus('idle')
-                    if (articleTopRef.current) {
-                      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    }
-                  }}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                >
-                  {t.backToCards}
-                </button>
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {t.loadingInsight}
+              </p>
+              <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingInsightText}</p>
+            </div>
+          ) : error && activeTab === 'insights' ? (
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {t.unableToLoad}
+              </p>
+              <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{error}</p>
 
-                <span className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                  {t.article}
-                </span>
-              </div>
+              {rawOutput && (
+                <div className="rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                    {t.rawModelOutput}
+                  </p>
+                  <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                    {rawOutput}
+                  </pre>
+                </div>
+              )}
+            </div>
+          ) : displayedCard ? (
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              {activeTab === 'lens' && selectedLens && (
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="text-sm font-medium text-stone-500">
+                    {t.lensLabel}:{' '}
+                    {selectedLens === 'word'
+                      ? t.word
+                      : selectedLens === 'tension'
+                        ? t.tension
+                        : t.phrase}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLensSheetOpen(true)}
+                    className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+                  >
+                    {t.change}
+                  </button>
+                </div>
+              )}
 
-              <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {activeArticleJob.reference}
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {formattedReference}
               </p>
 
-              <h2 className="mb-6 text-center text-[2.15rem] font-semibold leading-tight tracking-tight text-stone-900">
-                {activeArticleJob.article.title}
+              {displayedVerseText && (
+                <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
+                  <p className="text-[1rem] leading-8 text-stone-700 italic">
+                    {displayedVerseText}
+                  </p>
+                </div>
+              )}
+
+              <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
+                {displayedCard.title}
               </h2>
 
-              <p className="mb-8 text-[1.1rem] leading-9 text-stone-900">
-                {activeArticleJob.article.lead}
-              </p>
+              <p className="text-[1.08rem] leading-9 text-stone-800">{displayedCard.text}</p>
 
-              {activeArticleJob.article.quote ? (
-                <blockquote className="mb-8 border-l-2 border-stone-300 pl-4 text-[1rem] italic leading-8 text-stone-700">
-                  {activeArticleJob.article.quote}
-                </blockquote>
-              ) : null}
-
-              <div className="space-y-7 text-[0.98rem] leading-8 text-stone-800">
-                {activeArticleJob.article.body.map((paragraph, index) => (
-                  <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
-                ))}
-              </div>
-
-              <div className="mt-10 grid grid-cols-2 gap-3">
+              <div className="mt-6 flex flex-wrap justify-center gap-2.5">
                 <button
                   type="button"
-                  onClick={handleCopyArticle}
-                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                  onClick={handleUnfold}
+                  disabled={currentArticleJob?.status === 'generating'}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${unfoldButtonClass}`}
                 >
-                  {articleCopyStatus === 'copied'
+                  {unfoldButtonLabel}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
+                >
+                  {copyStatus === 'copied'
                     ? t.copied
-                    : articleCopyStatus === 'failed'
+                    : copyStatus === 'failed'
                       ? t.copyFailed
-                      : t.copyArticle}
+                      : t.copy}
                 </button>
 
                 <button
                   type="button"
-                  onClick={handleShareArticle}
-                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                  onClick={handleShare}
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  {t.shareArticle}
+                  {t.share}
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveArticleKey('')
-                    setArticleShareStatus('')
-                    setArticleCopyStatus('idle')
-                    if (articleTopRef.current) {
-                      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    }
-                  }}
-                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                >
-                  {t.backToCards}
-                </button>
-
-                <Link
-                  href="/"
-                  className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-center text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                >
-                  {t.home}
-                </Link>
               </div>
 
-              {articleShareStatus && (
-                <p className="mt-3 text-center text-sm text-stone-500">{articleShareStatus}</p>
+              {currentArticleJob?.status === 'failed' && currentArticleJob.error && (
+                <p className="mt-3 text-center text-sm text-red-700">{currentArticleJob.error}</p>
+              )}
+
+              {currentArticleJob?.status === 'ready' && (
+                <p className="mt-3 text-center text-sm text-stone-500">{t.articleReady}</p>
+              )}
+
+              {shareStatus && (
+                <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
+              )}
+
+              {translationError && (
+                <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
               )}
             </div>
-          </div>
-        ) : (
-          <>
-            <div
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
+          ) : (
+            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+                {t.noInsight}
+              </p>
+              <p className="text-[1.08rem] leading-9 text-stone-800">{t.noInsightText}</p>
+            </div>
+          )}
+        </div>
+
+        {!loading && currentCards.length > 1 && (
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handlePrev}
+              className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
             >
-              {displayedCard ? (
-                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div className="text-sm font-medium text-stone-500">
-                      {t.lensLabel}:{' '}
-                      {selectedLens === 'word'
-                        ? t.word
-                        : selectedLens === 'tension'
-                          ? t.tension
-                          : t.phrase}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setLensSheetOpen(true)}
-                      className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-                    >
-                      {t.change}
-                    </button>
-                  </div>
+              {t.previous}
+            </button>
 
-                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                    {formattedReference}
-                  </p>
-
-                  {displayedVerseText && (
-                    <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
-                      <p className="text-[1rem] leading-8 text-stone-700 italic">
-                        {displayedVerseText}
-                      </p>
-                    </div>
-                  )}
-
-                  <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
-                    {displayedCard.title}
-                  </h2>
-
-                  <p className="text-[1.08rem] leading-9 text-stone-800">{displayedCard.text}</p>
-
-                  <div className="mt-6 flex flex-wrap justify-center gap-2.5">
-                    <button
-                      type="button"
-                      onClick={handleUnfold}
-                      disabled={currentArticleJob?.status === 'generating'}
-                      className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${unfoldButtonClass}`}
-                    >
-                      {unfoldButtonLabel}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleCopy}
-                      className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
-                    >
-                      {copyStatus === 'copied'
-                        ? t.copied
-                        : copyStatus === 'failed'
-                          ? t.copyFailed
-                          : t.copy}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleShare}
-                      className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                    >
-                      {t.share}
-                    </button>
-                  </div>
-
-                  {currentArticleJob?.status === 'failed' && currentArticleJob.error && (
-                    <p className="mt-3 text-center text-sm text-red-700">
-                      {currentArticleJob.error}
-                    </p>
-                  )}
-
-                  {currentArticleJob?.status === 'ready' && (
-                    <p className="mt-3 text-center text-sm text-stone-500">{t.articleReady}</p>
-                  )}
-
-                  {shareStatus && (
-                    <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>
-                  )}
-
-                  {translationError && (
-                    <p className="mt-3 text-center text-sm text-red-700">{translationError}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                  <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                    {t.noInsight}
-                  </p>
-                  <p className="text-[1.08rem] leading-9 text-stone-800">{t.noInsightText}</p>
-                </div>
-              )}
-            </div>
-
-            {!loading && currentCards.length > 1 && (
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={handlePrev}
-                  className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
-                >
-                  {t.previous}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
-                >
-                  {t.next}
-                </button>
-              </div>
-            )}
-          </>
+            <button
+              type="button"
+              onClick={handleNext}
+              className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
+            >
+              {t.next}
+            </button>
+          </div>
         )}
       </div>
     )
+  }
+
+  function renderInsightsView() {
+    return renderCardStackView()
   }
 
   function renderCompareView() {
@@ -2199,7 +2073,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         )
       }
 
-      return renderLiveLensCardView()
+      return renderCardStackView()
     }
 
     if (selectedLens === 'tension') {
@@ -2249,7 +2123,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         )
       }
 
-      return renderLiveLensCardView()
+      return renderCardStackView()
     }
 
     if (selectedLens === 'phrase') {
@@ -2299,7 +2173,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         )
       }
 
-      return renderLiveLensCardView()
+      return renderCardStackView()
     }
 
     return renderStructuredPanel(
