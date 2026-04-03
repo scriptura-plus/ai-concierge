@@ -49,6 +49,8 @@ type UnfoldApiResponse = {
 
 type AppLanguage = 'en' | 'ru' | 'es'
 type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
+type TopTab = 'insights' | 'compare' | 'context' | 'another-lens'
+type LensKind = 'word' | 'tension' | 'phrase'
 
 type ArticleJob = {
   status: ArticleJobStatus
@@ -91,6 +93,10 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [activeArticleKey, setActiveArticleKey] = useState('')
   const [articleShareStatus, setArticleShareStatus] = useState('')
   const [articleCopyStatus, setArticleCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+
+  const [activeTab, setActiveTab] = useState<TopTab>('insights')
+  const [lensSheetOpen, setLensSheetOpen] = useState(false)
+  const [selectedLens, setSelectedLens] = useState<LensKind | null>(null)
 
   const copyTimerRef = useRef<number | null>(null)
   const exportCardRef = useRef<HTMLDivElement | null>(null)
@@ -161,6 +167,9 @@ export default function VerseDetailPage({ params }: PageProps) {
       setActiveArticleKey('')
       setArticleShareStatus('')
       setArticleCopyStatus('idle')
+      setActiveTab('insights')
+      setSelectedLens(null)
+      setLensSheetOpen(false)
 
       try {
         const res = await fetch('/api/insights', {
@@ -638,136 +647,77 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
-  const copyButtonClass =
-    copyStatus === 'copied'
-      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-      : copyStatus === 'failed'
-        ? 'border-red-300 bg-red-50 text-red-700'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+  function handleSelectLens(lens: LensKind) {
+    setSelectedLens(lens)
+    setLensSheetOpen(false)
+    setActiveTab('another-lens')
+    setActiveArticleKey('')
+    setArticleShareStatus('')
+    setArticleCopyStatus('idle')
+  }
 
-  const unfoldButtonLabel =
-    currentArticleJob?.status === 'generating'
-      ? 'Generating...'
-      : currentArticleJob?.status === 'ready'
-        ? 'Open article'
-        : 'Unfold'
+  function renderTabButton(label: string, isActive: boolean, onClick: () => void) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`rounded-full border px-4 py-2 text-sm font-medium transition whitespace-nowrap ${
+          isActive
+            ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+            : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+        }`}
+      >
+        {label}
+      </button>
+    )
+  }
 
-  const unfoldButtonClass =
-    currentArticleJob?.status === 'ready'
-      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-      : currentArticleJob?.status === 'generating'
-        ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+  function renderPlaceholderPanel(
+    title: string,
+    lead: string,
+    points: string[],
+    extraAction?: React.ReactNode
+  ) {
+    return (
+      <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {title}
+            </p>
+            {extraAction}
+          </div>
 
-  return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
-      <div ref={articleTopRef} className="mx-auto flex w-full max-w-md flex-col">
-        <div className="mb-6 flex items-center gap-3 text-sm">
-          <Link
-            href={`/bible/${book}/${chapter}`}
-            className="text-neutral-500 transition hover:text-neutral-700"
-          >
-            ← Back
-          </Link>
+          <p className="text-[1.02rem] leading-8 text-stone-800">{lead}</p>
 
-          <Link href="/" className="text-neutral-500 transition hover:text-neutral-700">
-            Home
-          </Link>
+          <div className="mt-6 space-y-4">
+            {points.map((point, index) => (
+              <div
+                key={`${title}-${index}`}
+                className="rounded-[20px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Point {index + 1}
+                </p>
+                <p className="mt-2 text-[0.98rem] leading-7 text-stone-800">{point}</p>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
+    )
+  }
 
-        <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
-          {formattedReference || 'Loading...'}
-        </h1>
+  function renderInsightsView() {
+    const copyButtonClass =
+      copyStatus === 'copied'
+        ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+        : copyStatus === 'failed'
+          ? 'border-red-300 bg-red-50 text-red-700'
+          : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 
-        <div className="mb-5 flex gap-5 overflow-x-auto pb-1 text-[0.98rem] leading-6">
-          <button
-            type="button"
-            onClick={handleShowOriginal}
-            className={`whitespace-nowrap border-b bg-transparent pb-1 transition ${
-              appLanguage === 'en'
-                ? 'border-stone-500 text-stone-900'
-                : 'border-transparent text-stone-500 hover:text-stone-700'
-            }`}
-          >
-            English
-          </button>
-
-          <button
-            type="button"
-            onClick={handleTranslateToSpanish}
-            disabled={translationLoading}
-            className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-50 ${
-              appLanguage === 'es'
-                ? 'border-stone-500 text-stone-900'
-                : 'border-transparent text-stone-500 hover:text-stone-700'
-            }`}
-          >
-            {translationLoading && appLanguage === 'es' ? 'Translating...' : 'Spanish'}
-          </button>
-
-          <button
-            type="button"
-            disabled
-            className="whitespace-nowrap border-b border-transparent bg-transparent pb-1 text-stone-300"
-          >
-            French
-          </button>
-
-          <button
-            type="button"
-            disabled
-            className="whitespace-nowrap border-b border-transparent bg-transparent pb-1 text-stone-300"
-          >
-            German
-          </button>
-
-          <button
-            type="button"
-            onClick={handleTranslateToRussian}
-            disabled={translationLoading}
-            className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-50 ${
-              appLanguage === 'ru'
-                ? 'border-stone-500 text-stone-900'
-                : 'border-transparent text-stone-500 hover:text-stone-700'
-            }`}
-          >
-            {translationLoading && appLanguage === 'ru' ? 'Translating...' : 'Russian'}
-          </button>
-        </div>
-
-        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            className="rounded-full border border-stone-400 bg-[#e8dcc0] px-4 py-2 text-sm font-medium text-stone-900"
-          >
-            Insights
-          </button>
-
-          <button
-            type="button"
-            disabled
-            className="rounded-full border border-stone-200 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-400"
-          >
-            Compare
-          </button>
-
-          <button
-            type="button"
-            disabled
-            className="rounded-full border border-stone-200 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-400"
-          >
-            Context
-          </button>
-
-          <button
-            type="button"
-            disabled
-            className="rounded-full border border-stone-200 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-400"
-          >
-            Another Lens
-          </button>
-        </div>
-
+    return (
+      <>
         {!loading && insights.length > 0 && !activeArticleKey && (
           <p className="mb-4 text-sm font-medium text-stone-500">
             {currentIndex + 1} / {insights.length}
@@ -1008,6 +958,193 @@ export default function VerseDetailPage({ params }: PageProps) {
             )}
           </>
         )}
+      </>
+    )
+  }
+
+  function renderCompareView() {
+    return renderPlaceholderPanel(
+      'Compare',
+      'This mode will compare translation choices and surface where wording moves the reader’s attention in different directions.',
+      [
+        'A short lead will name the main translation tension in the verse.',
+        'The final version will show 3–5 compact comparison points instead of one dense block.',
+        'A short takeaway will explain why those differences matter for reading the verse.',
+      ]
+    )
+  }
+
+  function renderContextView() {
+    return renderPlaceholderPanel(
+      'Context',
+      'This mode will surface only the context that materially changes the reading of the verse.',
+      [
+        'The final version will identify the main context type that matters most here.',
+        'It will present 3–5 compact context points, not a heavy encyclopedia panel.',
+        'A final takeaway will explain how context changes the force of the verse.',
+      ]
+    )
+  }
+
+  function renderLensView() {
+    const lensLabel =
+      selectedLens === 'word'
+        ? 'Word'
+        : selectedLens === 'tension'
+          ? 'Tension'
+          : selectedLens === 'phrase'
+            ? 'Why This Phrase'
+            : 'Another Lens'
+
+    const lead =
+      selectedLens === 'word'
+        ? 'Word will focus on the hidden weight of words, terms, and small textual units.'
+        : selectedLens === 'tension'
+          ? 'Tension will look for what is surprising, pressured, or internally contrasted in the verse.'
+          : selectedLens === 'phrase'
+            ? 'Why This Phrase will ask why the verse is said in this exact way, and what is gained by that form.'
+            : 'Choose a focused lens to read this verse through one angle.'
+
+    const points =
+      selectedLens === 'word'
+        ? [
+            'This lens will stay close to words and textual units, not generic reflections.',
+            'It will highlight hidden weight, verbal force, and meaningful small shifts.',
+            'It should feel like close reading, not dictionary trivia.',
+          ]
+        : selectedLens === 'tension'
+          ? [
+              'This lens will localize where the tension actually lives in the verse.',
+              'It will avoid vague “pseudo-depth” and stay anchored in the text.',
+              'It should surface the most surprising pressure point in the wording.',
+            ]
+          : selectedLens === 'phrase'
+            ? [
+                'This lens will treat the phrase as a shaped form, not just a container of words.',
+                'It will ask what would be lost if the verse were said more simply.',
+                'It should feel like disciplined close reading, not airy rhetoric.',
+              ]
+            : [
+                'Choose Word, Tension, or Why This Phrase.',
+                'Each lens will become a focused reading mode.',
+                'This screen is ready; the lens content comes next.',
+              ]
+
+    return renderPlaceholderPanel(
+      `Lens: ${lensLabel}`,
+      lead,
+      points,
+      <button
+        type="button"
+        onClick={() => setLensSheetOpen(true)}
+        className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+      >
+        Change
+      </button>
+    )
+  }
+
+  return (
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
+      <div ref={articleTopRef} className="mx-auto flex w-full max-w-md flex-col">
+        <div className="mb-6 flex items-center gap-3 text-sm">
+          <Link
+            href={`/bible/${book}/${chapter}`}
+            className="text-neutral-500 transition hover:text-neutral-700"
+          >
+            ← Back
+          </Link>
+
+          <Link href="/" className="text-neutral-500 transition hover:text-neutral-700">
+            Home
+          </Link>
+        </div>
+
+        <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
+          {formattedReference || 'Loading...'}
+        </h1>
+
+        <div className="mb-5 flex gap-5 overflow-x-auto pb-1 text-[0.98rem] leading-6">
+          <button
+            type="button"
+            onClick={handleShowOriginal}
+            className={`whitespace-nowrap border-b bg-transparent pb-1 transition ${
+              appLanguage === 'en'
+                ? 'border-stone-500 text-stone-900'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            English
+          </button>
+
+          <button
+            type="button"
+            onClick={handleTranslateToSpanish}
+            disabled={translationLoading}
+            className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-50 ${
+              appLanguage === 'es'
+                ? 'border-stone-500 text-stone-900'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            {translationLoading && appLanguage === 'es' ? 'Translating...' : 'Spanish'}
+          </button>
+
+          <button
+            type="button"
+            disabled
+            className="whitespace-nowrap border-b border-transparent bg-transparent pb-1 text-stone-300"
+          >
+            French
+          </button>
+
+          <button
+            type="button"
+            disabled
+            className="whitespace-nowrap border-b border-transparent bg-transparent pb-1 text-stone-300"
+          >
+            German
+          </button>
+
+          <button
+            type="button"
+            onClick={handleTranslateToRussian}
+            disabled={translationLoading}
+            className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-50 ${
+              appLanguage === 'ru'
+                ? 'border-stone-500 text-stone-900'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            {translationLoading && appLanguage === 'ru' ? 'Translating...' : 'Russian'}
+          </button>
+        </div>
+
+        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          {renderTabButton('Insights', activeTab === 'insights', () => {
+            setActiveTab('insights')
+            setLensSheetOpen(false)
+          })}
+          {renderTabButton('Compare', activeTab === 'compare', () => {
+            setActiveTab('compare')
+            setLensSheetOpen(false)
+            setActiveArticleKey('')
+          })}
+          {renderTabButton('Context', activeTab === 'context', () => {
+            setActiveTab('context')
+            setLensSheetOpen(false)
+            setActiveArticleKey('')
+          })}
+          {renderTabButton('Another Lens', activeTab === 'another-lens', () => {
+            setLensSheetOpen(true)
+            setActiveArticleKey('')
+          })}
+        </div>
+
+        {activeTab === 'insights' && renderInsightsView()}
+        {activeTab === 'compare' && renderCompareView()}
+        {activeTab === 'context' && renderContextView()}
+        {activeTab === 'another-lens' && renderLensView()}
       </div>
 
       {displayedCard && (
@@ -1103,6 +1240,57 @@ export default function VerseDetailPage({ params }: PageProps) {
               >
                 Scriptura+
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {lensSheetOpen && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/25 px-4 pb-4 pt-16">
+          <div className="mx-auto w-full max-w-md rounded-[28px] border border-stone-300 bg-[#fbf6ea] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-lg font-semibold text-stone-900">Another Lens</p>
+                <p className="mt-1 text-sm text-stone-500">Choose a focused lens</p>
+                <p className="text-sm text-stone-500">Read this verse through one angle.</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setLensSheetOpen(false)}
+                className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1.5 text-sm font-medium text-stone-700"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <button
+                type="button"
+                onClick={() => handleSelectLens('word')}
+                className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
+              >
+                <p className="text-base font-semibold text-stone-900">Word</p>
+                <p className="mt-1 text-sm text-stone-500">Hidden weight of words</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectLens('tension')}
+                className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
+              >
+                <p className="text-base font-semibold text-stone-900">Tension</p>
+                <p className="mt-1 text-sm text-stone-500">What’s surprising here</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectLens('phrase')}
+                className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
+              >
+                <p className="text-base font-semibold text-stone-900">Why This Phrase</p>
+                <p className="mt-1 text-sm text-stone-500">Why it is said this way</p>
+              </button>
             </div>
           </div>
         </div>
