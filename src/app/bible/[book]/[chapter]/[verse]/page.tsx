@@ -803,6 +803,12 @@ export default function VerseDetailPage({ params }: PageProps) {
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
 
+  const compareRequestIdRef = useRef(0)
+  const contextRequestIdRef = useRef(0)
+  const wordLensRequestIdRef = useRef(0)
+  const tensionLensRequestIdRef = useRef(0)
+  const phraseLensRequestIdRef = useRef(0)
+
   const t = UI_TEXT[appLanguage]
 
   useEffect(() => {
@@ -882,6 +888,12 @@ export default function VerseDetailPage({ params }: PageProps) {
       setSelectedLens(null)
       setLensSheetOpen(false)
       setAppLanguage('en')
+
+      compareRequestIdRef.current += 1
+      contextRequestIdRef.current += 1
+      wordLensRequestIdRef.current += 1
+      tensionLensRequestIdRef.current += 1
+      phraseLensRequestIdRef.current += 1
 
       try {
         const res = await fetch('/api/insights', {
@@ -1033,6 +1045,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (!formattedReference || !verseText) return
     if (!force && wordLensCardsByLanguage[language]?.length > 0) return
 
+    const requestId = ++wordLensRequestIdRef.current
+
     setWordLensLoading(true)
     setWordLensError('')
     setCurrentIndex(0)
@@ -1051,6 +1065,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       const data: LensApiResponse = await res.json()
 
+      if (requestId !== wordLensRequestIdRef.current) return
+
       if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
         setWordLensError(data.error || UI_TEXT[language].wordLensUnavailable)
         setWordLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
@@ -1059,16 +1075,21 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       setWordLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
     } catch {
+      if (requestId !== wordLensRequestIdRef.current) return
       setWordLensError(UI_TEXT[language].wordLensUnavailable)
       setWordLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
     } finally {
-      setWordLensLoading(false)
+      if (requestId === wordLensRequestIdRef.current) {
+        setWordLensLoading(false)
+      }
     }
   }
 
   async function loadTensionLens(force = false, language: AppLanguage = appLanguage) {
     if (!formattedReference || !verseText) return
     if (!force && tensionLensCardsByLanguage[language]?.length > 0) return
+
+    const requestId = ++tensionLensRequestIdRef.current
 
     setTensionLensLoading(true)
     setTensionLensError('')
@@ -1088,6 +1109,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       const data: LensApiResponse = await res.json()
 
+      if (requestId !== tensionLensRequestIdRef.current) return
+
       if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
         setTensionLensError(data.error || UI_TEXT[language].tensionLensUnavailable)
         setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
@@ -1096,16 +1119,21 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
     } catch {
+      if (requestId !== tensionLensRequestIdRef.current) return
       setTensionLensError(UI_TEXT[language].tensionLensUnavailable)
       setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
     } finally {
-      setTensionLensLoading(false)
+      if (requestId === tensionLensRequestIdRef.current) {
+        setTensionLensLoading(false)
+      }
     }
   }
 
   async function loadPhraseLens(force = false, language: AppLanguage = appLanguage) {
     if (!formattedReference || !verseText) return
     if (!force && phraseLensCardsByLanguage[language]?.length > 0) return
+
+    const requestId = ++phraseLensRequestIdRef.current
 
     setPhraseLensLoading(true)
     setPhraseLensError('')
@@ -1125,6 +1153,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       const data: LensApiResponse = await res.json()
 
+      if (requestId !== phraseLensRequestIdRef.current) return
+
       if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
         setPhraseLensError(data.error || UI_TEXT[language].phraseLensUnavailable)
         setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
@@ -1133,16 +1163,21 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
     } catch {
+      if (requestId !== phraseLensRequestIdRef.current) return
       setPhraseLensError(UI_TEXT[language].phraseLensUnavailable)
       setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
     } finally {
-      setPhraseLensLoading(false)
+      if (requestId === phraseLensRequestIdRef.current) {
+        setPhraseLensLoading(false)
+      }
     }
   }
 
   async function loadCompare(force = false, language: AppLanguage = appLanguage) {
     if (!formattedReference || !verseText) return
     if (!force && compareByLanguage[language]) return
+
+    const requestId = ++compareRequestIdRef.current
 
     setCompareLoading(true)
     setCompareError('')
@@ -1161,6 +1196,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       const data: CompareApiResponse = await res.json()
 
+      if (requestId !== compareRequestIdRef.current) return
+
       if (!res.ok || !data.compare || !Array.isArray(data.compare.points)) {
         setCompareError(data.error || UI_TEXT[language].compareUnavailable)
         setCompareByLanguage((prev) => ({ ...prev, [language]: null }))
@@ -1169,16 +1206,21 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       setCompareByLanguage((prev) => ({ ...prev, [language]: data.compare as ComparePayload }))
     } catch {
+      if (requestId !== compareRequestIdRef.current) return
       setCompareError(UI_TEXT[language].compareUnavailable)
       setCompareByLanguage((prev) => ({ ...prev, [language]: null }))
     } finally {
-      setCompareLoading(false)
+      if (requestId === compareRequestIdRef.current) {
+        setCompareLoading(false)
+      }
     }
   }
 
   async function loadContext(force = false, language: AppLanguage = appLanguage) {
     if (!formattedReference || !verseText) return
     if (!force && contextByLanguage[language]) return
+
+    const requestId = ++contextRequestIdRef.current
 
     setContextLoading(true)
     setContextError('')
@@ -1197,6 +1239,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       const data: ContextApiResponse = await res.json()
 
+      if (requestId !== contextRequestIdRef.current) return
+
       if (!res.ok || !data.context || !Array.isArray(data.context.points)) {
         setContextError(data.error || UI_TEXT[language].contextUnavailable)
         setContextByLanguage((prev) => ({ ...prev, [language]: null }))
@@ -1205,10 +1249,13 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       setContextByLanguage((prev) => ({ ...prev, [language]: data.context as ContextPayload }))
     } catch {
+      if (requestId !== contextRequestIdRef.current) return
       setContextError(UI_TEXT[language].contextUnavailable)
       setContextByLanguage((prev) => ({ ...prev, [language]: null }))
     } finally {
-      setContextLoading(false)
+      if (requestId === contextRequestIdRef.current) {
+        setContextLoading(false)
+      }
     }
   }
 
@@ -1774,7 +1821,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     return (
-      <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+      <div className="card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
           <div className="mb-5 flex items-center justify-between gap-3">
             <button
@@ -1890,7 +1937,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
+          className="card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
         >
           {loading ? (
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
@@ -1944,18 +1991,18 @@ export default function VerseDetailPage({ params }: PageProps) {
               </p>
 
               {displayedVerseText && (
-                <div className="mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
+                <div className="verse-fade mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
                   <p className="text-[1rem] leading-8 text-stone-700 italic">
                     {displayedVerseText}
                   </p>
                 </div>
               )}
 
-              <h2 className="mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
+              <h2 className="title-fade mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
                 {displayedCard.title}
               </h2>
 
-              <p className="text-[1.08rem] leading-9 text-stone-800">{displayedCard.text}</p>
+              <p className="text-fade text-[1.08rem] leading-9 text-stone-800">{displayedCard.text}</p>
 
               <div className="mt-6 flex flex-wrap justify-center gap-2.5">
                 <button
@@ -2087,7 +2134,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     return (
-      <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+      <div className="tab-panel-enter card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
           <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
             {t.compare}
@@ -2217,7 +2264,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     return (
-      <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+      <div className="tab-panel-enter card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
           <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
             {t.context}
@@ -2708,6 +2755,28 @@ export default function VerseDetailPage({ params }: PageProps) {
           }
         }
 
+        @keyframes scriptura-card-pop {
+          from {
+            opacity: 0;
+            transform: translateY(8px) scale(0.992);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes scriptura-soft-fade {
+          from {
+            opacity: 0;
+            transform: translateY(4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         .tab-panel-enter {
           animation: scriptura-fade-slide-up 220ms ease;
         }
@@ -2718,6 +2787,16 @@ export default function VerseDetailPage({ params }: PageProps) {
 
         .sheet-panel {
           animation: scriptura-sheet-up 220ms ease;
+        }
+
+        .card-pop {
+          animation: scriptura-card-pop 240ms ease;
+        }
+
+        .verse-fade,
+        .title-fade,
+        .text-fade {
+          animation: scriptura-soft-fade 260ms ease;
         }
       `}</style>
     </main>
