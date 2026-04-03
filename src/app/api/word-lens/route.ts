@@ -1,27 +1,25 @@
 import { NextResponse } from "next/server";
-import { getVerseText } from "@/lib/bible/getVerseText";
 
+type SupportedLanguage = "en" | "ru" | "es" | "fr" | "de";
 type InsightItem = {
   title: string;
   text: string;
 };
 
-function buildPrompt(
-  reference: string,
-  verseText: string,
-  targetLanguage: "en" | "ru" | "es" = "en"
-) {
+function buildPrompt(reference: string, verseText: string, targetLanguage: SupportedLanguage) {
   const languageInstruction =
     targetLanguage === "ru"
       ? "Write the full output in Russian."
       : targetLanguage === "es"
         ? "Write the full output in Spanish."
-        : "Write the full output in English.";
+        : targetLanguage === "fr"
+          ? "Write the full output in French."
+          : targetLanguage === "de"
+            ? "Write the full output in German."
+            : "Write the full output in English.";
 
   return `
-You are an elite generator of close-reading Bible insight cards for the Word Lens.
-
-Your task is to produce 6-8 distinct cards based on ONE verse.
+You are an elite generator of close-reading Bible insight cards for the Word lens.
 
 REFERENCE:
 ${reference}
@@ -31,58 +29,29 @@ ${verseText}
 
 ${languageInstruction}
 
-WORD LENS DEFINITION:
-This lens focuses on the hidden weight of words, short phrases, particles, grammatical pivots, verbal force, and meaningful small textual units.
+TASK:
+Produce 5-7 distinct Word lens cards.
 
-CORE RULE:
-Stay close to the wording of the verse itself.
+WORD LENS:
+This lens stays close to words and small textual units.
+It surfaces hidden weight, force, pressure, and significance in wording.
 
-DO:
-- Focus on one word, short phrase, contrast, repetition, grammatical turn, or small textual feature
-- Show why that detail matters
-- Produce observations that feel precise, anchored, and worth noticing
-- Make each card meaningfully different from the others
-
-DO NOT:
-- Drift into generic commentary
-- Turn every card into Greek/Hebrew trivia
-- Build cards on the whole beauty of the verse in general
-- Explain broad context unless it directly clarifies the chosen word or phrase
-- Invent details not grounded in the verse text
-
-QUALITY FILTER:
-A good Word Lens card should feel like:
-"there is more weight in this small textual detail than the reader first notices."
-
-EACH CARD MUST:
-- Be anchored in a specific textual feature
-- Stay at the level of lexical/small-unit close reading
-- Be clear, sharp, and self-contained
-- Be 3-5 sentences long
-
-STYLE:
-- Modern
-- Intelligent
-- Precise
-- Readable
-- No preaching tone
-- No clichés
-- No filler
-
-OUTPUT RULES:
+RULES:
 - Return ONLY valid JSON
-- No markdown
-- No code fences
-- No commentary outside JSON
 - Output must be a JSON array
+- No markdown
+- No commentary outside JSON
 - Each item must have:
-  - "title": short and sharp
-  - "text": 3-5 sentences
+  - "title"
+  - "text"
+- "text" must be 3-5 sentences
+- Avoid generic commentary
+- Stay anchored in this specific verse
 
 Example:
 [
   {
-    "title": "A Small Word With Force",
+    "title": "A Word Carrying More Weight",
     "text": "Sentence one. Sentence two. Sentence three. Sentence four."
   }
 ]
@@ -93,9 +62,7 @@ function parseInsights(raw: string): InsightItem[] | null {
   try {
     const parsed = JSON.parse(raw);
 
-    if (!Array.isArray(parsed)) {
-      return null;
-    }
+    if (!Array.isArray(parsed)) return null;
 
     const cleaned = parsed
       .filter((item) => item && typeof item === "object")
@@ -115,10 +82,7 @@ function extractJsonArray(raw: string): string | null {
   const start = raw.indexOf("[");
   const end = raw.lastIndexOf("]");
 
-  if (start === -1 || end === -1 || end <= start) {
-    return null;
-  }
-
+  if (start === -1 || end === -1 || end <= start) return null;
   return raw.slice(start, end + 1);
 }
 
@@ -143,32 +107,26 @@ function extractOpenAIText(data: any): string {
 export async function POST(req: Request) {
   try {
     const { reference, verseText, targetLanguage } = await req.json();
-
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "OPENAI_API_KEY is missing." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "OPENAI_API_KEY is missing." }, { status: 500 });
     }
 
-    let safeReference = String(reference ?? "").trim();
-    let safeVerseText = String(verseText ?? "").trim();
+    const safeReference = String(reference ?? "").trim() || "Unknown reference";
+    const safeVerseText = String(verseText ?? "").trim();
 
     if (!safeVerseText) {
-      return NextResponse.json(
-        { error: "verseText is required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "verseText is required." }, { status: 400 });
     }
 
-    if (!safeReference) {
-      safeReference = "Unknown reference";
-    }
-
-    const safeLanguage: "en" | "ru" | "es" =
-      targetLanguage === "ru" || targetLanguage === "es" ? targetLanguage : "en";
+    const safeLanguage: SupportedLanguage =
+      targetLanguage === "ru" ||
+      targetLanguage === "es" ||
+      targetLanguage === "fr" ||
+      targetLanguage === "de"
+        ? targetLanguage
+        : "en";
 
     const prompt = buildPrompt(safeReference, safeVerseText, safeLanguage);
 
@@ -180,12 +138,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model: "gpt-5.4-mini",
-        input: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+        input: [{ role: "user", content: prompt }],
         max_output_tokens: 2200,
       }),
     });
@@ -194,45 +147,24 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       return NextResponse.json(
-        {
-          error: "OpenAI request failed.",
-          raw: responseText || "Empty OpenAI error response",
-        },
+        { error: "OpenAI request failed.", raw: responseText || "Empty OpenAI error response" },
         { status: 500 }
       );
     }
 
-    let data: any;
-
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      return NextResponse.json(
-        {
-          error: "OpenAI returned non-JSON HTTP response.",
-          raw: responseText || "Empty HTTP response body",
-        },
-        { status: 500 }
-      );
-    }
-
+    const data = JSON.parse(responseText);
     const rawText = extractOpenAIText(data);
 
     let cards = parseInsights(rawText);
 
     if (!cards) {
       const extracted = extractJsonArray(rawText);
-      if (extracted) {
-        cards = parseInsights(extracted);
-      }
+      if (extracted) cards = parseInsights(extracted);
     }
 
     if (!cards) {
       return NextResponse.json(
-        {
-          error: "Failed to parse Word lens JSON.",
-          raw: rawText || "Empty model response",
-        },
+        { error: "Failed to parse Word lens JSON.", raw: rawText || "Empty model response" },
         { status: 500 }
       );
     }
@@ -241,16 +173,12 @@ export async function POST(req: Request) {
       reference: safeReference,
       verseText: safeVerseText,
       targetLanguage: safeLanguage,
-      count: cards.length,
       cards,
     });
   } catch (error) {
-    console.error("Word Lens API error:", error);
-
+    console.error("Word lens API error:", error);
     return NextResponse.json(
-      {
-        error: "Something went wrong while generating Word lens cards.",
-      },
+      { error: "Something went wrong while generating Word lens cards." },
       { status: 500 }
     );
   }
