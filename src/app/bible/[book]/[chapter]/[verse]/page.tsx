@@ -65,6 +65,525 @@ type ArticleJob = {
 
 const ARTICLE_STORAGE_KEY = 'scriptura_unfold_articles_v2'
 
+const UI_TEXT: Record<
+  AppLanguage,
+  {
+    back: string
+    home: string
+    english: string
+    spanish: string
+    french: string
+    german: string
+    russian: string
+    translating: string
+
+    insights: string
+    compare: string
+    context: string
+    anotherLens: string
+
+    loadingInsight: string
+    loadingInsightText: string
+    unableToLoad: string
+    rawModelOutput: string
+    noInsight: string
+    noInsightText: string
+
+    previous: string
+    next: string
+
+    copy: string
+    copied: string
+    copyFailed: string
+    share: string
+
+    unfold: string
+    generating: string
+    openArticle: string
+    articleReady: string
+
+    article: string
+    backToCards: string
+    copyArticle: string
+    shareArticle: string
+    articleShared: string
+    shareUnavailableArticleCopied: string
+
+    compareLead: string
+    compareTakeaway: string
+    compareDiffLabel: string
+
+    contextLead: string
+    contextTakeaway: string
+    contextPointLabel: string
+
+    lensTitle: string
+    chooseFocusedLens: string
+    readThisVerseOneAngle: string
+    close: string
+    change: string
+
+    word: string
+    tension: string
+    phrase: string
+
+    wordHelper: string
+    tensionHelper: string
+    phraseHelper: string
+
+    lensPointLabel: string
+    takeaway: string
+
+    lensLeadWord: string
+    lensLeadTension: string
+    lensLeadPhrase: string
+    lensLeadDefault: string
+
+    lensTakeawayWord: string
+    lensTakeawayTension: string
+    lensTakeawayPhrase: string
+    lensTakeawayDefault: string
+
+    point: string
+    difference: string
+    contextPoint: string
+
+    lensPoint1Word: string
+    lensPoint2Word: string
+    lensPoint3Word: string
+
+    lensPoint1Tension: string
+    lensPoint2Tension: string
+    lensPoint3Tension: string
+
+    lensPoint1Phrase: string
+    lensPoint2Phrase: string
+    lensPoint3Phrase: string
+
+    lensPoint1Default: string
+    lensPoint2Default: string
+    lensPoint3Default: string
+
+    comparePoint1: string
+    comparePoint2: string
+    comparePoint3: string
+
+    contextPoint1: string
+    contextPoint2: string
+    contextPoint3: string
+
+    sharedAsImage: string
+    sharedAsText: string
+    shareUnavailableCopiedInstead: string
+  }
+> = {
+  en: {
+    back: '← Back',
+    home: 'Home',
+    english: 'English',
+    spanish: 'Spanish',
+    french: 'French',
+    german: 'German',
+    russian: 'Russian',
+    translating: 'Translating...',
+
+    insights: 'Insights',
+    compare: 'Compare',
+    context: 'Context',
+    anotherLens: 'Another Lens',
+
+    loadingInsight: 'Loading insight',
+    loadingInsightText: 'Please wait while the insight cards are generated.',
+    unableToLoad: 'Unable to load',
+    rawModelOutput: 'Raw model output',
+    noInsight: 'No insight',
+    noInsightText: 'No insight is available for this verse yet.',
+
+    previous: 'Previous',
+    next: 'Next',
+
+    copy: 'Copy',
+    copied: 'Copied',
+    copyFailed: 'Copy failed',
+    share: 'Share',
+
+    unfold: 'Unfold',
+    generating: 'Generating...',
+    openArticle: 'Open article',
+    articleReady: 'Article ready',
+
+    article: 'Article',
+    backToCards: 'Back to cards',
+    copyArticle: 'Copy article',
+    shareArticle: 'Share article',
+    articleShared: 'Article shared',
+    shareUnavailableArticleCopied: 'Share unavailable — article copied',
+
+    compareLead:
+      'This mode will compare translation choices and surface where wording moves the reader’s attention in different directions.',
+    compareTakeaway:
+      'Compare should feel like a reading tool, not a raw list of translations.',
+    compareDiffLabel: 'Difference',
+
+    contextLead:
+      'This mode will surface only the context that materially changes the reading of the verse.',
+    contextTakeaway:
+      'Context should clarify why the verse sounds the way it does inside its real setting.',
+    contextPointLabel: 'Context point',
+
+    lensTitle: 'Another Lens',
+    chooseFocusedLens: 'Choose a focused lens',
+    readThisVerseOneAngle: 'Read this verse through one angle.',
+    close: 'Close',
+    change: 'Change',
+
+    word: 'Word',
+    tension: 'Tension',
+    phrase: 'Why This Phrase',
+
+    wordHelper: 'Hidden weight of words',
+    tensionHelper: 'What’s surprising here',
+    phraseHelper: 'Why it is said this way',
+
+    lensPointLabel: 'Lens point',
+    takeaway: 'Takeaway',
+
+    lensLeadWord:
+      'Word will focus on the hidden weight of words, terms, and small textual units.',
+    lensLeadTension:
+      'Tension will look for what is surprising, pressured, or internally contrasted in the verse.',
+    lensLeadPhrase:
+      'Why This Phrase will ask why the verse is said in this exact way, and what is gained by that form.',
+    lensLeadDefault: 'Choose a focused lens to read this verse through one angle.',
+
+    lensTakeawayWord:
+      'Word should reveal hidden textual weight without turning into a dry lexicon.',
+    lensTakeawayTension:
+      'Tension should surface real internal pressure in the verse, not invented drama.',
+    lensTakeawayPhrase:
+      'Why This Phrase should explain why the wording itself carries meaning.',
+    lensTakeawayDefault:
+      'Another Lens is the focused-reading family, not just a reroll button.',
+
+    point: 'Point',
+    difference: 'Difference',
+    contextPoint: 'Context point',
+
+    lensPoint1Word:
+      'This lens will stay close to words and textual units, not generic reflections.',
+    lensPoint2Word:
+      'It will highlight hidden weight, verbal force, and meaningful small shifts.',
+    lensPoint3Word: 'It should feel like close reading, not dictionary trivia.',
+
+    lensPoint1Tension:
+      'This lens will localize where the tension actually lives in the verse.',
+    lensPoint2Tension:
+      'It will avoid vague “pseudo-depth” and stay anchored in the text.',
+    lensPoint3Tension:
+      'It should surface the most surprising pressure point in the wording.',
+
+    lensPoint1Phrase:
+      'This lens will treat the phrase as a shaped form, not just a container of words.',
+    lensPoint2Phrase:
+      'It will ask what would be lost if the verse were said more simply.',
+    lensPoint3Phrase:
+      'It should feel like disciplined close reading, not airy rhetoric.',
+
+    lensPoint1Default: 'Choose Word, Tension, or Why This Phrase.',
+    lensPoint2Default: 'Each lens will become a focused reading mode.',
+    lensPoint3Default: 'This screen is ready; the lens content comes next.',
+
+    comparePoint1: 'A short lead will name the main translation tension in the verse.',
+    comparePoint2:
+      'The final version will show 3–5 compact comparison points instead of one dense block.',
+    comparePoint3:
+      'A short takeaway will explain why those differences matter for reading the verse.',
+
+    contextPoint1:
+      'The final version will identify the main context type that matters most here.',
+    contextPoint2:
+      'It will present 3–5 compact context points, not a heavy encyclopedia panel.',
+    contextPoint3:
+      'A final takeaway will explain how context changes the force of the verse.',
+
+    sharedAsImage: 'Shared as image',
+    sharedAsText: 'Shared as text',
+    shareUnavailableCopiedInstead: 'Share unavailable — copied instead',
+  },
+  ru: {
+    back: '← Назад',
+    home: 'Главная',
+    english: 'Английский',
+    spanish: 'Испанский',
+    french: 'Французский',
+    german: 'Немецкий',
+    russian: 'Русский',
+    translating: 'Перевод...',
+
+    insights: 'Инсайты',
+    compare: 'Сравнение',
+    context: 'Контекст',
+    anotherLens: 'Другая линза',
+
+    loadingInsight: 'Загрузка инсайта',
+    loadingInsightText: 'Подождите, пока генерируются карточки инсайтов.',
+    unableToLoad: 'Не удалось загрузить',
+    rawModelOutput: 'Сырой вывод модели',
+    noInsight: 'Нет инсайта',
+    noInsightText: 'Для этого стиха пока нет доступного инсайта.',
+
+    previous: 'Назад',
+    next: 'Далее',
+
+    copy: 'Копировать',
+    copied: 'Скопировано',
+    copyFailed: 'Ошибка копирования',
+    share: 'Поделиться',
+
+    unfold: 'Развернуть',
+    generating: 'Генерация...',
+    openArticle: 'Открыть статью',
+    articleReady: 'Статья готова',
+
+    article: 'Статья',
+    backToCards: 'Назад к карточкам',
+    copyArticle: 'Копировать статью',
+    shareArticle: 'Поделиться статьёй',
+    articleShared: 'Статья отправлена',
+    shareUnavailableArticleCopied: 'Поделиться нельзя — статья скопирована',
+
+    compareLead:
+      'Этот режим будет сравнивать переводческие решения и показывать, как формулировка направляет внимание читателя в разные стороны.',
+    compareTakeaway:
+      'Сравнение должно ощущаться как инструмент чтения, а не как сырой список переводов.',
+    compareDiffLabel: 'Различие',
+
+    contextLead:
+      'Этот режим будет показывать только тот контекст, который реально меняет чтение стиха.',
+    contextTakeaway:
+      'Контекст должен объяснять, почему стих звучит именно так в своей реальной среде.',
+    contextPointLabel: 'Пункт контекста',
+
+    lensTitle: 'Другая линза',
+    chooseFocusedLens: 'Выберите сфокусированную линзу',
+    readThisVerseOneAngle: 'Посмотрите на этот стих под одним углом.',
+    close: 'Закрыть',
+    change: 'Изменить',
+
+    word: 'Слово',
+    tension: 'Напряжение',
+    phrase: 'Почему именно эта фраза',
+
+    wordHelper: 'Скрытый вес слов',
+    tensionHelper: 'Что здесь неожиданно',
+    phraseHelper: 'Почему это сказано именно так',
+
+    lensPointLabel: 'Пункт линзы',
+    takeaway: 'Вывод',
+
+    lensLeadWord:
+      'Линза «Слово» сосредоточится на скрытом весе слов, терминов и малых текстовых единиц.',
+    lensLeadTension:
+      'Линза «Напряжение» будет искать то, что в стихе удивляет, напрягает или внутренне контрастирует.',
+    lensLeadPhrase:
+      'Линза «Почему именно эта фраза» спросит, почему стих сформулирован именно так и что даёт эта форма.',
+    lensLeadDefault:
+      'Выберите сфокусированную линзу, чтобы посмотреть на этот стих под одним углом.',
+
+    lensTakeawayWord:
+      'Линза «Слово» должна раскрывать скрытый текстовый вес, не превращаясь в сухой лексикон.',
+    lensTakeawayTension:
+      'Линза «Напряжение» должна находить реальное внутреннее напряжение стиха, а не выдуманную драму.',
+    lensTakeawayPhrase:
+      'Линза «Почему именно эта фраза» должна объяснять, почему сама формулировка несёт смысл.',
+    lensTakeawayDefault:
+      '«Другая линза» — это семейство сфокусированного чтения, а не просто кнопка reroll.',
+
+    point: 'Пункт',
+    difference: 'Различие',
+    contextPoint: 'Пункт контекста',
+
+    lensPoint1Word:
+      'Эта линза должна держаться слов и текстовых единиц, а не уходить в общие размышления.',
+    lensPoint2Word:
+      'Она будет выделять скрытый вес, силу глагола и значимые малые сдвиги.',
+    lensPoint3Word:
+      'Она должна ощущаться как close reading, а не как словарная справка.',
+
+    lensPoint1Tension:
+      'Эта линза должна точно локализовать, где именно в стихе живёт напряжение.',
+    lensPoint2Tension:
+      'Она должна избегать псевдоглубины и оставаться привязанной к тексту.',
+    lensPoint3Tension:
+      'Она должна показывать самую неожиданную точку напряжения в формулировке.',
+
+    lensPoint1Phrase:
+      'Эта линза должна читать фразу как сформированную форму, а не просто как контейнер слов.',
+    lensPoint2Phrase:
+      'Она должна спрашивать, что было бы потеряно, если бы стих был сказан проще.',
+    lensPoint3Phrase:
+      'Она должна ощущаться как дисциплинированное close reading, а не как воздушная риторика.',
+
+    lensPoint1Default: 'Выберите «Слово», «Напряжение» или «Почему именно эта фраза».',
+    lensPoint2Default: 'Каждая линза станет отдельным режимом сфокусированного чтения.',
+    lensPoint3Default: 'Экран уже готов; содержимое линзы будет следующим шагом.',
+
+    comparePoint1:
+      'Короткий lead будет называть главное переводческое напряжение в стихе.',
+    comparePoint2:
+      'Финальная версия покажет 3–5 компактных различий вместо одного плотного блока.',
+    comparePoint3:
+      'Короткий вывод объяснит, почему эти различия важны для чтения стиха.',
+
+    contextPoint1:
+      'Финальная версия определит, какой тип контекста здесь важнее всего.',
+    contextPoint2:
+      'Она покажет 3–5 компактных пунктов контекста, а не тяжёлую энциклопедическую панель.',
+    contextPoint3:
+      'Итоговый вывод объяснит, как контекст меняет силу звучания стиха.',
+
+    sharedAsImage: 'Отправлено как изображение',
+    sharedAsText: 'Отправлено как текст',
+    shareUnavailableCopiedInstead: 'Поделиться нельзя — текст скопирован',
+  },
+  es: {
+    back: '← Atrás',
+    home: 'Inicio',
+    english: 'Inglés',
+    spanish: 'Español',
+    french: 'Francés',
+    german: 'Alemán',
+    russian: 'Ruso',
+    translating: 'Traduciendo...',
+
+    insights: 'Ideas',
+    compare: 'Comparar',
+    context: 'Contexto',
+    anotherLens: 'Otra lente',
+
+    loadingInsight: 'Cargando idea',
+    loadingInsightText: 'Espera mientras se generan las tarjetas de ideas.',
+    unableToLoad: 'No se pudo cargar',
+    rawModelOutput: 'Salida bruta del modelo',
+    noInsight: 'Sin idea',
+    noInsightText: 'Todavía no hay una idea disponible para este versículo.',
+
+    previous: 'Anterior',
+    next: 'Siguiente',
+
+    copy: 'Copiar',
+    copied: 'Copiado',
+    copyFailed: 'Error al copiar',
+    share: 'Compartir',
+
+    unfold: 'Desarrollar',
+    generating: 'Generando...',
+    openArticle: 'Abrir artículo',
+    articleReady: 'Artículo listo',
+
+    article: 'Artículo',
+    backToCards: 'Volver a tarjetas',
+    copyArticle: 'Copiar artículo',
+    shareArticle: 'Compartir artículo',
+    articleShared: 'Artículo compartido',
+    shareUnavailableArticleCopied: 'No se puede compartir — artículo copiado',
+
+    compareLead:
+      'Este modo comparará decisiones de traducción y mostrará cómo la redacción dirige la atención del lector en distintas direcciones.',
+    compareTakeaway:
+      'Comparar debe sentirse como una herramienta de lectura, no como una lista bruta de traducciones.',
+    compareDiffLabel: 'Diferencia',
+
+    contextLead:
+      'Este modo mostrará solo el contexto que realmente cambia la lectura del versículo.',
+    contextTakeaway:
+      'El contexto debe aclarar por qué el versículo suena así dentro de su escenario real.',
+    contextPointLabel: 'Punto de contexto',
+
+    lensTitle: 'Otra lente',
+    chooseFocusedLens: 'Elige una lente enfocada',
+    readThisVerseOneAngle: 'Lee este versículo desde un solo ángulo.',
+    close: 'Cerrar',
+    change: 'Cambiar',
+
+    word: 'Palabra',
+    tension: 'Tensión',
+    phrase: 'Por qué esta frase',
+
+    wordHelper: 'Peso oculto de las palabras',
+    tensionHelper: 'Qué sorprende aquí',
+    phraseHelper: 'Por qué se dice así',
+
+    lensPointLabel: 'Punto de lente',
+    takeaway: 'Conclusión',
+
+    lensLeadWord:
+      'Palabra se enfocará en el peso oculto de palabras, términos y pequeñas unidades textuales.',
+    lensLeadTension:
+      'Tensión buscará lo que sorprende, presiona o contrasta internamente en el versículo.',
+    lensLeadPhrase:
+      'Por qué esta frase preguntará por qué el versículo está dicho exactamente así y qué aporta esa forma.',
+    lensLeadDefault:
+      'Elige una lente enfocada para leer este versículo desde un solo ángulo.',
+
+    lensTakeawayWord:
+      'Palabra debe revelar peso textual oculto sin convertirse en un léxico seco.',
+    lensTakeawayTension:
+      'Tensión debe mostrar presión interna real en el versículo, no drama inventado.',
+    lensTakeawayPhrase:
+      'Por qué esta frase debe explicar por qué la formulación misma lleva significado.',
+    lensTakeawayDefault:
+      'Otra lente es la familia de lectura enfocada, no solo un botón de repetir.',
+
+    point: 'Punto',
+    difference: 'Diferencia',
+    contextPoint: 'Punto de contexto',
+
+    lensPoint1Word:
+      'Esta lente debe mantenerse cerca de palabras y unidades textuales, no de reflexiones genéricas.',
+    lensPoint2Word:
+      'Destacará peso oculto, fuerza verbal y pequeños cambios significativos.',
+    lensPoint3Word:
+      'Debe sentirse como lectura cercana, no como trivia de diccionario.',
+
+    lensPoint1Tension:
+      'Esta lente debe localizar dónde vive realmente la tensión en el versículo.',
+    lensPoint2Tension:
+      'Debe evitar la “pseudo-profundidad” vaga y mantenerse anclada en el texto.',
+    lensPoint3Tension:
+      'Debe sacar a la luz el punto de tensión más sorprendente en la redacción.',
+
+    lensPoint1Phrase:
+      'Esta lente debe tratar la frase como una forma construida, no solo como un contenedor de palabras.',
+    lensPoint2Phrase:
+      'Debe preguntar qué se perdería si el versículo se dijera de forma más simple.',
+    lensPoint3Phrase:
+      'Debe sentirse como lectura cercana disciplinada, no como retórica vacía.',
+
+    lensPoint1Default: 'Elige Palabra, Tensión o Por qué esta frase.',
+    lensPoint2Default: 'Cada lente se convertirá en un modo de lectura enfocado.',
+    lensPoint3Default: 'La pantalla ya está lista; el contenido de la lente viene después.',
+
+    comparePoint1:
+      'Un lead breve nombrará la tensión principal de traducción en el versículo.',
+    comparePoint2:
+      'La versión final mostrará 3–5 puntos de comparación compactos en vez de un bloque denso.',
+    comparePoint3:
+      'Una conclusión breve explicará por qué esas diferencias importan para leer el versículo.',
+
+    contextPoint1:
+      'La versión final identificará qué tipo de contexto importa más aquí.',
+    contextPoint2:
+      'Presentará 3–5 puntos de contexto compactos, no un panel enciclopédico pesado.',
+    contextPoint3:
+      'Una conclusión final explicará cómo el contexto cambia la fuerza del versículo.',
+
+    sharedAsImage: 'Compartido como imagen',
+    sharedAsText: 'Compartido como texto',
+    shareUnavailableCopiedInstead: 'No se puede compartir — copiado en su lugar',
+  },
+}
+
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
   const [chapter, setChapter] = useState('')
@@ -104,6 +623,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const touchStartXRef = useRef<number | null>(null)
   const touchDeltaXRef = useRef(0)
+
+  const t = UI_TEXT[appLanguage]
 
   useEffect(() => {
     async function loadInitial() {
@@ -572,10 +1093,10 @@ export default function VerseDetailPage({ params }: PageProps) {
     try {
       if (navigator.share) {
         await navigator.share({ text })
-        setArticleShareStatus('Article shared')
+        setArticleShareStatus(t.articleShared)
       } else {
         await navigator.clipboard.writeText(text)
-        setArticleShareStatus('Share unavailable — article copied')
+        setArticleShareStatus(t.shareUnavailableArticleCopied)
       }
     } catch {
       setArticleShareStatus('')
@@ -627,7 +1148,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           navigator.canShare({ files: [file] })
         ) {
           await navigator.share({ files: [file] })
-          setShareStatus('Shared as image')
+          setShareStatus(t.sharedAsImage)
           setCopyStatus('idle')
           return
         }
@@ -635,11 +1156,11 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       if (navigator.share) {
         await navigator.share({ text: shareText })
-        setShareStatus('Shared as text')
+        setShareStatus(t.sharedAsText)
         setCopyStatus('idle')
       } else {
         await navigator.clipboard.writeText(shareText)
-        setShareStatus('Share unavailable — copied instead')
+        setShareStatus(t.shareUnavailableCopiedInstead)
         setCopyStatus('idle')
       }
     } catch {
@@ -708,7 +1229,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
           <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-              Takeaway
+              {t.takeaway}
             </p>
             <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{takeaway}</p>
           </div>
@@ -726,10 +1247,10 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const unfoldButtonLabel =
     currentArticleJob?.status === 'generating'
-      ? 'Generating...'
+      ? t.generating
       : currentArticleJob?.status === 'ready'
-        ? 'Open article'
-        : 'Unfold'
+        ? t.openArticle
+        : t.unfold
 
   const unfoldButtonClass =
     currentArticleJob?.status === 'ready'
@@ -763,11 +1284,11 @@ export default function VerseDetailPage({ params }: PageProps) {
                   }}
                   className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Back to cards
+                  {t.backToCards}
                 </button>
 
                 <span className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                  Article
+                  {t.article}
                 </span>
               </div>
 
@@ -802,10 +1323,10 @@ export default function VerseDetailPage({ params }: PageProps) {
                   className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
                   {articleCopyStatus === 'copied'
-                    ? 'Copied'
+                    ? t.copied
                     : articleCopyStatus === 'failed'
-                      ? 'Copy failed'
-                      : 'Copy article'}
+                      ? t.copyFailed
+                      : t.copyArticle}
                 </button>
 
                 <button
@@ -813,7 +1334,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                   onClick={handleShareArticle}
                   className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Share article
+                  {t.shareArticle}
                 </button>
 
                 <button
@@ -828,14 +1349,14 @@ export default function VerseDetailPage({ params }: PageProps) {
                   }}
                   className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Back to cards
+                  {t.backToCards}
                 </button>
 
                 <Link
                   href="/"
                   className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-center text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Home
+                  {t.home}
                 </Link>
               </div>
 
@@ -855,23 +1376,21 @@ export default function VerseDetailPage({ params }: PageProps) {
               {loading ? (
                 <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
                   <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                    Loading insight
+                    {t.loadingInsight}
                   </p>
-                  <p className="text-[1.08rem] leading-9 text-stone-800">
-                    Please wait while the insight cards are generated.
-                  </p>
+                  <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingInsightText}</p>
                 </div>
               ) : error ? (
                 <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
                   <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                    Unable to load
+                    {t.unableToLoad}
                   </p>
                   <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{error}</p>
 
                   {rawOutput && (
                     <div className="rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
                       <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-                        Raw model output
+                        {t.rawModelOutput}
                       </p>
                       <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
                         {rawOutput}
@@ -917,10 +1436,10 @@ export default function VerseDetailPage({ params }: PageProps) {
                       className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
                     >
                       {copyStatus === 'copied'
-                        ? 'Copied'
+                        ? t.copied
                         : copyStatus === 'failed'
-                          ? 'Copy failed'
-                          : 'Copy'}
+                          ? t.copyFailed
+                          : t.copy}
                     </button>
 
                     <button
@@ -928,7 +1447,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                       onClick={handleShare}
                       className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                     >
-                      Share
+                      {t.share}
                     </button>
                   </div>
 
@@ -937,7 +1456,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                   )}
 
                   {currentArticleJob?.status === 'ready' && (
-                    <p className="mt-3 text-center text-sm text-stone-500">Article ready</p>
+                    <p className="mt-3 text-center text-sm text-stone-500">{t.articleReady}</p>
                   )}
 
                   {shareStatus && (
@@ -951,11 +1470,9 @@ export default function VerseDetailPage({ params }: PageProps) {
               ) : (
                 <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
                   <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                    No insight
+                    {t.noInsight}
                   </p>
-                  <p className="text-[1.08rem] leading-9 text-stone-800">
-                    No insight is available for this verse yet.
-                  </p>
+                  <p className="text-[1.08rem] leading-9 text-stone-800">{t.noInsightText}</p>
                 </div>
               )}
             </div>
@@ -967,7 +1484,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                   onClick={handlePrev}
                   className="rounded-[24px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-base font-medium text-stone-800 shadow-[0_8px_18px_rgba(28,25,23,0.08)] transition hover:bg-[#f8efdc]"
                 >
-                  Previous
+                  {t.previous}
                 </button>
 
                 <button
@@ -975,7 +1492,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                   onClick={handleNext}
                   className="rounded-[24px] bg-stone-900 px-4 py-4 text-base font-medium text-stone-50 shadow-[0_12px_24px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
                 >
-                  Next
+                  {t.next}
                 </button>
               </div>
             )}
@@ -987,89 +1504,65 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   function renderCompareView() {
     return renderStructuredPanel(
-      'Compare',
-      'This mode will compare translation choices and surface where wording moves the reader’s attention in different directions.',
-      'Difference',
-      [
-        'A short lead will name the main translation tension in the verse.',
-        'The final version will show 3–5 compact comparison points instead of one dense block.',
-        'A short takeaway will explain why those differences matter for reading the verse.',
-      ],
-      'Compare should feel like a reading tool, not a raw list of translations.'
+      t.compare,
+      t.compareLead,
+      t.difference,
+      [t.comparePoint1, t.comparePoint2, t.comparePoint3],
+      t.compareTakeaway
     )
   }
 
   function renderContextView() {
     return renderStructuredPanel(
-      'Context',
-      'This mode will surface only the context that materially changes the reading of the verse.',
-      'Context point',
-      [
-        'The final version will identify the main context type that matters most here.',
-        'It will present 3–5 compact context points, not a heavy encyclopedia panel.',
-        'A final takeaway will explain how context changes the force of the verse.',
-      ],
-      'Context should clarify why the verse sounds the way it does inside its real setting.'
+      t.context,
+      t.contextLead,
+      t.contextPoint,
+      [t.contextPoint1, t.contextPoint2, t.contextPoint3],
+      t.contextTakeaway
     )
   }
 
   function renderLensView() {
     const lensLabel =
       selectedLens === 'word'
-        ? 'Word'
+        ? t.word
         : selectedLens === 'tension'
-          ? 'Tension'
+          ? t.tension
           : selectedLens === 'phrase'
-            ? 'Why This Phrase'
-            : 'Another Lens'
+            ? t.phrase
+            : t.lensTitle
 
     const lead =
       selectedLens === 'word'
-        ? 'Word will focus on the hidden weight of words, terms, and small textual units.'
+        ? t.lensLeadWord
         : selectedLens === 'tension'
-          ? 'Tension will look for what is surprising, pressured, or internally contrasted in the verse.'
+          ? t.lensLeadTension
           : selectedLens === 'phrase'
-            ? 'Why This Phrase will ask why the verse is said in this exact way, and what is gained by that form.'
-            : 'Choose a focused lens to read this verse through one angle.'
+            ? t.lensLeadPhrase
+            : t.lensLeadDefault
 
     const points =
       selectedLens === 'word'
-        ? [
-            'This lens will stay close to words and textual units, not generic reflections.',
-            'It will highlight hidden weight, verbal force, and meaningful small shifts.',
-            'It should feel like close reading, not dictionary trivia.',
-          ]
+        ? [t.lensPoint1Word, t.lensPoint2Word, t.lensPoint3Word]
         : selectedLens === 'tension'
-          ? [
-              'This lens will localize where the tension actually lives in the verse.',
-              'It will avoid vague “pseudo-depth” and stay anchored in the text.',
-              'It should surface the most surprising pressure point in the wording.',
-            ]
+          ? [t.lensPoint1Tension, t.lensPoint2Tension, t.lensPoint3Tension]
           : selectedLens === 'phrase'
-            ? [
-                'This lens will treat the phrase as a shaped form, not just a container of words.',
-                'It will ask what would be lost if the verse were said more simply.',
-                'It should feel like disciplined close reading, not airy rhetoric.',
-              ]
-            : [
-                'Choose Word, Tension, or Why This Phrase.',
-                'Each lens will become a focused reading mode.',
-                'This screen is ready; the lens content comes next.',
-              ]
+            ? [t.lensPoint1Phrase, t.lensPoint2Phrase, t.lensPoint3Phrase]
+            : [t.lensPoint1Default, t.lensPoint2Default, t.lensPoint3Default]
 
     const takeaway =
       selectedLens === 'word'
-        ? 'Word should reveal hidden textual weight without turning into a dry lexicon.'
+        ? t.lensTakeawayWord
         : selectedLens === 'tension'
-          ? 'Tension should surface real internal pressure in the verse, not invented drama.'
+          ? t.lensTakeawayTension
           : selectedLens === 'phrase'
-            ? 'Why This Phrase should explain why the wording itself carries meaning.'
-            : 'Another Lens is the focused-reading family, not just a reroll button.'
+            ? t.lensTakeawayPhrase
+            : t.lensTakeawayDefault
 
     return renderStructuredPanel(
-      `Lens: ${lensLabel}`,
+      `${t.anotherLens}: ${lensLabel}`,
       lead,
-      'Lens point',
+      t.lensPointLabel,
       points,
       takeaway,
       <button
@@ -1077,7 +1570,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         onClick={() => setLensSheetOpen(true)}
         className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
       >
-        Change
+        {t.change}
       </button>
     )
   }
@@ -1090,11 +1583,11 @@ export default function VerseDetailPage({ params }: PageProps) {
             href={`/bible/${book}/${chapter}`}
             className="text-neutral-500 transition hover:text-neutral-700"
           >
-            ← Back
+            {t.back}
           </Link>
 
           <Link href="/" className="text-neutral-500 transition hover:text-neutral-700">
-            Home
+            {t.home}
           </Link>
         </div>
 
@@ -1112,7 +1605,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                 : 'border-transparent text-stone-500 hover:text-stone-700'
             }`}
           >
-            English
+            {t.english}
           </button>
 
           <button
@@ -1125,7 +1618,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                 : 'border-transparent text-stone-500 hover:text-stone-700'
             }`}
           >
-            {translationLoading && appLanguage === 'es' ? 'Translating...' : 'Spanish'}
+            {translationLoading && appLanguage === 'es' ? t.translating : t.spanish}
           </button>
 
           <button
@@ -1133,7 +1626,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             disabled
             className="whitespace-nowrap border-b border-transparent bg-transparent pb-1 text-stone-300"
           >
-            French
+            {t.french}
           </button>
 
           <button
@@ -1141,7 +1634,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             disabled
             className="whitespace-nowrap border-b border-transparent bg-transparent pb-1 text-stone-300"
           >
-            German
+            {t.german}
           </button>
 
           <button
@@ -1154,26 +1647,26 @@ export default function VerseDetailPage({ params }: PageProps) {
                 : 'border-transparent text-stone-500 hover:text-stone-700'
             }`}
           >
-            {translationLoading && appLanguage === 'ru' ? 'Translating...' : 'Russian'}
+            {translationLoading && appLanguage === 'ru' ? t.translating : t.russian}
           </button>
         </div>
 
         <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
-          {renderTabButton('Insights', activeTab === 'insights', () => {
+          {renderTabButton(t.insights, activeTab === 'insights', () => {
             setActiveTab('insights')
             setLensSheetOpen(false)
           })}
-          {renderTabButton('Compare', activeTab === 'compare', () => {
+          {renderTabButton(t.compare, activeTab === 'compare', () => {
             setActiveTab('compare')
             setLensSheetOpen(false)
             setActiveArticleKey('')
           })}
-          {renderTabButton('Context', activeTab === 'context', () => {
+          {renderTabButton(t.context, activeTab === 'context', () => {
             setActiveTab('context')
             setLensSheetOpen(false)
             setActiveArticleKey('')
           })}
-          {renderTabButton('Another Lens', activeTab === 'another-lens', () => {
+          {renderTabButton(t.anotherLens, activeTab === 'another-lens', () => {
             setLensSheetOpen(true)
             setActiveArticleKey('')
           })}
@@ -1288,9 +1781,9 @@ export default function VerseDetailPage({ params }: PageProps) {
           <div className="sheet-panel mx-auto w-full max-w-md rounded-[28px] border border-stone-300 bg-[#fbf6ea] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-lg font-semibold text-stone-900">Another Lens</p>
-                <p className="mt-1 text-sm text-stone-500">Choose a focused lens</p>
-                <p className="text-sm text-stone-500">Read this verse through one angle.</p>
+                <p className="text-lg font-semibold text-stone-900">{t.lensTitle}</p>
+                <p className="mt-1 text-sm text-stone-500">{t.chooseFocusedLens}</p>
+                <p className="text-sm text-stone-500">{t.readThisVerseOneAngle}</p>
               </div>
 
               <button
@@ -1298,7 +1791,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                 onClick={() => setLensSheetOpen(false)}
                 className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1.5 text-sm font-medium text-stone-700"
               >
-                Close
+                {t.close}
               </button>
             </div>
 
@@ -1308,8 +1801,8 @@ export default function VerseDetailPage({ params }: PageProps) {
                 onClick={() => handleSelectLens('word')}
                 className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
               >
-                <p className="text-base font-semibold text-stone-900">Word</p>
-                <p className="mt-1 text-sm text-stone-500">Hidden weight of words</p>
+                <p className="text-base font-semibold text-stone-900">{t.word}</p>
+                <p className="mt-1 text-sm text-stone-500">{t.wordHelper}</p>
               </button>
 
               <button
@@ -1317,8 +1810,8 @@ export default function VerseDetailPage({ params }: PageProps) {
                 onClick={() => handleSelectLens('tension')}
                 className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
               >
-                <p className="text-base font-semibold text-stone-900">Tension</p>
-                <p className="mt-1 text-sm text-stone-500">What’s surprising here</p>
+                <p className="text-base font-semibold text-stone-900">{t.tension}</p>
+                <p className="mt-1 text-sm text-stone-500">{t.tensionHelper}</p>
               </button>
 
               <button
@@ -1326,8 +1819,8 @@ export default function VerseDetailPage({ params }: PageProps) {
                 onClick={() => handleSelectLens('phrase')}
                 className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
               >
-                <p className="text-base font-semibold text-stone-900">Why This Phrase</p>
-                <p className="mt-1 text-sm text-stone-500">Why it is said this way</p>
+                <p className="text-base font-semibold text-stone-900">{t.phrase}</p>
+                <p className="mt-1 text-sm text-stone-500">{t.phraseHelper}</p>
               </button>
             </div>
           </div>
