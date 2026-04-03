@@ -68,9 +68,6 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [chapter, setChapter] = useState('')
   const [verse, setVerse] = useState('')
 
-  const [focusWord, setFocusWord] = useState('')
-  const [submittedFocusWord, setSubmittedFocusWord] = useState('')
-
   const [verseText, setVerseText] = useState('')
   const [translatedVerseTexts, setTranslatedVerseTexts] = useState<Record<string, string>>({})
 
@@ -175,7 +172,6 @@ export default function VerseDetailPage({ params }: PageProps) {
             book,
             chapter,
             verse,
-            focusWord: submittedFocusWord,
             count: 12,
           }),
         })
@@ -206,7 +202,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     loadInsights()
-  }, [book, chapter, verse, submittedFocusWord])
+  }, [book, chapter, verse])
 
   useEffect(() => {
     if (activeArticleKey && articleTopRef.current) {
@@ -388,13 +384,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     await goToIndex(prevIndex)
   }
 
-  function handleGenerate() {
-    setSubmittedFocusWord(focusWord.trim())
-    setActiveArticleKey('')
-    setArticleShareStatus('')
-    setArticleCopyStatus('idle')
-  }
-
   function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
     touchStartXRef.current = e.touches[0]?.clientX ?? null
     touchDeltaXRef.current = 0
@@ -488,7 +477,6 @@ export default function VerseDetailPage({ params }: PageProps) {
           verseText: displayedVerseText,
           insightTitle: displayedCard.title,
           insightText: displayedCard.text,
-          focusWord: submittedFocusWord,
           targetLanguage: appLanguage,
         }),
       })
@@ -706,19 +694,6 @@ export default function VerseDetailPage({ params }: PageProps) {
 
           <button
             type="button"
-            onClick={handleTranslateToRussian}
-            disabled={translationLoading}
-            className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-50 ${
-              appLanguage === 'ru'
-                ? 'border-stone-500 text-stone-900'
-                : 'border-transparent text-stone-500 hover:text-stone-700'
-            }`}
-          >
-            {translationLoading && appLanguage === 'ru' ? 'Translating...' : 'Russian'}
-          </button>
-
-          <button
-            type="button"
             onClick={handleTranslateToSpanish}
             disabled={translationLoading}
             className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-50 ${
@@ -729,41 +704,36 @@ export default function VerseDetailPage({ params }: PageProps) {
           >
             {translationLoading && appLanguage === 'es' ? 'Translating...' : 'Spanish'}
           </button>
+
+          <button
+            type="button"
+            disabled
+            className="whitespace-nowrap border-b border-transparent bg-transparent pb-1 text-stone-300"
+          >
+            French
+          </button>
+
+          <button
+            type="button"
+            disabled
+            className="whitespace-nowrap border-b border-transparent bg-transparent pb-1 text-stone-300"
+          >
+            German
+          </button>
+
+          <button
+            type="button"
+            onClick={handleTranslateToRussian}
+            disabled={translationLoading}
+            className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-50 ${
+              appLanguage === 'ru'
+                ? 'border-stone-500 text-stone-900'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            {translationLoading && appLanguage === 'ru' ? 'Translating...' : 'Russian'}
+          </button>
         </div>
-
-        {!activeArticleKey && (
-          <div className="mb-5 rounded-[28px] border border-stone-200/80 bg-[#fbf6ea] p-5 shadow-[0_8px_24px_rgba(90,72,41,0.08)] backdrop-blur-sm">
-            <label
-              htmlFor="focusWord"
-              className="mb-2 block text-sm font-medium text-stone-700"
-            >
-              What word or phrase would you like to focus on?
-            </label>
-
-            <input
-              id="focusWord"
-              type="text"
-              value={focusWord}
-              onChange={(e) => setFocusWord(e.target.value)}
-              placeholder="Optional: e.g. know, truth, eternal life"
-              className="w-full rounded-2xl border border-stone-300/80 bg-[#fffdf7] px-4 py-3 text-base text-stone-900 shadow-inner outline-none placeholder:text-stone-400"
-            />
-
-            <button
-              type="button"
-              onClick={handleGenerate}
-              className="mt-3 w-full rounded-2xl bg-stone-900 px-4 py-3 text-base font-medium text-stone-50 shadow-[0_10px_20px_rgba(28,25,23,0.18)] transition hover:bg-stone-800"
-            >
-              Generate insights
-            </button>
-
-            {submittedFocusWord && (
-              <p className="mt-3 text-sm text-stone-500">
-                Focus: “{submittedFocusWord}”
-              </p>
-            )}
-          </div>
-        )}
 
         {!loading && insights.length > 0 && !activeArticleKey && (
           <p className="mb-4 text-sm font-medium text-stone-500">
