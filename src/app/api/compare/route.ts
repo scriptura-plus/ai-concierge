@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+type SupportedLanguage = "en" | "ru" | "es" | "fr" | "de";
+
 type ComparePoint = {
   title: string;
   labelA: string;
@@ -18,14 +20,18 @@ type ComparePayload = {
 function buildPrompt(
   reference: string,
   verseText: string,
-  targetLanguage: "en" | "ru" | "es" = "en"
+  targetLanguage: SupportedLanguage = "en"
 ) {
   const languageInstruction =
     targetLanguage === "ru"
       ? "Write the full output in Russian."
       : targetLanguage === "es"
         ? "Write the full output in Spanish."
-        : "Write the full output in English.";
+        : targetLanguage === "fr"
+          ? "Write the full output in French."
+          : targetLanguage === "de"
+            ? "Write the full output in German."
+            : "Write the full output in English.";
 
   return `
 You are an elite Bible translation-comparison analyst.
@@ -122,11 +128,6 @@ RULES FOR CONTENT:
 - no markdown
 - no code fences
 - no commentary outside JSON
-
-QUALITY TEST:
-The reader should feel:
-"I can now SEE the translation difference, not just read a description of it."
-
 `.trim();
 }
 
@@ -241,8 +242,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const safeLanguage: "en" | "ru" | "es" =
-      targetLanguage === "ru" || targetLanguage === "es" ? targetLanguage : "en";
+    const safeLanguage: SupportedLanguage =
+      targetLanguage === "ru" ||
+      targetLanguage === "es" ||
+      targetLanguage === "fr" ||
+      targetLanguage === "de"
+        ? targetLanguage
+        : "en";
 
     const prompt = buildPrompt(safeReference, safeVerseText, safeLanguage);
 
