@@ -144,11 +144,12 @@ function BookGrid({ books }: { books: typeof BIBLE_BOOKS }) {
           <Link
             key={book.id}
             href={`/bible/${book.id}`}
-            className="group relative overflow-hidden rounded-[18px] border px-4 py-5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_14px_30px_rgba(15,23,42,0.14)] active:translate-y-[1px] active:scale-[0.985] active:shadow-[0_6px_14px_rgba(15,23,42,0.10)]"
+            className="group relative overflow-hidden rounded-[14px] border px-4 py-5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition-all duration-300 ease-out hover:-translate-y-[2px] hover:shadow-[0_18px_34px_rgba(15,23,42,0.16)] active:translate-y-[1px] active:scale-[0.975] active:shadow-[0_8px_16px_rgba(15,23,42,0.12)]"
             style={{
               backgroundColor: tone.background,
               borderColor: tone.border,
               color: tone.color,
+              WebkitTapHighlightColor: "transparent",
             }}
           >
             <div
@@ -156,7 +157,7 @@ function BookGrid({ books }: { books: typeof BIBLE_BOOKS }) {
               style={{ background: "rgba(255,255,255,0.34)" }}
             />
             <div
-              className="pointer-events-none absolute inset-0 opacity-0 transition duration-200 group-hover:opacity-100"
+              className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               style={{
                 background:
                   "radial-gradient(circle at top left, rgba(255,255,255,0.10), transparent 42%)",
@@ -176,12 +177,6 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f3f6fb_40%,#eef2f7_100%)]">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="mb-10 rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.90)_0%,rgba(245,248,252,0.95)_100%)] px-6 py-6 shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.32em] text-slate-500">
-            Scriptura+
-          </p>
-        </section>
-
         <section className="mb-14">
           <div className="mb-6">
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
