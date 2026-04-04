@@ -23,7 +23,7 @@ export default async function ChapterSelectPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f3f6fb_40%,#eef2f7_100%)] px-4 py-6">
-      <div className="mx-auto flex w-full max-w-md flex-col chapter-screen-enter">
+      <div className="mx-auto flex w-full max-w-md flex-col">
         <Link
           href="/"
           className="mb-6 text-sm text-slate-500 transition hover:text-slate-700"
@@ -52,23 +52,6 @@ export default async function ChapterSelectPage({ params }: PageProps) {
           ))}
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes chapter-screen-fade-up {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .chapter-screen-enter {
-          animation: chapter-screen-fade-up 320ms cubic-bezier(0.22, 1, 0.36, 1);
-        }
-      `}</style>
     </main>
   )
 }
