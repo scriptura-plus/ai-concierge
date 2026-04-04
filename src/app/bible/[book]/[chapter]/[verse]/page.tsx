@@ -17,6 +17,12 @@ type InsightItem = {
   text: string
 }
 
+type VerseApiResponse = {
+  reference?: string
+  verseText?: string
+  error?: string
+}
+
 type InsightsApiResponse = {
   reference?: string
   verseText?: string
@@ -124,6 +130,12 @@ const UI_TEXT: Record<
     context: string
     lens: string
 
+    verseLoading: string
+    verseLoadingText: string
+    verseUnavailable: string
+    insightsLoading: string
+    insightsLoadingText: string
+
     loadingInsight: string
     loadingInsightText: string
     unableToLoad: string
@@ -218,6 +230,7 @@ const UI_TEXT: Record<
 
     tryAgain: string
     lensLabel: string
+    preparingModes: string
   }
 > = {
   en: {
@@ -233,6 +246,11 @@ const UI_TEXT: Record<
     translations: 'Translations',
     context: 'Context',
     lens: 'Lens',
+    verseLoading: 'Loading verse',
+    verseLoadingText: 'Preparing the verse text for reading.',
+    verseUnavailable: 'Unable to load verse.',
+    insightsLoading: 'Loading insights',
+    insightsLoadingText: 'Building the first set of insight cards in the background.',
     loadingInsight: 'Loading insight',
     loadingInsightText: 'Please wait while the insight cards are generated.',
     unableToLoad: 'Unable to load',
@@ -312,12 +330,13 @@ const UI_TEXT: Record<
     loadingContextText:
       'Tracing the immediate forces, flow, and setting that sharpen the verse…',
     contextUnavailable: 'Unable to load Context mode.',
-    backToTop: 'Back to top',
-    copiedAnalysis: 'Analysis copied',
-    copyAnalysis: 'Copy analysis',
-    shareAnalysis: 'Share analysis',
+    backToTop: 'Top',
+    copiedAnalysis: 'Copied',
+    copyAnalysis: 'Copy',
+    shareAnalysis: 'Share',
     tryAgain: 'Try again',
     lensLabel: 'Lens',
+    preparingModes: 'Preparing other modes...',
   },
   ru: {
     back: '← Назад',
@@ -332,6 +351,11 @@ const UI_TEXT: Record<
     translations: 'Переводы',
     context: 'Контекст',
     lens: 'Линза',
+    verseLoading: 'Загрузка стиха',
+    verseLoadingText: 'Подготавливаем текст стиха для чтения.',
+    verseUnavailable: 'Не удалось загрузить стих.',
+    insightsLoading: 'Загрузка инсайтов',
+    insightsLoadingText: 'Подбираем первые карточки с мыслями в фоне.',
     loadingInsight: 'Загрузка инсайта',
     loadingInsightText: 'Подождите, пока генерируются карточки инсайтов.',
     unableToLoad: 'Не удалось загрузить',
@@ -415,11 +439,12 @@ const UI_TEXT: Record<
       'Отслеживаем ближайшие силы, ход мысли и обстановку, которые заостряют чтение стиха…',
     contextUnavailable: 'Не удалось загрузить режим «Контекст».',
     backToTop: 'Наверх',
-    copiedAnalysis: 'Анализ скопирован',
-    copyAnalysis: 'Копировать анализ',
-    shareAnalysis: 'Поделиться анализом',
+    copiedAnalysis: 'Скопировано',
+    copyAnalysis: 'Копировать',
+    shareAnalysis: 'Поделиться',
     tryAgain: 'Попробовать снова',
     lensLabel: 'Линза',
+    preparingModes: 'Подготавливаем остальные режимы...',
   },
   es: {
     back: '← Atrás',
@@ -434,6 +459,11 @@ const UI_TEXT: Record<
     translations: 'Traducciones',
     context: 'Contexto',
     lens: 'Lente',
+    verseLoading: 'Cargando versículo',
+    verseLoadingText: 'Preparando el texto del versículo para leerlo.',
+    verseUnavailable: 'No se pudo cargar el versículo.',
+    insightsLoading: 'Cargando ideas',
+    insightsLoadingText: 'Generando en segundo plano las primeras tarjetas de ideas.',
     loadingInsight: 'Cargando idea',
     loadingInsightText: 'Espera mientras se generan las tarjetas de ideas.',
     unableToLoad: 'No se pudo cargar',
@@ -516,12 +546,13 @@ const UI_TEXT: Record<
     loadingContextText:
       'Siguiendo las fuerzas inmediatas, el flujo y el marco que afinan la lectura del versículo…',
     contextUnavailable: 'No se pudo cargar el modo Contexto.',
-    backToTop: 'Volver arriba',
-    copiedAnalysis: 'Análisis copiado',
-    copyAnalysis: 'Copiar análisis',
-    shareAnalysis: 'Compartir análisis',
+    backToTop: 'Arriba',
+    copiedAnalysis: 'Copiado',
+    copyAnalysis: 'Copiar',
+    shareAnalysis: 'Compartir',
     tryAgain: 'Intentar de nuevo',
     lensLabel: 'Lente',
+    preparingModes: 'Preparando otros modos...',
   },
   fr: {
     back: '← Retour',
@@ -536,6 +567,11 @@ const UI_TEXT: Record<
     translations: 'Traductions',
     context: 'Contexte',
     lens: 'Lentille',
+    verseLoading: 'Chargement du verset',
+    verseLoadingText: 'Préparation du texte du verset pour la lecture.',
+    verseUnavailable: 'Impossible de charger le verset.',
+    insightsLoading: 'Chargement des insights',
+    insightsLoadingText: 'Génération en arrière-plan des premières cartes d’insight.',
     loadingInsight: 'Chargement de l’insight',
     loadingInsightText: 'Veuillez patienter pendant la génération des cartes.',
     unableToLoad: 'Impossible de charger',
@@ -616,12 +652,13 @@ const UI_TEXT: Record<
     loadingContextText:
       'Repérage des forces immédiates, du mouvement et du cadre qui affinent la lecture du verset…',
     contextUnavailable: 'Impossible de charger le mode Contexte.',
-    backToTop: 'Haut de page',
-    copiedAnalysis: 'Analyse copiée',
-    copyAnalysis: 'Copier l’analyse',
-    shareAnalysis: 'Partager l’analyse',
+    backToTop: 'Haut',
+    copiedAnalysis: 'Copié',
+    copyAnalysis: 'Copier',
+    shareAnalysis: 'Partager',
     tryAgain: 'Réessayer',
     lensLabel: 'Lentille',
+    preparingModes: 'Préparation des autres modes...',
   },
   de: {
     back: '← Zurück',
@@ -636,6 +673,11 @@ const UI_TEXT: Record<
     translations: 'Übersetzungen',
     context: 'Kontext',
     lens: 'Linse',
+    verseLoading: 'Vers wird geladen',
+    verseLoadingText: 'Der Verstext wird zum Lesen vorbereitet.',
+    verseUnavailable: 'Vers konnte nicht geladen werden.',
+    insightsLoading: 'Insights werden geladen',
+    insightsLoadingText: 'Die ersten Insight-Karten werden im Hintergrund erstellt.',
     loadingInsight: 'Insight wird geladen',
     loadingInsightText: 'Bitte warten, während die Karten erzeugt werden.',
     unableToLoad: 'Konnte nicht geladen werden',
@@ -717,12 +759,13 @@ const UI_TEXT: Record<
     loadingContextText:
       'Unmittelbare Kräfte, Bewegungen und Rahmen werden verfolgt, die die Lesart des Verses schärfen…',
     contextUnavailable: 'Kontextmodus konnte nicht geladen werden.',
-    backToTop: 'Nach oben',
-    copiedAnalysis: 'Analyse kopiert',
-    copyAnalysis: 'Analyse kopieren',
-    shareAnalysis: 'Analyse teilen',
+    backToTop: 'Oben',
+    copiedAnalysis: 'Kopiert',
+    copyAnalysis: 'Kopieren',
+    shareAnalysis: 'Teilen',
     tryAgain: 'Erneut versuchen',
     lensLabel: 'Linse',
+    preparingModes: 'Andere Modi werden vorbereitet...',
   },
 }
 
@@ -745,8 +788,14 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [verseText, setVerseText] = useState('')
   const [translatedVerseTexts, setTranslatedVerseTexts] = useState<Record<string, string>>({})
+  const [verseLoading, setVerseLoading] = useState(true)
+  const [verseError, setVerseError] = useState('')
 
   const [insights, setInsights] = useState<InsightItem[]>([])
+  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [insightsError, setInsightsError] = useState('')
+  const [rawOutput, setRawOutput] = useState('')
+
   const [wordLensCardsByLanguage, setWordLensCardsByLanguage] =
     useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
   const [tensionLensCardsByLanguage, setTensionLensCardsByLanguage] =
@@ -768,10 +817,6 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [contextError, setContextError] = useState('')
   const [contextCopyStatus, setContextCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [contextShareStatus, setContextShareStatus] = useState('')
-
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [rawOutput, setRawOutput] = useState('')
 
   const [wordLensLoading, setWordLensLoading] = useState(false)
   const [wordLensError, setWordLensError] = useState('')
@@ -808,8 +853,12 @@ export default function VerseDetailPage({ params }: PageProps) {
   const wordLensRequestIdRef = useRef(0)
   const tensionLensRequestIdRef = useRef(0)
   const phraseLensRequestIdRef = useRef(0)
+  const verseRequestIdRef = useRef(0)
+  const insightsRequestIdRef = useRef(0)
 
   const t = UI_TEXT[appLanguage]
+  const modesReady = !insightsLoading && !insightsError && insights.length > 0
+  const interactionsLocked = verseLoading || !modesReady
 
   useEffect(() => {
     async function loadInitial() {
@@ -854,12 +903,17 @@ export default function VerseDetailPage({ params }: PageProps) {
   useEffect(() => {
     if (!book || !chapter || !verse) return
 
-    async function loadInsights() {
-      setLoading(true)
-      setError('')
-      setRawOutput('')
+    async function loadVerseOnly() {
+      const requestId = ++verseRequestIdRef.current
+
+      setVerseLoading(true)
+      setVerseError('')
       setVerseText('')
+      setTranslatedVerseTexts({})
       setInsights([])
+      setInsightsLoading(false)
+      setInsightsError('')
+      setRawOutput('')
       setWordLensCardsByLanguage(emptyLensMap())
       setTensionLensCardsByLanguage(emptyLensMap())
       setPhraseLensCardsByLanguage(emptyLensMap())
@@ -878,7 +932,6 @@ export default function VerseDetailPage({ params }: PageProps) {
       setTranslationLoading(false)
       setTranslationError('')
       setTranslatedCards({})
-      setTranslatedVerseTexts({})
       setCopyStatus('idle')
       setShareStatus('')
       setActiveArticleKey('')
@@ -894,6 +947,47 @@ export default function VerseDetailPage({ params }: PageProps) {
       wordLensRequestIdRef.current += 1
       tensionLensRequestIdRef.current += 1
       phraseLensRequestIdRef.current += 1
+      insightsRequestIdRef.current += 1
+
+      try {
+        const res = await fetch('/api/verse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ book, chapter, verse }),
+        })
+
+        const data: VerseApiResponse = await res.json()
+
+        if (requestId !== verseRequestIdRef.current) return
+
+        if (!res.ok || !data.verseText) {
+          setVerseError(data.error || t.verseUnavailable)
+          return
+        }
+
+        setVerseText(data.verseText)
+      } catch {
+        if (requestId !== verseRequestIdRef.current) return
+        setVerseError(t.verseUnavailable)
+      } finally {
+        if (requestId === verseRequestIdRef.current) {
+          setVerseLoading(false)
+        }
+      }
+    }
+
+    loadVerseOnly()
+  }, [book, chapter, verse])
+
+  useEffect(() => {
+    if (!book || !chapter || !verse || !verseText || verseError) return
+
+    async function loadInsights() {
+      const requestId = ++insightsRequestIdRef.current
+
+      setInsightsLoading(true)
+      setInsightsError('')
+      setRawOutput('')
 
       try {
         const res = await fetch('/api/insights', {
@@ -904,30 +998,34 @@ export default function VerseDetailPage({ params }: PageProps) {
 
         const data: InsightsApiResponse = await res.json()
 
+        if (requestId !== insightsRequestIdRef.current) return
+
         if (!res.ok) {
-          setError(data.error || 'API request failed.')
+          setInsightsError(data.error || 'API request failed.')
           setRawOutput(data.raw || '')
           return
         }
 
-        setVerseText(data.verseText || '')
         const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
 
         if (receivedInsights.length > 0) {
           setInsights(receivedInsights)
         } else {
-          setError(data.error || 'No insights returned.')
+          setInsightsError(data.error || 'No insights returned.')
           setRawOutput(data.raw || '')
         }
       } catch {
-        setError('Error loading insights.')
+        if (requestId !== insightsRequestIdRef.current) return
+        setInsightsError('Error loading insights.')
       } finally {
-        setLoading(false)
+        if (requestId === insightsRequestIdRef.current) {
+          setInsightsLoading(false)
+        }
       }
     }
 
     loadInsights()
-  }, [book, chapter, verse])
+  }, [book, chapter, verse, verseText, verseError])
 
   useEffect(() => {
     if (activeArticleKey && articleTopRef.current) {
@@ -1042,7 +1140,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function loadWordLens(force = false, language: AppLanguage = appLanguage) {
-    if (!formattedReference || !verseText) return
+    if (!formattedReference || !verseText || !modesReady) return
     if (!force && wordLensCardsByLanguage[language]?.length > 0) return
 
     const requestId = ++wordLensRequestIdRef.current
@@ -1086,7 +1184,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function loadTensionLens(force = false, language: AppLanguage = appLanguage) {
-    if (!formattedReference || !verseText) return
+    if (!formattedReference || !verseText || !modesReady) return
     if (!force && tensionLensCardsByLanguage[language]?.length > 0) return
 
     const requestId = ++tensionLensRequestIdRef.current
@@ -1130,7 +1228,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function loadPhraseLens(force = false, language: AppLanguage = appLanguage) {
-    if (!formattedReference || !verseText) return
+    if (!formattedReference || !verseText || !modesReady) return
     if (!force && phraseLensCardsByLanguage[language]?.length > 0) return
 
     const requestId = ++phraseLensRequestIdRef.current
@@ -1174,7 +1272,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function loadCompare(force = false, language: AppLanguage = appLanguage) {
-    if (!formattedReference || !verseText) return
+    if (!formattedReference || !verseText || !modesReady) return
     if (!force && compareByLanguage[language]) return
 
     const requestId = ++compareRequestIdRef.current
@@ -1217,7 +1315,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function loadContext(force = false, language: AppLanguage = appLanguage) {
-    if (!formattedReference || !verseText) return
+    if (!formattedReference || !verseText || !modesReady) return
     if (!force && contextByLanguage[language]) return
 
     const requestId = ++contextRequestIdRef.current
@@ -1260,16 +1358,18 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   useEffect(() => {
-    if (!formattedReference || !verseText) return
+    if (!formattedReference || !verseText || !modesReady) return
 
     if (activeTab === 'compare') void loadCompare(false, appLanguage)
     if (activeTab === 'context') void loadContext(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'word') void loadWordLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'tension') void loadTensionLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'phrase') void loadPhraseLens(false, appLanguage)
-  }, [activeTab, selectedLens, appLanguage, formattedReference, verseText])
+  }, [activeTab, selectedLens, appLanguage, formattedReference, verseText, modesReady])
 
   async function handleSetLanguage(targetLanguage: AppLanguage) {
+    if (interactionsLocked) return
+
     setTranslationError('')
     setCopyStatus('idle')
     setShareStatus('')
@@ -1316,7 +1416,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function handleNext() {
-    if (currentCards.length === 0) return
+    if (currentCards.length === 0 || interactionsLocked) return
     const nextIndex = (currentIndex + 1) % currentCards.length
     setCurrentIndex(nextIndex)
 
@@ -1340,7 +1440,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function handlePrev() {
-    if (currentCards.length === 0) return
+    if (currentCards.length === 0 || interactionsLocked) return
     const prevIndex = (currentIndex - 1 + currentCards.length) % currentCards.length
     setCurrentIndex(prevIndex)
 
@@ -1380,7 +1480,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     touchStartXRef.current = null
     touchDeltaXRef.current = 0
 
-    if (Math.abs(deltaX) < threshold) return
+    if (Math.abs(deltaX) < threshold || interactionsLocked) return
     if (deltaX < 0) await handleNext()
     else await handlePrev()
   }
@@ -1455,7 +1555,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const activeArticleJob = activeArticleKey ? articleJobs[activeArticleKey] : undefined
 
   async function handleUnfold() {
-    if (!displayedCard || !formattedReference || !displayedVerseText || !articleJobKey) return
+    if (!displayedCard || !formattedReference || !displayedVerseText || !articleJobKey || interactionsLocked) return
 
     const existingJob = articleJobs[articleJobKey]
     if (existingJob?.status === 'ready' && existingJob.article) {
@@ -1581,7 +1681,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function handleCopy() {
-    if (!shareText) return
+    if (!shareText || interactionsLocked) return
 
     try {
       await navigator.clipboard.writeText(shareText)
@@ -1598,7 +1698,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function handleShare() {
-    if (!displayedCard || !formattedReference) return
+    if (!displayedCard || !formattedReference || interactionsLocked) return
     setShareStatus('')
 
     try {
@@ -1724,6 +1824,8 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function handleSelectLens(lens: LensKind) {
+    if (!modesReady) return
+
     setSelectedLens(lens)
     setLensSheetOpen(false)
     setActiveTab('lens')
@@ -1737,12 +1839,13 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (lens === 'phrase') await loadPhraseLens(false, appLanguage)
   }
 
-  function renderTabButton(label: string, isActive: boolean, onClick: () => void) {
+  function renderTabButton(label: string, isActive: boolean, onClick: () => void, disabled = false) {
     return (
       <button
         type="button"
         onClick={onClick}
-        className={`rounded-full border px-4 py-2 text-sm font-medium transition whitespace-nowrap ${
+        disabled={disabled}
+        className={`rounded-full border px-4 py-2 text-sm font-medium transition whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-45 ${
           isActive
             ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
             : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
@@ -1920,14 +2023,273 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
+  function renderVerseBlock() {
+    if (verseLoading) {
+      return (
+        <div className="verse-shell rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#faf3e4_0%,#f0e1bd_58%,#e7d3ab_100%)] px-6 py-7 shadow-inner">
+            <p className="mb-4 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.verseLoading}
+            </p>
+            <div className="space-y-3">
+              <div className="skeleton-line h-4 w-11/12 rounded-full bg-stone-200/80" />
+              <div className="skeleton-line h-4 w-10/12 rounded-full bg-stone-200/80" />
+              <div className="skeleton-line h-4 w-9/12 rounded-full bg-stone-200/80" />
+            </div>
+            <p className="mt-5 text-sm text-stone-500">{t.verseLoadingText}</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (verseError) {
+      return (
+        <div className="verse-shell rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="rounded-[28px] border border-red-200/70 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f5ead4_55%,#eedab9_100%)] px-6 py-7 shadow-inner">
+            <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.verseUnavailable}
+            </p>
+            <p className="text-[1rem] leading-8 text-stone-800">{verseError}</p>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="verse-shell verse-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            {formattedReference}
+          </p>
+          <p className="text-[1.08rem] leading-9 text-stone-800 italic">{displayedVerseText}</p>
+        </div>
+      </div>
+    )
+  }
+
+  function renderInsightsSkeleton() {
+    return (
+      <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/60 bg-[linear-gradient(180deg,#f7edd8_0%,#efe1bd_100%)] p-6 shadow-[0_12px_28px_rgba(94,72,37,0.10)]">
+        <div className="rounded-[28px] border border-stone-300/50 bg-[#fbf6ea]/85 px-6 py-7">
+          <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            {t.insightsLoading}
+          </p>
+
+          <div className="space-y-4">
+            <div className="rounded-[24px] border border-stone-300/50 bg-[#fffaf1] px-5 py-5">
+              <div className="skeleton-line h-5 w-8/12 rounded-full bg-stone-200/85" />
+              <div className="mt-4 space-y-3">
+                <div className="skeleton-line h-4 w-full rounded-full bg-stone-200/75" />
+                <div className="skeleton-line h-4 w-11/12 rounded-full bg-stone-200/75" />
+                <div className="skeleton-line h-4 w-10/12 rounded-full bg-stone-200/75" />
+                <div className="skeleton-line h-4 w-9/12 rounded-full bg-stone-200/75" />
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-stone-300/35 bg-[#fffaf1]/70 px-5 py-5">
+              <div className="skeleton-line h-5 w-7/12 rounded-full bg-stone-200/70" />
+              <div className="mt-4 space-y-3">
+                <div className="skeleton-line h-4 w-full rounded-full bg-stone-200/65" />
+                <div className="skeleton-line h-4 w-10/12 rounded-full bg-stone-200/65" />
+                <div className="skeleton-line h-4 w-8/12 rounded-full bg-stone-200/65" />
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-5 text-sm text-stone-500">{t.insightsLoadingText}</p>
+          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-stone-400">
+            {t.preparingModes}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  function renderArticleView() {
+    if (!(activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article)) {
+      return null
+    }
+
+    return (
+      <div className="card-pop mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveArticleKey('')
+                setArticleShareStatus('')
+                setArticleCopyStatus('idle')
+                if (articleTopRef.current) {
+                  articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              }}
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.backToCards}
+            </button>
+
+            <span className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.article}
+            </span>
+          </div>
+
+          <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            {activeArticleJob.reference}
+          </p>
+
+          <h2 className="mb-6 text-center text-[2.15rem] font-semibold leading-tight tracking-tight text-stone-900">
+            {activeArticleJob.article.title}
+          </h2>
+
+          <p className="mb-8 text-[1.1rem] leading-9 text-stone-900">
+            {activeArticleJob.article.lead}
+          </p>
+
+          {activeArticleJob.article.quote ? (
+            <blockquote className="mb-8 border-l-2 border-stone-300 pl-4 text-[1rem] italic leading-8 text-stone-700">
+              {activeArticleJob.article.quote}
+            </blockquote>
+          ) : null}
+
+          <div className="space-y-7 text-[0.98rem] leading-8 text-stone-800">
+            {activeArticleJob.article.body.map((paragraph, index) => (
+              <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
+            ))}
+          </div>
+
+          <div className="mt-10 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handleCopyArticle}
+              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {articleCopyStatus === 'copied'
+                ? t.copied
+                : articleCopyStatus === 'failed'
+                  ? t.copyFailed
+                  : t.copyArticle}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShareArticle}
+              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.shareArticle}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveArticleKey('')
+                setArticleShareStatus('')
+                setArticleCopyStatus('idle')
+                if (articleTopRef.current) {
+                  articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              }}
+              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.backToCards}
+            </button>
+
+            <Link
+              href="/"
+              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-center text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              {t.home}
+            </Link>
+          </div>
+
+          {articleShareStatus && (
+            <p className="mt-3 text-center text-sm text-stone-500">{articleShareStatus}</p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   function renderCardStackView() {
     if (activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article) {
       return renderArticleView()
     }
 
+    if (insightsLoading) {
+      return renderInsightsSkeleton()
+    }
+
+    if (insightsError) {
+      return (
+        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.unableToLoad}
+            </p>
+            <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{insightsError}</p>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!book || !chapter || !verse || !verseText) return
+                const requestId = ++insightsRequestIdRef.current
+                setInsightsLoading(true)
+                setInsightsError('')
+                setRawOutput('')
+                fetch('/api/insights', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ book, chapter, verse, count: 12 }),
+                })
+                  .then(async (res) => {
+                    const data: InsightsApiResponse = await res.json()
+                    if (requestId !== insightsRequestIdRef.current) return
+                    if (!res.ok) {
+                      setInsightsError(data.error || 'API request failed.')
+                      setRawOutput(data.raw || '')
+                      return
+                    }
+                    const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
+                    if (receivedInsights.length > 0) {
+                      setInsights(receivedInsights)
+                    } else {
+                      setInsightsError(data.error || 'No insights returned.')
+                      setRawOutput(data.raw || '')
+                    }
+                  })
+                  .catch(() => {
+                    if (requestId !== insightsRequestIdRef.current) return
+                    setInsightsError('Error loading insights.')
+                  })
+                  .finally(() => {
+                    if (requestId === insightsRequestIdRef.current) {
+                      setInsightsLoading(false)
+                    }
+                  })
+              }}
+              className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+            >
+              {t.tryAgain}
+            </button>
+
+            {rawOutput && (
+              <div className="mt-5 rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
+                  {t.rawModelOutput}
+                </p>
+                <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                  {rawOutput}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+
     return (
-      <div className="tab-panel-enter">
-        {!loading && currentCards.length > 0 && !activeArticleKey && (
+      <div className="tab-panel-enter mt-5">
+        {currentCards.length > 0 && !activeArticleKey && (
           <p className="mb-4 text-sm font-medium text-stone-500">
             {currentIndex + 1} / {currentCards.length}
           </p>
@@ -1939,32 +2301,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           onTouchEnd={handleTouchEnd}
           className="card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]"
         >
-          {loading ? (
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {t.loadingInsight}
-              </p>
-              <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingInsightText}</p>
-            </div>
-          ) : error && activeTab === 'insights' ? (
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {t.unableToLoad}
-              </p>
-              <p className="mb-4 text-[1.08rem] leading-9 text-stone-800">{error}</p>
-
-              {rawOutput && (
-                <div className="rounded-2xl border border-stone-300/50 bg-[#fffaf0] p-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">
-                    {t.rawModelOutput}
-                  </p>
-                  <pre className="whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                    {rawOutput}
-                  </pre>
-                </div>
-              )}
-            </div>
-          ) : displayedCard ? (
+          {displayedCard ? (
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
               {activeTab === 'lens' && selectedLens && (
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -1983,18 +2320,6 @@ export default function VerseDetailPage({ params }: PageProps) {
                   >
                     {t.change}
                   </button>
-                </div>
-              )}
-
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {formattedReference}
-              </p>
-
-              {displayedVerseText && (
-                <div className="verse-fade mb-6 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-5 py-4">
-                  <p className="text-[1rem] leading-8 text-stone-700 italic">
-                    {displayedVerseText}
-                  </p>
                 </div>
               )}
 
@@ -2061,7 +2386,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           )}
         </div>
 
-        {!loading && currentCards.length > 1 && (
+        {currentCards.length > 1 && (
           <div className="mt-5 grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -2084,14 +2409,20 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
-  function renderInsightsView() {
-    return renderCardStackView()
-  }
-
   function renderCompareView() {
+    if (!modesReady) {
+      return renderStructuredPanel(
+        t.translations,
+        t.translationsLead,
+        t.translationsDiffLabel,
+        [t.translationsPoint1, t.translationsPoint2, t.translationsPoint3],
+        t.translationsTakeaway
+      )
+    }
+
     if (compareLoading) {
       return (
-        <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
           <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
             <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
               {t.loadingTranslations}
@@ -2104,7 +2435,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     if (compareError) {
       return (
-        <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
           <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
             <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
               {t.translations}
@@ -2134,7 +2465,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     return (
-      <div className="tab-panel-enter card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+      <div className="tab-panel-enter card-pop mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
           <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
             {t.translations}
@@ -2219,9 +2550,19 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   function renderContextView() {
+    if (!modesReady) {
+      return renderStructuredPanel(
+        t.context,
+        t.contextLead,
+        t.contextPointLabel,
+        [t.contextPoint1, t.contextPoint2, t.contextPoint3],
+        t.contextTakeaway
+      )
+    }
+
     if (contextLoading) {
       return (
-        <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
           <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
             <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
               {t.loadingContext}
@@ -2234,7 +2575,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     if (contextError) {
       return (
-        <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
           <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
             <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
               {t.context}
@@ -2264,7 +2605,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     return (
-      <div className="tab-panel-enter card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+      <div className="tab-panel-enter card-pop mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
           <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
             {t.context}
@@ -2332,10 +2673,20 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   function renderLensView() {
+    if (!modesReady) {
+      return renderStructuredPanel(
+        t.lens,
+        t.lensLeadDefault,
+        t.lensPointLabel,
+        [t.word, t.tension, t.phrase],
+        t.lensTakeawayDefault
+      )
+    }
+
     if (selectedLens === 'word') {
       if (wordLensLoading) {
         return (
-          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
               <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
                 {t.loadingWordLens}
@@ -2348,7 +2699,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       if (wordLensError) {
         return (
-          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
               <div className="mb-5 flex items-center justify-between gap-3">
                 <p className="text-sm font-medium text-stone-500">
@@ -2383,7 +2734,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (selectedLens === 'tension') {
       if (tensionLensLoading) {
         return (
-          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
               <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
                 {t.loadingTensionLens}
@@ -2398,7 +2749,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       if (tensionLensError) {
         return (
-          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
               <div className="mb-5 flex items-center justify-between gap-3">
                 <p className="text-sm font-medium text-stone-500">
@@ -2433,7 +2784,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (selectedLens === 'phrase') {
       if (phraseLensLoading) {
         return (
-          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
               <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
                 {t.loadingPhraseLens}
@@ -2448,7 +2799,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       if (phraseLensError) {
         return (
-          <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
             <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
               <div className="mb-5 flex items-center justify-between gap-3">
                 <p className="text-sm font-medium text-stone-500">
@@ -2484,7 +2835,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       t.lens,
       t.lensLeadDefault,
       t.lensPointLabel,
-      ['Word', 'Tension', 'Why This Phrase'],
+      [t.word, t.tension, t.phrase],
       t.lensTakeawayDefault
     )
   }
@@ -2534,8 +2885,8 @@ export default function VerseDetailPage({ params }: PageProps) {
                 key={lang}
                 type="button"
                 onClick={() => void handleSetLanguage(lang)}
-                disabled={translationLoading && activeTab === 'insights'}
-                className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-50 ${
+                disabled={translationLoading || interactionsLocked}
+                className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-45 ${
                   isActive
                     ? 'border-stone-500 text-stone-900'
                     : 'border-transparent text-stone-500 hover:text-stone-700'
@@ -2551,30 +2902,35 @@ export default function VerseDetailPage({ params }: PageProps) {
           {renderTabButton(t.insights, activeTab === 'insights', () => {
             setActiveTab('insights')
             setLensSheetOpen(false)
-          })}
+          }, false)}
           {renderTabButton(t.translations, activeTab === 'compare', () => {
+            if (!modesReady) return
             setActiveTab('compare')
             setLensSheetOpen(false)
             setActiveArticleKey('')
-          })}
+          }, !modesReady)}
           {renderTabButton(t.context, activeTab === 'context', () => {
+            if (!modesReady) return
             setActiveTab('context')
             setLensSheetOpen(false)
             setActiveArticleKey('')
-          })}
+          }, !modesReady)}
           {renderTabButton(t.lens, activeTab === 'lens', () => {
+            if (!modesReady) return
             setLensSheetOpen(true)
             setActiveArticleKey('')
-          })}
+          }, !modesReady)}
         </div>
 
-        {activeTab === 'insights' && renderInsightsView()}
-        {activeTab === 'compare' && renderCompareView()}
-        {activeTab === 'context' && renderContextView()}
-        {activeTab === 'lens' && renderLensView()}
+        {renderVerseBlock()}
+
+        {!verseLoading && !verseError && activeTab === 'insights' && renderCardStackView()}
+        {!verseLoading && !verseError && activeTab === 'compare' && renderCompareView()}
+        {!verseLoading && !verseError && activeTab === 'context' && renderContextView()}
+        {!verseLoading && !verseError && activeTab === 'lens' && renderLensView()}
       </div>
 
-      {displayedCard && (
+      {displayedCard && !insightsLoading && !insightsError && (
         <div className="pointer-events-none fixed -left-[9999px] top-0 z-[-1]">
           <div
             ref={exportCardRef}
@@ -2672,7 +3028,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {lensSheetOpen && (
+      {lensSheetOpen && modesReady && (
         <div className="sheet-overlay fixed inset-0 z-50 flex items-end bg-black/25 px-4 pb-4 pt-16">
           <div className="sheet-panel mx-auto w-full max-w-md rounded-[28px] border border-stone-300 bg-[#fbf6ea] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
             <div className="flex items-start justify-between gap-4">
@@ -2777,6 +3133,18 @@ export default function VerseDetailPage({ params }: PageProps) {
           }
         }
 
+        @keyframes scriptura-skeleton {
+          0% {
+            opacity: 0.55;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0.55;
+          }
+        }
+
         .tab-panel-enter {
           animation: scriptura-fade-slide-up 220ms ease;
         }
@@ -2793,10 +3161,15 @@ export default function VerseDetailPage({ params }: PageProps) {
           animation: scriptura-card-pop 240ms ease;
         }
 
+        .verse-enter,
         .verse-fade,
         .title-fade,
         .text-fade {
           animation: scriptura-soft-fade 260ms ease;
+        }
+
+        .skeleton-line {
+          animation: scriptura-skeleton 1.45s ease-in-out infinite;
         }
       `}</style>
     </main>
