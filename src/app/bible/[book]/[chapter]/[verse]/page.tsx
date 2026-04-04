@@ -1864,7 +1864,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     takeaway: string
   ) {
     return (
-      <div className="tab-panel-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+      <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
           <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
             {title}
@@ -1892,132 +1892,6 @@ export default function VerseDetailPage({ params }: PageProps) {
             </p>
             <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{takeaway}</p>
           </div>
-        </div>
-      </div>
-    )
-  }
-
-  const copyButtonClass =
-    copyStatus === 'copied'
-      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-      : copyStatus === 'failed'
-        ? 'border-red-300 bg-red-50 text-red-700'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-
-  const unfoldButtonLabel =
-    currentArticleJob?.status === 'generating'
-      ? t.generating
-      : currentArticleJob?.status === 'ready'
-        ? t.openArticle
-        : t.unfold
-
-  const unfoldButtonClass =
-    currentArticleJob?.status === 'ready'
-      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-      : currentArticleJob?.status === 'generating'
-        ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
-        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-
-  function renderArticleView() {
-    if (!(activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article)) {
-      return null
-    }
-
-    return (
-      <div className="card-pop rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveArticleKey('')
-                setArticleShareStatus('')
-                setArticleCopyStatus('idle')
-                if (articleTopRef.current) {
-                  articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                }
-              }}
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {t.backToCards}
-            </button>
-
-            <span className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.article}
-            </span>
-          </div>
-
-          <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-            {activeArticleJob.reference}
-          </p>
-
-          <h2 className="mb-6 text-center text-[2.15rem] font-semibold leading-tight tracking-tight text-stone-900">
-            {activeArticleJob.article.title}
-          </h2>
-
-          <p className="mb-8 text-[1.1rem] leading-9 text-stone-900">
-            {activeArticleJob.article.lead}
-          </p>
-
-          {activeArticleJob.article.quote ? (
-            <blockquote className="mb-8 border-l-2 border-stone-300 pl-4 text-[1rem] italic leading-8 text-stone-700">
-              {activeArticleJob.article.quote}
-            </blockquote>
-          ) : null}
-
-          <div className="space-y-7 text-[0.98rem] leading-8 text-stone-800">
-            {activeArticleJob.article.body.map((paragraph, index) => (
-              <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
-            ))}
-          </div>
-
-          <div className="mt-10 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={handleCopyArticle}
-              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {articleCopyStatus === 'copied'
-                ? t.copied
-                : articleCopyStatus === 'failed'
-                  ? t.copyFailed
-                  : t.copyArticle}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleShareArticle}
-              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {t.shareArticle}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveArticleKey('')
-                setArticleShareStatus('')
-                setArticleCopyStatus('idle')
-                if (articleTopRef.current) {
-                  articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                }
-              }}
-              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {t.backToCards}
-            </button>
-
-            <Link
-              href="/"
-              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-center text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {t.home}
-            </Link>
-          </div>
-
-          {articleShareStatus && (
-            <p className="mt-3 text-center text-sm text-stone-500">{articleShareStatus}</p>
-          )}
         </div>
       </div>
     )
@@ -2334,15 +2208,31 @@ export default function VerseDetailPage({ params }: PageProps) {
                   type="button"
                   onClick={handleUnfold}
                   disabled={currentArticleJob?.status === 'generating'}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${unfoldButtonClass}`}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
+                    currentArticleJob?.status === 'ready'
+                      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+                      : currentArticleJob?.status === 'generating'
+                        ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
+                        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+                  }`}
                 >
-                  {unfoldButtonLabel}
+                  {currentArticleJob?.status === 'generating'
+                    ? t.generating
+                    : currentArticleJob?.status === 'ready'
+                      ? t.openArticle
+                      : t.unfold}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${copyButtonClass}`}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                    copyStatus === 'copied'
+                      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+                      : copyStatus === 'failed'
+                        ? 'border-red-300 bg-red-50 text-red-700'
+                        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+                  }`}
                 >
                   {copyStatus === 'copied'
                     ? t.copied
@@ -2899,27 +2789,47 @@ export default function VerseDetailPage({ params }: PageProps) {
         </div>
 
         <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
-          {renderTabButton(t.insights, activeTab === 'insights', () => {
-            setActiveTab('insights')
-            setLensSheetOpen(false)
-          }, false)}
-          {renderTabButton(t.translations, activeTab === 'compare', () => {
-            if (!modesReady) return
-            setActiveTab('compare')
-            setLensSheetOpen(false)
-            setActiveArticleKey('')
-          }, !modesReady)}
-          {renderTabButton(t.context, activeTab === 'context', () => {
-            if (!modesReady) return
-            setActiveTab('context')
-            setLensSheetOpen(false)
-            setActiveArticleKey('')
-          }, !modesReady)}
-          {renderTabButton(t.lens, activeTab === 'lens', () => {
-            if (!modesReady) return
-            setLensSheetOpen(true)
-            setActiveArticleKey('')
-          }, !modesReady)}
+          {renderTabButton(
+            t.insights,
+            activeTab === 'insights',
+            () => {
+              setActiveTab('insights')
+              setLensSheetOpen(false)
+            },
+            false
+          )}
+          {renderTabButton(
+            t.translations,
+            activeTab === 'compare',
+            () => {
+              if (!modesReady) return
+              setActiveTab('compare')
+              setLensSheetOpen(false)
+              setActiveArticleKey('')
+            },
+            !modesReady
+          )}
+          {renderTabButton(
+            t.context,
+            activeTab === 'context',
+            () => {
+              if (!modesReady) return
+              setActiveTab('context')
+              setLensSheetOpen(false)
+              setActiveArticleKey('')
+            },
+            !modesReady
+          )}
+          {renderTabButton(
+            t.lens,
+            activeTab === 'lens',
+            () => {
+              if (!modesReady) return
+              setLensSheetOpen(true)
+              setActiveArticleKey('')
+            },
+            !modesReady
+          )}
         </div>
 
         {renderVerseBlock()}
@@ -3162,7 +3072,6 @@ export default function VerseDetailPage({ params }: PageProps) {
         }
 
         .verse-enter,
-        .verse-fade,
         .title-fade,
         .text-fade {
           animation: scriptura-soft-fade 260ms ease;
