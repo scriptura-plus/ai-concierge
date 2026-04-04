@@ -92,53 +92,49 @@ function getBookTone(title: string) {
   const revelation = new Set(["Revelation"]);
 
   if (torah.has(title)) {
-    return { background: "#495d72", border: "#3f5163", color: "#f8fafc" };
+    return { background: "#44576B", border: "#39495A", color: "#F8FAFC" };
   }
 
   if (historical.has(title)) {
-    return { background: "#5f758d", border: "#53677d", color: "#f8fafc" };
+    return { background: "#647A91", border: "#56697E", color: "#F8FAFC" };
   }
 
   if (wisdom.has(title)) {
-    return { background: "#55697f", border: "#495c70", color: "#f8fafc" };
+    return { background: "#566A80", border: "#495B70", color: "#F8FAFC" };
   }
 
   if (majorProphets.has(title)) {
-    return { background: "#44586d", border: "#394b5d", color: "#f8fafc" };
+    return { background: "#3F5266", border: "#344454", color: "#F8FAFC" };
   }
 
   if (minorProphets.has(title)) {
-    return { background: "#50657b", border: "#44576a", color: "#f8fafc" };
+    return { background: "#4D6176", border: "#415365", color: "#F8FAFC" };
   }
 
   if (gospels.has(title)) {
-    return { background: "#4c6076", border: "#415365", color: "#f8fafc" };
+    return { background: "#495D72", border: "#3E5062", color: "#F8FAFC" };
   }
 
   if (acts.has(title)) {
-    return { background: "#688098", border: "#5a7086", color: "#f8fafc" };
+    return { background: "#70869D", border: "#5E7287", color: "#F8FAFC" };
   }
 
   if (pauline.has(title)) {
-    return { background: "#5a7188", border: "#4d6277", color: "#f8fafc" };
+    return { background: "#5D748B", border: "#4F6479", color: "#F8FAFC" };
   }
 
   if (generalLetters.has(title)) {
-    return { background: "#52687f", border: "#465a6e", color: "#f8fafc" };
+    return { background: "#52687E", border: "#45586C", color: "#F8FAFC" };
   }
 
   if (revelation.has(title)) {
-    return { background: "#486075", border: "#3d5163", color: "#f8fafc" };
+    return { background: "#476075", border: "#3B5062", color: "#F8FAFC" };
   }
 
-  return { background: "#5b7086", border: "#4f6276", color: "#f8fafc" };
+  return { background: "#5D748B", border: "#4F6479", color: "#F8FAFC" };
 }
 
-function BookGrid({
-  books,
-}: {
-  books: typeof BIBLE_BOOKS;
-}) {
+function BookGrid({ books }: { books: typeof BIBLE_BOOKS }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {books.map((book) => {
@@ -148,7 +144,7 @@ function BookGrid({
           <Link
             key={book.id}
             href={`/bible/${book.id}`}
-            className="group relative overflow-hidden rounded-[22px] border px-4 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_14px_30px_rgba(15,23,42,0.14)]"
+            className="group relative overflow-hidden rounded-[18px] border px-4 py-5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_14px_30px_rgba(15,23,42,0.14)] active:translate-y-[1px] active:scale-[0.985] active:shadow-[0_6px_14px_rgba(15,23,42,0.10)]"
             style={{
               backgroundColor: tone.background,
               borderColor: tone.border,
@@ -157,13 +153,13 @@ function BookGrid({
           >
             <div
               className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-70"
-              style={{ background: "rgba(255,255,255,0.32)" }}
+              style={{ background: "rgba(255,255,255,0.34)" }}
             />
             <div
               className="pointer-events-none absolute inset-0 opacity-0 transition duration-200 group-hover:opacity-100"
               style={{
                 background:
-                  "radial-gradient(circle at top left, rgba(255,255,255,0.12), transparent 45%)",
+                  "radial-gradient(circle at top left, rgba(255,255,255,0.10), transparent 42%)",
               }}
             />
             <span className="relative block text-[0.98rem] font-medium leading-6 tracking-[0.01em]">
@@ -178,100 +174,35 @@ function BookGrid({
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f3f6fb_42%,#eef2f7_100%)]">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f3f6fb_40%,#eef2f7_100%)]">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="mb-12 overflow-hidden rounded-[32px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(245,248,252,0.94)_100%)] px-6 py-8 shadow-[0_20px_50px_rgba(15,23,42,0.07)] sm:px-8 sm:py-10">
-          <div className="max-w-3xl">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">
-              Scriptura+
-            </p>
-
-            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">
-              Explore Scripture with depth, structure, and clarity.
-            </h1>
-
-            <p className="mt-4 max-w-2xl text-[1.02rem] leading-8 text-slate-600 sm:text-[1.06rem]">
-              Select a book to begin a verse-based study experience designed to
-              feel calm, precise, and intellectually rewarding from the first tap.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <div className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-600 shadow-sm">
-                66 books
-              </div>
-              <div className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-600 shadow-sm">
-                Structured by canon
-              </div>
-              <div className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-600 shadow-sm">
-                Verse-first research
-              </div>
-            </div>
-          </div>
+        <section className="mb-10 rounded-[28px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.90)_0%,rgba(245,248,252,0.95)_100%)] px-6 py-6 shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.32em] text-slate-500">
+            Scriptura+
+          </p>
         </section>
 
         <section className="mb-14">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Section I
-              </p>
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
-                Hebrew-Aramaic Scriptures
-              </h2>
-            </div>
-
-            <div className="hidden rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-500 shadow-sm sm:block">
-              Law · History · Wisdom · Prophets
-            </div>
-          </div>
-
-          <div className="mb-4 flex flex-wrap gap-2 sm:hidden">
-            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500 shadow-sm">
-              Law
-            </span>
-            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500 shadow-sm">
-              History
-            </span>
-            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500 shadow-sm">
-              Wisdom
-            </span>
-            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500 shadow-sm">
-              Prophets
-            </span>
+          <div className="mb-6">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+              Section I
+            </p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Hebrew-Aramaic Scriptures
+            </h2>
           </div>
 
           <BookGrid books={hebrewScriptures} />
         </section>
 
         <section>
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Section II
-              </p>
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
-                Christian Greek Scriptures
-              </h2>
-            </div>
-
-            <div className="hidden rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm text-slate-500 shadow-sm sm:block">
-              Gospels · Acts · Letters · Revelation
-            </div>
-          </div>
-
-          <div className="mb-4 flex flex-wrap gap-2 sm:hidden">
-            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500 shadow-sm">
-              Gospels
-            </span>
-            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500 shadow-sm">
-              Acts
-            </span>
-            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500 shadow-sm">
-              Letters
-            </span>
-            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs text-slate-500 shadow-sm">
-              Revelation
-            </span>
+          <div className="mb-6">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+              Section II
+            </p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+              Christian Greek Scriptures
+            </h2>
           </div>
 
           <BookGrid books={greekScriptures} />
