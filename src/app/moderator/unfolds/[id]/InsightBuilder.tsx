@@ -19,10 +19,10 @@ type Props = {
   unfoldText: string
 }
 
-function optionToneLabel(index: number) {
-  if (index === 0) return 'Option 1'
-  if (index === 1) return 'Option 2'
-  return 'Option 3'
+function labelForOption(index: number) {
+  if (index === 0) return 'Вариант 1'
+  if (index === 1) return 'Вариант 2'
+  return 'Вариант 3'
 }
 
 export default function InsightBuilder({
@@ -69,12 +69,12 @@ export default function InsightBuilder({
       const data = await res.json()
 
       if (!res.ok || !Array.isArray(data.options)) {
-        throw new Error(data.error || 'Failed to generate insight options.')
+        throw new Error(data.error || 'Не удалось сгенерировать варианты карточки.')
       }
 
       setOptions(data.options as InsightOption[])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate insight options.')
+      setError(err instanceof Error ? err.message : 'Не удалось сгенерировать варианты карточки.')
     } finally {
       setLoading(false)
     }
@@ -101,13 +101,13 @@ export default function InsightBuilder({
       const data = await res.json()
 
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Failed to promote selected insight.')
+        throw new Error(data.error || 'Не удалось сохранить выбранную карточку.')
       }
 
-      setSuccess('Saved to curated insights.')
+      setSuccess('Карточка сохранена в curated insights.')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to promote selected insight.')
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить выбранную карточку.')
     } finally {
       setPromotingIndex(null)
     }
@@ -118,26 +118,26 @@ export default function InsightBuilder({
       <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
         <div className="mb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-            Passage-Anchored Insight Builder
+            Построение карточки по фрагменту
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-            Build from selected passage
+            Собрать инсайт из выбранного фрагмента
           </h2>
           <p className="mt-2 text-sm leading-6 text-stone-600">
-            Paste 1–2 “pearl” sentences from the unfold text. The selected passage must stay
-            verbatim. The AI will keep the same angle and generate exactly 3 short card options.
+            Вставь 1–2 сильных предложения из unfold. Выбранный фрагмент должен сохраниться дословно.
+            ИИ удержит тот же угол и предложит ровно 3 полноценных варианта карточки.
           </p>
         </div>
 
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-            Selected passage
+            Выбранный фрагмент
           </span>
           <textarea
             value={selectedPassage}
             onChange={(e) => setSelectedPassage(e.target.value)}
             rows={6}
-            placeholder="Paste 1–2 exact sentences from the unfold text..."
+            placeholder="Вставь 1–2 точных предложения из unfold..."
             className="mt-2 w-full rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.98rem] leading-7 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-500"
           />
         </label>
@@ -149,7 +149,7 @@ export default function InsightBuilder({
             disabled={!canGenerate || loading}
             className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? 'Generating...' : 'Generate 3 insight options'}
+            {loading ? 'Генерация...' : 'Сгенерировать 3 варианта'}
           </button>
 
           <button
@@ -162,7 +162,7 @@ export default function InsightBuilder({
             }}
             className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
           >
-            Clear
+            Очистить
           </button>
         </div>
 
@@ -178,7 +178,7 @@ export default function InsightBuilder({
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                    {optionToneLabel(index)}
+                    {labelForOption(index)}
                   </p>
 
                   <button
@@ -187,7 +187,7 @@ export default function InsightBuilder({
                     disabled={promotingIndex !== null}
                     className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {promotingIndex === index ? 'Saving...' : 'Use this'}
+                    {promotingIndex === index ? 'Сохранение...' : 'Сохранить'}
                   </button>
                 </div>
 
