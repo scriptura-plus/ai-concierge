@@ -6,9 +6,6 @@ export const dynamic = 'force-dynamic'
 type UnfoldRow = {
   id: string
   verse_ref: string
-  book: string
-  chapter: number
-  verse: number
   source_mode: 'insights' | 'word' | 'tension' | 'why_this_phrase'
   source_title: string
   source_text: string
@@ -31,25 +28,13 @@ function normalizeFilter(value: string | undefined): FilterMode {
   return 'active'
 }
 
-function formatMode(mode: UnfoldRow['source_mode']) {
-  if (mode === 'why_this_phrase') return 'Why This Phrase'
-  if (mode === 'word') return 'Word'
-  if (mode === 'tension') return 'Tension'
-  return 'Insights'
+function filterClasses(isActive: boolean) {
+  return isActive
+    ? 'border-stone-900 bg-stone-900 text-stone-50 shadow-[0_8px_18px_rgba(28,25,23,0.16)]'
+    : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 }
 
-function formatStatus(status: UnfoldRow['review_status']) {
-  if (status === 'new') return 'New'
-  if (status === 'reviewed') return 'Reviewed'
-  if (status === 'promoted') return 'Promoted'
-  return 'Hidden'
-}
-
-function statusClasses(status: UnfoldRow['review_status']) {
-  if (status === 'new') {
-    return 'border-amber-400 bg-amber-100 text-amber-900'
-  }
-
+function statusPill(status: UnfoldRow['review_status']) {
   if (status === 'promoted') {
     return 'border-emerald-400 bg-emerald-100 text-emerald-900'
   }
@@ -58,16 +43,28 @@ function statusClasses(status: UnfoldRow['review_status']) {
     return 'border-sky-400 bg-sky-100 text-sky-900'
   }
 
-  return 'border-stone-400 bg-stone-200 text-stone-700'
+  if (status === 'hidden') {
+    return 'border-stone-400 bg-stone-200 text-stone-700'
+  }
+
+  return 'border-amber-400 bg-amber-100 text-amber-900'
 }
 
-function filterClasses(isActive: boolean) {
-  return isActive
-    ? 'border-stone-900 bg-stone-900 text-stone-50 shadow-[0_8px_18px_rgba(28,25,23,0.16)]'
-    : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+function statusLabel(status: UnfoldRow['review_status']) {
+  if (status === 'promoted') return 'Сохранён'
+  if (status === 'reviewed') return 'Просмотрен'
+  if (status === 'hidden') return 'Скрыт'
+  return 'Новый'
 }
 
-function truncate(text: string, max = 180) {
+function modeLabel(mode: UnfoldRow['source_mode']) {
+  if (mode === 'why_this_phrase') return 'Почему эта фраза'
+  if (mode === 'word') return 'Слово'
+  if (mode === 'tension') return 'Напряжение'
+  return 'Инсайты'
+}
+
+function truncate(text: string, max = 220) {
   const clean = text.replace(/\s+/g, ' ').trim()
   if (clean.length <= max) return clean
   return `${clean.slice(0, max).trim()}…`
@@ -75,11 +72,11 @@ function truncate(text: string, max = 180) {
 
 function formatDate(value: string) {
   try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
+    return new Intl.DateTimeFormat('ru-RU', {
       day: 'numeric',
+      month: 'short',
       year: 'numeric',
-      hour: 'numeric',
+      hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(value))
   } catch {
@@ -92,11 +89,9 @@ async function loadUnfolds(): Promise<UnfoldRow[]> {
 
   const { data, error } = await supabase
     .from('unfold_events')
-    .select(
-      'id, verse_ref, book, chapter, verse, source_mode, source_title, source_text, unfold_text, review_status, created_at'
-    )
+    .select('id, verse_ref, source_mode, source_title, source_text, unfold_text, review_status, created_at')
     .order('created_at', { ascending: false })
-    .limit(100)
+    .limit(200)
 
   if (error) {
     throw new Error(`Failed to load unfold events: ${error.message}`)
@@ -109,20 +104,21 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const filter = normalizeFilter(resolvedSearchParams?.filter)
 
-  let unfolds: UnfoldRow[] = []
+  let items: UnfoldRow[] = []
   let loadError = ''
 
   try {
-    unfolds = await loadUnfolds()
+    items = await loadUnfolds()
   } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Failed to load unfold events.'
+    loadError = error instanceof Error ? error.message : 'Не удалось загрузить unfold-события.'
   }
 
-  const activeItems = unfolds.filter((item) => item.review_status !== 'hidden')
-  const hiddenItems = unfolds.filter((item) => item.review_status === 'hidden')
+  const activeItems = items.filter((item) => item.review_status !== 'hidden')
+  const hiddenItems = items.filter((item) => item.review_status === 'hidden')
+  const promotedItems = items.filter((item) => item.review_status === 'promoted')
 
   const visibleItems =
-    filter === 'hidden' ? hiddenItems : filter === 'all' ? unfolds : activeItems
+    filter === 'hidden' ? hiddenItems : filter === 'all' ? items : activeItems
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
@@ -130,13 +126,13 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-              Moderator
+              Модератор
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-              Unfold Inbox
+              Входящие unfold
             </h1>
             <p className="mt-2 text-sm text-stone-600">
-              Incoming unfold events saved from the reading experience.
+              Все unfold-события, сохранённые из reading experience.
             </p>
           </div>
 
@@ -144,7 +140,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
             href="/"
             className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
           >
-            Home
+            Домой
           </Link>
         </div>
 
@@ -152,32 +148,30 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
           <div className="grid gap-4 sm:grid-cols-4">
             <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Total items
+                Всего
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-900">{unfolds.length}</p>
+              <p className="mt-2 text-3xl font-semibold text-stone-900">{items.length}</p>
             </div>
 
             <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Active
+                Активные
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{activeItems.length}</p>
             </div>
 
             <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Hidden
+                Скрытые
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{hiddenItems.length}</p>
             </div>
 
             <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Promoted
+                Сохранённые
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-900">
-                {unfolds.filter((item) => item.review_status === 'promoted').length}
-              </p>
+              <p className="mt-2 text-3xl font-semibold text-stone-900">{promotedItems.length}</p>
             </div>
           </div>
         </div>
@@ -189,7 +183,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
               filter === 'active'
             )}`}
           >
-            Active
+            Активные
           </Link>
 
           <Link
@@ -198,7 +192,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
               filter === 'hidden'
             )}`}
           >
-            Hidden
+            Скрытые
           </Link>
 
           <Link
@@ -207,7 +201,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
               filter === 'all'
             )}`}
           >
-            All
+            Все
           </Link>
         </div>
 
@@ -217,11 +211,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
           </div>
         ) : visibleItems.length === 0 ? (
           <div className="rounded-[28px] border border-stone-300/70 bg-[#fffaf1] px-5 py-6 text-stone-600">
-            {filter === 'hidden'
-              ? 'No hidden unfold events.'
-              : filter === 'all'
-                ? 'No unfold events yet.'
-                : 'No active unfold events.'}
+            Нет unfold-событий для выбранного фильтра.
           </div>
         ) : (
           <div className="space-y-4">
@@ -233,14 +223,12 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
               >
                 <article className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses(item.review_status)}`}
-                    >
-                      {formatStatus(item.review_status)}
+                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusPill(item.review_status)}`}>
+                      {statusLabel(item.review_status)}
                     </span>
 
                     <span className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1 text-xs font-medium text-stone-700">
-                      {formatMode(item.source_mode)}
+                      {modeLabel(item.source_mode)}
                     </span>
 
                     <span className="text-xs text-stone-500">{formatDate(item.created_at)}</span>
@@ -248,14 +236,14 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
 
                   <div className="mt-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                      Reference
+                      Ссылка
                     </p>
                     <h2 className="mt-1 text-xl font-semibold text-stone-900">{item.verse_ref}</h2>
                   </div>
 
                   <div className="mt-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                      Source title
+                      Исходный заголовок
                     </p>
                     <p className="mt-1 text-lg font-medium leading-7 text-stone-900">
                       {item.source_title}
@@ -268,23 +256,23 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
                         Source text
                       </p>
                       <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                        {truncate(item.source_text, 260)}
+                        {truncate(item.source_text, 240)}
                       </p>
                     </div>
 
                     <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Unfold preview
+                        Краткий unfold
                       </p>
                       <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                        {truncate(item.unfold_text, 260)}
+                        {truncate(item.unfold_text, 240)}
                       </p>
                     </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between gap-4">
                     <p className="text-xs text-stone-500">ID: {item.id}</p>
-                    <span className="text-sm font-medium text-stone-700">Open →</span>
+                    <span className="text-sm font-medium text-stone-700">Открыть →</span>
                   </div>
                 </article>
               </Link>
