@@ -171,6 +171,13 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
 
           <div className="flex items-center gap-3">
             <Link
+              href="/moderator/insights"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Curated insights
+            </Link>
+
+            <Link
               href="/moderator/unfolds"
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
@@ -192,6 +199,15 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
           >
             Current status: {formatStatus(item.review_status)}
           </div>
+
+          {item.promoted_insight_id ? (
+            <Link
+              href={`/moderator/insights/${item.promoted_insight_id}`}
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Open saved insight
+            </Link>
+          ) : null}
 
           {item.review_status === 'new' ? (
             <>
