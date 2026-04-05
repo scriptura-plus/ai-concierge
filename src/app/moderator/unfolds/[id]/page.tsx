@@ -45,18 +45,18 @@ function formatStatus(status: UnfoldDetailRow['review_status']) {
 
 function statusClasses(status: UnfoldDetailRow['review_status']) {
   if (status === 'new') {
-    return 'border-amber-300 bg-amber-50 text-amber-800'
+    return 'border-amber-400 bg-amber-100 text-amber-900'
   }
 
   if (status === 'promoted') {
-    return 'border-emerald-300 bg-emerald-50 text-emerald-800'
+    return 'border-emerald-400 bg-emerald-100 text-emerald-900'
   }
 
   if (status === 'reviewed') {
-    return 'border-stone-300 bg-stone-100 text-stone-700'
+    return 'border-sky-400 bg-sky-100 text-sky-900'
   }
 
-  return 'border-stone-300 bg-stone-50 text-stone-500'
+  return 'border-stone-400 bg-stone-200 text-stone-700'
 }
 
 function formatDate(value: string) {
@@ -186,6 +186,12 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
         </div>
 
         <div className="mb-5 flex flex-wrap items-center gap-3">
+          <div
+            className={`rounded-full border px-4 py-2 text-sm font-semibold ${statusClasses(item.review_status)}`}
+          >
+            Current status: {formatStatus(item.review_status)}
+          </div>
+
           {item.review_status === 'new' ? (
             <>
               <form action={`/api/moderator/unfolds/${item.id}/review`} method="POST">
@@ -217,30 +223,20 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
               </form>
             </>
           ) : item.review_status === 'reviewed' ? (
-            <>
-              <div className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-600">
-                Status already: {formatStatus(item.review_status)}
-              </div>
-
-              <form action={`/api/moderator/unfolds/${item.id}/hide`} method="POST">
-                <input
-                  type="hidden"
-                  name="returnTo"
-                  value={`/moderator/unfolds/${item.id}`}
-                />
-                <button
-                  type="submit"
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                >
-                  Hide
-                </button>
-              </form>
-            </>
-          ) : (
-            <div className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-600">
-              Status already: {formatStatus(item.review_status)}
-            </div>
-          )}
+            <form action={`/api/moderator/unfolds/${item.id}/hide`} method="POST">
+              <input
+                type="hidden"
+                name="returnTo"
+                value={`/moderator/unfolds/${item.id}`}
+              />
+              <button
+                type="submit"
+                className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+              >
+                Hide
+              </button>
+            </form>
+          ) : null}
         </div>
 
         <div className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
