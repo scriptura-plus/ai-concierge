@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { runModel } from '@/lib/ai/run-model'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import InsightBuilder from './InsightBuilder'
 
@@ -28,6 +29,14 @@ type PageProps = {
   params: Promise<{
     id: string
   }>
+}
+
+type RussianModeratorPayload = {
+  sourceTitleRu: string
+  sourceTextRu: string
+  sourceAngleNoteRu: string | null
+  unfoldTitleRu: string | null
+  unfoldTextRu: string
 }
 
 function formatMode(mode: UnfoldDetailRow['source_mode']) {
@@ -74,6 +83,151 @@ function formatDate(value: string) {
   }
 }
 
+function looksRussian(text: string | null | undefined): boolean {
+  const sample = String(text ?? '').slice(0, 900)
+  const matches = sample.match(/[А-Яа-яЁё]/g) ?? []
+  return matches.length >= 10
+}
+
+function needsRussianModeratorLayer(item: UnfoldDetailRow): boolean {
+  return !(
+    looksRussian(item.source_title) &&
+    looksRussian(item.source_text) &&
+    looksRussian(item.unfold_text)
+  )
+}
+
+function buildRussianModeratorPrompt(item: UnfoldDetailRow) {
+  return `
+Ты подготавливаешь русский рабочий слой для модератора Scriptura+.
+
+ССЫЛКА:
+${item.verse_ref}
+
+РЕЖИМ:
+${item.source_mode}
+
+ИСХОДНЫЙ SOURCE TITLE:
+${item.source_title}
+
+ИСХОДНЫЙ SOURCE TEXT:
+${item.source_text}
+
+SOURCE ANGLE NOTE:
+${item.source_angle_note ?? ''}
+
+ИСХОДНЫЙ UNFOLD TITLE:
+${item.unfold_title ?? ''}
+
+ИСХОДНЫЙ UNFOLD TEXT:
+${item.unfold_text}
+
+ЗАДАЧА:
+Переведи весь этот модераторский материал на естественный русский язык.
+
+КРИТИЧЕСКИЕ ПРАВИЛА:
+- Это рабочий перевод для модератора, не пересказ.
+- Сохрани тот же угол мысли.
+- Не добавляй новых идей.
+- Не сокращай содержание без необходимости.
+- Не делай текст проповедническим.
+- Если поле изначально пустое, верни null для него.
+- Верни только валидный JSON.
+
+ФОРМАТ ОТВЕТА:
+{
+  "sourceTitleRu": "...",
+  "sourceTextRu": "...",
+  "sourceAngleNoteRu": "... или null",
+  "unfoldTitleRu": "... или null",
+  "unfoldTextRu": "..."
+}
+`.trim()
+}
+
+function extractJsonObject(raw: string): string | null {
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
+
+  if (start === -1 || end === -1 || end <= start) return null
+  return raw.slice(start, end + 1)
+}
+
+function parseRussianModeratorPayload(raw: string): RussianModeratorPayload | null {
+  try {
+    const parsed = JSON.parse(raw)
+
+    if (typeof parsed?.sourceTitleRu !== 'string') return null
+    if (typeof parsed?.sourceTextRu !== 'string') return null
+    if (typeof parsed?.unfoldTextRu !== 'string') return null
+
+    const sourceAngleNoteRu =
+      parsed?.sourceAngleNoteRu === null
+        ? null
+        : typeof parsed?.sourceAngleNoteRu === 'string'
+          ? parsed.sourceAngleNoteRu.trim()
+          : null
+
+    const unfoldTitleRu =
+      parsed?.unfoldTitleRu === null
+        ? null
+        : typeof parsed?.unfoldTitleRu === 'string'
+          ? parsed.unfoldTitleRu.trim()
+          : null
+
+    return {
+      sourceTitleRu: parsed.sourceTitleRu.trim(),
+      sourceTextRu: parsed.sourceTextRu.trim(),
+      sourceAngleNoteRu,
+      unfoldTitleRu,
+      unfoldTextRu: parsed.unfoldTextRu.trim(),
+    }
+  } catch {
+    return null
+  }
+}
+
+async function normalizeForRussianModerator(item: UnfoldDetailRow): Promise<UnfoldDetailRow> {
+  if (!needsRussianModeratorLayer(item)) {
+    return item
+  }
+
+  const prompt = buildRussianModeratorPrompt(item)
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 2600,
+  })
+
+  if (!result.ok) {
+    return item
+  }
+
+  const rawText = result.rawText
+  let normalized = parseRussianModeratorPayload(rawText)
+
+  if (!normalized) {
+    const extracted = extractJsonObject(rawText)
+    if (extracted) {
+      normalized = parseRussianModeratorPayload(extracted)
+    }
+  }
+
+  if (!normalized) {
+    return item
+  }
+
+  return {
+    ...item,
+    source_title: normalized.sourceTitleRu || item.source_title,
+    source_text: normalized.sourceTextRu || item.source_text,
+    source_angle_note: normalized.sourceAngleNoteRu,
+    unfold_title: normalized.unfoldTitleRu,
+    unfold_text: normalized.unfoldTextRu || item.unfold_text,
+  }
+}
+
 async function loadUnfoldById(id: string): Promise<UnfoldDetailRow | null> {
   const supabase = getSupabaseServerClient()
 
@@ -115,7 +269,8 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
   let item: UnfoldDetailRow | null = null
 
   try {
-    item = await loadUnfoldById(id)
+    const loaded = await loadUnfoldById(id)
+    item = loaded ? await normalizeForRussianModerator(loaded) : null
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Failed to load unfold event.'
@@ -165,7 +320,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
               Unfold Review
             </h1>
             <p className="mt-2 text-sm text-stone-600">
-              Single unfold event view for review and future promotion workflow.
+              Единый русский рабочий слой для модератора, независимо от языка пользовательского unfold.
             </p>
           </div>
 
