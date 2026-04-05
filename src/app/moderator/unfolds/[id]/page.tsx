@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
+import InsightBuilder from './InsightBuilder'
 
 export const dynamic = 'force-dynamic'
 
@@ -238,6 +239,15 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
             </form>
           ) : null}
         </div>
+
+        <InsightBuilder
+          unfoldId={item.id}
+          reference={item.verse_ref}
+          sourceMode={item.source_mode}
+          sourceTitle={item.source_title}
+          sourceText={item.source_text}
+          unfoldText={item.unfold_text}
+        />
 
         <div className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
