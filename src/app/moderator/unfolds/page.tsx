@@ -17,6 +17,20 @@ type UnfoldRow = {
   created_at: string
 }
 
+type FilterMode = 'active' | 'hidden' | 'all'
+
+type PageProps = {
+  searchParams?: Promise<{
+    filter?: string
+  }>
+}
+
+function normalizeFilter(value: string | undefined): FilterMode {
+  if (value === 'hidden') return 'hidden'
+  if (value === 'all') return 'all'
+  return 'active'
+}
+
 function formatMode(mode: UnfoldRow['source_mode']) {
   if (mode === 'why_this_phrase') return 'Why This Phrase'
   if (mode === 'word') return 'Word'
@@ -33,18 +47,24 @@ function formatStatus(status: UnfoldRow['review_status']) {
 
 function statusClasses(status: UnfoldRow['review_status']) {
   if (status === 'new') {
-    return 'border-amber-300 bg-amber-50 text-amber-800'
+    return 'border-amber-400 bg-amber-100 text-amber-900'
   }
 
   if (status === 'promoted') {
-    return 'border-emerald-300 bg-emerald-50 text-emerald-800'
+    return 'border-emerald-400 bg-emerald-100 text-emerald-900'
   }
 
   if (status === 'reviewed') {
-    return 'border-stone-300 bg-stone-100 text-stone-700'
+    return 'border-sky-400 bg-sky-100 text-sky-900'
   }
 
-  return 'border-stone-300 bg-stone-50 text-stone-500'
+  return 'border-stone-400 bg-stone-200 text-stone-700'
+}
+
+function filterClasses(isActive: boolean) {
+  return isActive
+    ? 'border-stone-900 bg-stone-900 text-stone-50 shadow-[0_8px_18px_rgba(28,25,23,0.16)]'
+    : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
 }
 
 function truncate(text: string, max = 180) {
@@ -85,7 +105,10 @@ async function loadUnfolds(): Promise<UnfoldRow[]> {
   return (data ?? []) as UnfoldRow[]
 }
 
-export default async function ModeratorUnfoldsPage() {
+export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const filter = normalizeFilter(resolvedSearchParams?.filter)
+
   let unfolds: UnfoldRow[] = []
   let loadError = ''
 
@@ -94,6 +117,12 @@ export default async function ModeratorUnfoldsPage() {
   } catch (error) {
     loadError = error instanceof Error ? error.message : 'Failed to load unfold events.'
   }
+
+  const activeItems = unfolds.filter((item) => item.review_status !== 'hidden')
+  const hiddenItems = unfolds.filter((item) => item.review_status === 'hidden')
+
+  const visibleItems =
+    filter === 'hidden' ? hiddenItems : filter === 'all' ? unfolds : activeItems
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
@@ -120,7 +149,7 @@ export default async function ModeratorUnfoldsPage() {
         </div>
 
         <div className="mb-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-4">
             <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
                 Total items
@@ -130,11 +159,16 @@ export default async function ModeratorUnfoldsPage() {
 
             <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                New
+                Active
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-900">
-                {unfolds.filter((item) => item.review_status === 'new').length}
+              <p className="mt-2 text-3xl font-semibold text-stone-900">{activeItems.length}</p>
+            </div>
+
+            <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Hidden
               </p>
+              <p className="mt-2 text-3xl font-semibold text-stone-900">{hiddenItems.length}</p>
             </div>
 
             <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
@@ -148,21 +182,54 @@ export default async function ModeratorUnfoldsPage() {
           </div>
         </div>
 
+        <div className="mb-5 flex flex-wrap gap-3">
+          <Link
+            href="/moderator/unfolds?filter=active"
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition ${filterClasses(
+              filter === 'active'
+            )}`}
+          >
+            Active
+          </Link>
+
+          <Link
+            href="/moderator/unfolds?filter=hidden"
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition ${filterClasses(
+              filter === 'hidden'
+            )}`}
+          >
+            Hidden
+          </Link>
+
+          <Link
+            href="/moderator/unfolds?filter=all"
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition ${filterClasses(
+              filter === 'all'
+            )}`}
+          >
+            All
+          </Link>
+        </div>
+
         {loadError ? (
           <div className="rounded-[28px] border border-red-200 bg-red-50 px-5 py-5 text-red-700">
             {loadError}
           </div>
-        ) : unfolds.length === 0 ? (
+        ) : visibleItems.length === 0 ? (
           <div className="rounded-[28px] border border-stone-300/70 bg-[#fffaf1] px-5 py-6 text-stone-600">
-            No unfold events yet.
+            {filter === 'hidden'
+              ? 'No hidden unfold events.'
+              : filter === 'all'
+                ? 'No unfold events yet.'
+                : 'No active unfold events.'}
           </div>
         ) : (
           <div className="space-y-4">
-            {unfolds.map((item) => (
+            {visibleItems.map((item) => (
               <Link
                 key={item.id}
                 href={`/moderator/unfolds/${item.id}`}
-                className="block rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(94,72,37,0.14)]"
+                className="block rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(94,72,37,0.14)] active:scale-[0.998]"
               >
                 <article className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
                   <div className="flex flex-wrap items-center gap-2">
