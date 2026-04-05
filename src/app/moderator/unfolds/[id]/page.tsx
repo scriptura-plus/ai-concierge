@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 type UnfoldDetailRow = {
   id: string
   verse_ref: string
@@ -185,10 +187,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
 
         <div className="mb-5 flex flex-wrap items-center gap-3">
           {item.review_status === 'new' ? (
-            <form
-              action={`/api/moderator/unfolds/${item.id}/review`}
-              method="POST"
-            >
+            <form action={`/api/moderator/unfolds/${item.id}/review`} method="POST">
               <input
                 type="hidden"
                 name="returnTo"
