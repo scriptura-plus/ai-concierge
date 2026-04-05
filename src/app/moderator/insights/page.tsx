@@ -10,12 +10,15 @@ type CuratedInsightRow = {
   chapter: number
   verse: number
   mode: 'insights' | 'word' | 'tension' | 'why_this_phrase'
-  title: string
-  text: string
+  title_ru: string | null
+  text_ru: string | null
+  title_en: string | null
+  text_en: string | null
   angle_note: string | null
   status: 'draft' | 'saved' | 'hidden'
   unfold_count: number
   promoted_from_unfold: boolean
+  source_language: 'ru' | 'en' | 'es' | 'fr' | 'de' | null
   created_at: string
   updated_at: string
 }
@@ -79,13 +82,21 @@ function formatDate(value: string) {
   }
 }
 
+function pickRuTitle(item: CuratedInsightRow) {
+  return item.title_ru?.trim() || item.title_en?.trim() || 'Без названия'
+}
+
+function pickRuText(item: CuratedInsightRow) {
+  return item.text_ru?.trim() || item.text_en?.trim() || ''
+}
+
 async function loadCuratedInsights(): Promise<CuratedInsightRow[]> {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
     .from('curated_insights')
     .select(
-      'id, verse_ref, book, chapter, verse, mode, title, text, angle_note, status, unfold_count, promoted_from_unfold, created_at, updated_at'
+      'id, verse_ref, book, chapter, verse, mode, title_ru, text_ru, title_en, text_en, angle_note, status, unfold_count, promoted_from_unfold, source_language, created_at, updated_at'
     )
     .order('created_at', { ascending: false })
     .limit(200)
@@ -128,7 +139,7 @@ export default async function ModeratorInsightsPage({ searchParams }: PageProps)
               Curated Insights
             </h1>
             <p className="mt-2 text-sm text-stone-600">
-              Reading-layer cards that are already saved into the main insight library.
+              Сохранённые карточки reading layer. Основной просмотр для модератора — на русском.
             </p>
           </div>
 
@@ -250,6 +261,10 @@ export default async function ModeratorInsightsPage({ searchParams }: PageProps)
                       </span>
                     ) : null}
 
+                    <span className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1 text-xs font-medium text-stone-700">
+                      Source: {item.source_language ?? 'ru'}
+                    </span>
+
                     <span className="text-xs text-stone-500">{formatDate(item.created_at)}</span>
                   </div>
 
@@ -262,19 +277,28 @@ export default async function ModeratorInsightsPage({ searchParams }: PageProps)
 
                   <div className="mt-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                      Title
+                      Title (RU)
                     </p>
                     <p className="mt-1 text-lg font-medium leading-7 text-stone-900">
-                      {item.title}
+                      {pickRuTitle(item)}
                     </p>
                   </div>
 
+                  {item.title_en ? (
+                    <div className="mt-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                        Title (EN)
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-stone-700">{item.title_en}</p>
+                    </div>
+                  ) : null}
+
                   <div className="mt-4 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                      Card text
+                      Card text (RU)
                     </p>
                     <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                      {truncate(item.text, 320)}
+                      {truncate(pickRuText(item), 320)}
                     </p>
                   </div>
 
