@@ -6,13 +6,13 @@ export default function ModeratorIndexPage() {
       <div className="mx-auto w-full max-w-3xl">
         <div className="mb-6">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-            Moderator
+            Модератор
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-            Workspace
+            Рабочий кабинет
           </h1>
           <p className="mt-2 text-sm text-stone-600">
-            Review incoming unfold signals and manage saved insight cards.
+            Разбирай входящие unfold-сигналы и управляй сохранёнными карточками.
           </p>
         </div>
 
@@ -23,11 +23,11 @@ export default function ModeratorIndexPage() {
           >
             <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Moderator
+                Модератор
               </p>
-              <h2 className="mt-2 text-2xl font-semibold text-stone-900">Unfold Inbox</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-stone-900">Входящие unfold</h2>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Review raw unfold events, mark them, hide noise, and extract passage-based cards.
+                Разбирай новые unfold-события, скрывай шум и извлекай из них сильные карточки.
               </p>
             </div>
           </Link>
@@ -38,11 +38,11 @@ export default function ModeratorIndexPage() {
           >
             <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Moderator
+                Модератор
               </p>
-              <h2 className="mt-2 text-2xl font-semibold text-stone-900">Curated Insights</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-stone-900">Сохранённые инсайты</h2>
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Inspect and clean the saved reading-layer cards that users actually receive.
+                Просматривай и очищай карточки, которые уже попадают в основной reading layer.
               </p>
             </div>
           </Link>
@@ -53,7 +53,7 @@ export default function ModeratorIndexPage() {
             href="/"
             className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
           >
-            Home
+            Домой
           </Link>
         </div>
       </div>
