@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { runModel } from "@/lib/ai/run-model";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 type SupportedLanguage = "en" | "ru" | "es" | "fr" | "de";
+type SourceMode = "insights" | "word" | "tension" | "why_this_phrase";
 
 type ArticlePayload = {
   title: string;
@@ -152,6 +154,100 @@ function articleLooksRussian(article: ArticlePayload): boolean {
   return looksRussian(joined);
 }
 
+function parseReference(reference: string): {
+  verse_ref: string;
+  book: string;
+  chapter: number;
+  verse: number;
+} | null {
+  const trimmed = reference.trim();
+  const match = trimmed.match(/^(.*)\s+(\d+):(\d+)$/);
+
+  if (!match) return null;
+
+  const [, rawBook, rawChapter, rawVerse] = match;
+  const book = rawBook.trim().toLowerCase();
+  const chapter = Number(rawChapter);
+  const verse = Number(rawVerse);
+
+  if (!book || !Number.isInteger(chapter) || !Number.isInteger(verse)) {
+    return null;
+  }
+
+  return {
+    verse_ref: trimmed,
+    book,
+    chapter,
+    verse,
+  };
+}
+
+function normalizeSourceMode(value: unknown): SourceMode {
+  return value === "word" ||
+    value === "tension" ||
+    value === "why_this_phrase"
+    ? value
+    : "insights";
+}
+
+function buildUnfoldText(article: ArticlePayload): string {
+  return [
+    article.title,
+    "",
+    article.lead,
+    "",
+    ...article.body,
+    ...(article.quote ? ["", `“${article.quote}”`] : []),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+async function saveUnfoldEvent(params: {
+  reference: string;
+  sourceMode?: unknown;
+  sourceInsightId?: unknown;
+  sourceTitle: string;
+  sourceText: string;
+  sourceAngleNote?: unknown;
+  article: ArticlePayload;
+}) {
+  const parsedRef = parseReference(params.reference);
+  if (!parsedRef) return;
+
+  const supabase = getSupabaseServerClient();
+
+  const sourceInsightId =
+    typeof params.sourceInsightId === "string" && params.sourceInsightId.trim()
+      ? params.sourceInsightId.trim()
+      : null;
+
+  const sourceAngleNote =
+    typeof params.sourceAngleNote === "string" && params.sourceAngleNote.trim()
+      ? params.sourceAngleNote.trim()
+      : null;
+
+  const { error } = await supabase.from("unfold_events").insert({
+    verse_ref: parsedRef.verse_ref,
+    book: parsedRef.book,
+    chapter: parsedRef.chapter,
+    verse: parsedRef.verse,
+    source_insight_id: sourceInsightId,
+    source_mode: normalizeSourceMode(params.sourceMode),
+    source_title: params.sourceTitle,
+    source_text: params.sourceText,
+    source_angle_note: sourceAngleNote,
+    unfold_title: params.article.title,
+    unfold_text: buildUnfoldText(params.article),
+    review_status: "new",
+    promoted_insight_id: null,
+  });
+
+  if (error) {
+    throw new Error(`Failed to save unfold event: ${error.message}`);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const {
@@ -160,6 +256,9 @@ export async function POST(req: Request) {
       insightTitle,
       insightText,
       targetLanguage,
+      sourceMode,
+      sourceAngleNote,
+      sourceInsightId,
     } = await req.json();
 
     const safeReference = String(reference ?? "").trim() || "Unknown reference";
@@ -232,6 +331,20 @@ export async function POST(req: Request) {
         },
         { status: 500 }
       );
+    }
+
+    try {
+      await saveUnfoldEvent({
+        reference: safeReference,
+        sourceMode,
+        sourceInsightId,
+        sourceTitle: safeInsightTitle,
+        sourceText: safeInsightText,
+        sourceAngleNote,
+        article,
+      });
+    } catch (error) {
+      console.error("Unfold event save error:", error);
     }
 
     return NextResponse.json({ article });
