@@ -215,35 +215,36 @@ export async function POST(req: Request, context: RouteContext) {
       ? `Preserved passage: ${selectedPassage}`.slice(0, 500)
       : 'Promoted from selected unfold passage.'
 
+    const insertPayload = {
+      verse_ref: parsedRef.verse_ref,
+      book: parsedRef.book,
+      chapter: parsedRef.chapter,
+      verse: parsedRef.verse,
+      mode: sourceMode,
+      angle_note: angleNote,
+      status: 'saved',
+      unfold_count: 0,
+      promoted_from_unfold: true,
+      source_language: 'ru',
+
+      title_ru: titleRu,
+      text_ru: textRu,
+      title_en: translations.en.title,
+      text_en: translations.en.text,
+      title_es: translations.es.title,
+      text_es: translations.es.text,
+      title_fr: translations.fr.title,
+      text_fr: translations.fr.text,
+      title_de: translations.de.title,
+      text_de: translations.de.text,
+
+      title: translations.en.title,
+      text: translations.en.text,
+    }
+
     const { data: inserted, error: insertError } = await supabase
       .from('curated_insights')
-      .insert({
-        verse_ref: parsedRef.verse_ref,
-        book: parsedRef.book,
-        chapter: parsedRef.chapter,
-        verse: parsedRef.verse,
-        mode: sourceMode,
-        angle_note: angleNote,
-        status: 'saved',
-        unfold_count: 0,
-        promoted_from_unfold: true,
-        source_language: 'ru',
-
-        title_ru: titleRu,
-        text_ru: textRu,
-        title_en: translations.en.title,
-        text_en: translations.en.text,
-        title_es: translations.es.title,
-        text_es: translations.es.text,
-        title_fr: translations.fr.title,
-        text_fr: translations.fr.text,
-        title_de: translations.de.title,
-        text_de: translations.de.text,
-
-        -- legacy fallback fields for current reading layer until it is upgraded
-        title: translations.en.title,
-        text: translations.en.text,
-      })
+      .insert(insertPayload)
       .select('id')
       .single()
 
