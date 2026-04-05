@@ -42,18 +42,18 @@ function buildRussianNormalizationPrompt(params: {
   selectedPassage: string
 }) {
   return `
-Ты подготавливаешь русский рабочий слой для модераторского процесса Scriptura+.
+Ты подготавливаешь русский рабочий слой для модераторского workflow Scriptura+.
 
 ССЫЛКА:
 ${params.reference}
 
-РЕЖИМ:
+РЕЖИМ ИСХОДНОГО ИНСАЙТА:
 ${params.sourceMode}
 
-SOURCE TITLE:
+SOURCE INSIGHT TITLE:
 ${params.sourceTitle}
 
-SOURCE TEXT:
+SOURCE INSIGHT TEXT:
 ${params.sourceText}
 
 UNFOLD TEXT:
@@ -63,14 +63,14 @@ SELECTED PASSAGE:
 ${params.selectedPassage}
 
 ЗАДАЧА:
-Переведи весь материал на естественный русский язык для работы модератора.
+Преобразуй все входные данные в естественный русский рабочий вариант для модератора.
 
-ПРАВИЛА:
-- Сохрани тот же самый угол мысли.
-- Не добавляй новых идей.
-- Не сокращай смысл.
+КРИТИЧЕСКИЕ ПРАВИЛА:
+- Сохрани тот же угол мысли.
+- Не выдумывай новых идей.
+- Не расширяй материал.
+- Не упрощай смысл.
 - Не делай текст проповедническим.
-- Не превращай это в пересказ.
 - Верни только валидный JSON.
 
 ФОРМАТ:
@@ -143,7 +143,7 @@ async function normalizeInputsToRussian(params: {
   })
 
   if (!result.ok) {
-    throw new Error(result.error || 'Не удалось перевести рабочий материал в русский язык.')
+    throw new Error(result.error || 'Не удалось привести unfold к русскому рабочему слою.')
   }
 
   const rawText = result.rawText
@@ -157,7 +157,7 @@ async function normalizeInputsToRussian(params: {
   }
 
   if (!normalized) {
-    throw new Error('Не удалось разобрать JSON русского рабочего слоя.')
+    throw new Error('Не удалось распарсить JSON с русской нормализацией.')
   }
 
   return normalized
@@ -172,14 +172,14 @@ function buildPrompt(params: {
   selectedPassageRu: string
 }) {
   return `
-Ты создаёшь карточки библейских инсайтов для модераторского процесса Scriptura+.
+Ты — генератор сильных карточек-инсайтов для Scriptura+.
 
-Твоя задача — предложить 3 сильных варианта карточки на основе уже найденного угла и выбранного модератором фрагмента.
+Твоя задача — создать 3 разных, но равноценных варианта карточки на основе уже найденного угла мысли.
 
 ССЫЛКА:
 ${params.reference}
 
-ИСХОДНЫЙ РЕЖИМ:
+РЕЖИМ:
 ${params.sourceMode}
 
 ИСХОДНЫЙ ЗАГОЛОВОК:
@@ -191,63 +191,49 @@ ${params.sourceTextRu}
 UNFOLD ТЕКСТ:
 ${params.unfoldTextRu}
 
-ВЫБРАННЫЙ ФРАГМЕНТ:
+ВЫБРАННЫЙ ФРАГМЕНТ (СВЯЩЕННЫЙ, ДОЛЖЕН СОХРАНИТЬСЯ ДОСЛОВНО):
 ${params.selectedPassageRu}
 
-ГЛАВНЫЙ ПРИНЦИП:
-Это не пересказ.
-Это не комментарий.
-Это не проповедь.
-Это точная упаковка уже найденной мысли в формат сильной insight-card.
+ОСНОВНОЙ ПРИНЦИП:
+Это не новый угол.
+Это не соседняя идея.
+Это не новый комментарий.
+Это более сильная, более точная, более законченная упаковка того же инсайта.
 
 КРИТИЧЕСКИЕ ПРАВИЛА:
 - Сохрани тот же самый угол мысли.
-- Не уходи в соседние идеи.
-- Не открывай новый угол.
-- Выбранный фрагмент должен остаться дословно в каждом варианте.
-- Не перефразируй выбранный фрагмент.
-- Не укорачивай выбранный фрагмент.
-- Эти 3 варианта отличаются подачей, а не направлением мысли.
-- Карточка должна быть по длине и плотности как обычный хороший insight.
-- Это должен быть полноценный card text, а не короткая обёртка вокруг цитаты.
+- Не уходи в соседние направления.
+- Не добавляй новую большую идею.
+- Выбранный фрагмент должен войти в каждый вариант дословно.
+- Не перефразируй его.
+- Не сокращай его.
+- Каждый вариант должен ощущаться как полноценная карточка, а не как краткая рамка вокруг цитаты.
+- Длина должна соответствовать обычной карточке Insight.
+- Делай примерно 4–5 предложений.
+- Не делай текст телеграфным.
+- Не делай текст проповедническим.
+- Не используй банальности, штампы и общие духовные фразы.
+- Каждый вариант должен быть читаемым, плотным, интеллектуальным и законченным.
+- Заголовок должен быть коротким, цепким, достойным сохранения.
+- Текст должен быть современным, ясным и достаточно насыщенным.
 
 СТАНДАРТ КАЧЕСТВА:
-- Избегай банальности
-- Избегай расплывчатости
-- Избегай штампов
-- Избегай “религиозного канцелярита”
-- Каждый вариант должен звучать как достойная сохранения карточка
-- Карточка должна ощущаться завершённой, а не обрезанной
-
-СТИЛЬ:
-- ясно
-- современно
-- умно
-- плотно, но читабельно
-- выразительно без крикливости
-- без проповеднического тона
-
-ФОРМАТ:
-- Верни ровно 3 варианта
-- У каждого варианта должны быть:
-  - "title"
-  - "text"
-- "title" должен быть коротким, точным, цепким
-- "text" должен быть из 4–5 предложений
-- "text" должен быть самодостаточным и готовым для карточки
+- Избегай очевидностей.
+- Избегай повторения одной мысли другими словами.
+- Карточка должна звучать как сильный finished insight, а не как компрессия.
 
 ПРАВИЛА ВЫВОДА:
 - Верни ТОЛЬКО валидный JSON
 - Без markdown
 - Без code fences
 - Без комментариев
-- Вывод должен быть JSON-массивом
+- Вывод должен быть JSON-массивом ровно из 3 элементов
 
-ПРИМЕР ФОРМЫ:
+ФОРМАТ:
 [
   {
-    "title": "Сильный заголовок",
-    "text": "Первое предложение. Дословно сохранённый фрагмент. Третье предложение. Четвёртое предложение."
+    "title": "Короткий сильный заголовок",
+    "text": "Четыре или пять предложений полноценного инсайта."
   }
 ]
 `.trim()
@@ -260,7 +246,7 @@ function parseOptions(raw: string): InsightOption[] | null {
     if (!Array.isArray(parsed)) return null
 
     const cleaned = parsed
-      .filter((item) => item && typeof item === "object")
+      .filter((item) => item && typeof item === 'object')
       .map((item) => ({
         title: String(item.title ?? '').trim(),
         text: String(item.text ?? '').trim(),
@@ -292,10 +278,15 @@ function allOptionsLookRussian(options: InsightOption[]): boolean {
   return options.every((option) => looksRussian(`${option.title} ${option.text}`))
 }
 
-function allOptionsHaveEnoughSentences(options: InsightOption[]): boolean {
+function countSentences(text: string): number {
+  const matches = text.match(/[.!?…]+/g)
+  return matches ? matches.length : 1
+}
+
+function optionsHaveNormalInsightLength(options: InsightOption[]): boolean {
   return options.every((option) => {
-    const count = option.text.split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length
-    return count >= 4
+    const sentences = countSentences(option.text)
+    return sentences >= 4 && sentences <= 6
   })
 }
 
@@ -366,7 +357,7 @@ export async function POST(req: Request, _context: RouteContext) {
     if (!options || options.length !== 3) {
       return NextResponse.json(
         {
-          error: 'Не удалось разобрать ровно 3 варианта карточки.',
+          error: 'Не удалось распарсить ровно 3 варианта инсайта.',
           raw: rawText || 'Empty model response',
         },
         { status: 500 }
@@ -376,7 +367,7 @@ export async function POST(req: Request, _context: RouteContext) {
     if (!allOptionsPreservePassage(options, normalized.selectedPassageRu)) {
       return NextResponse.json(
         {
-          error: 'Модель не сохранила выбранный фрагмент дословно во всех вариантах.',
+          error: 'Модель не сохранила выбранный русский фрагмент дословно во всех вариантах.',
           raw: rawText || 'Empty model response',
         },
         { status: 500 }
@@ -386,17 +377,17 @@ export async function POST(req: Request, _context: RouteContext) {
     if (!allOptionsLookRussian(options)) {
       return NextResponse.json(
         {
-          error: 'Модель не вернула русские варианты карточек.',
+          error: 'Модель не вернула варианты на русском языке.',
           raw: rawText || 'Empty model response',
         },
         { status: 500 }
       )
     }
 
-    if (!allOptionsHaveEnoughSentences(options)) {
+    if (!optionsHaveNormalInsightLength(options)) {
       return NextResponse.json(
         {
-          error: 'Варианты получились слишком короткими. Ожидался формат полноценной insight-card.',
+          error: 'Модель вернула слишком короткие или слишком длинные варианты. Нужен полноценный размер обычной insight-card.',
           raw: rawText || 'Empty model response',
         },
         { status: 500 }
@@ -415,7 +406,7 @@ export async function POST(req: Request, _context: RouteContext) {
         error:
           error instanceof Error
             ? error.message
-            : 'Что-то пошло не так при генерации вариантов карточки.',
+            : 'Что-то пошло не так при генерации вариантов инсайта.',
       },
       { status: 500 }
     )
