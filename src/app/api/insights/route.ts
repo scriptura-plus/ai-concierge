@@ -1,10 +1,28 @@
 import { NextResponse } from "next/server";
 import { getVerseText } from "@/lib/bible/getVerseText";
 import { runModel } from "@/lib/ai/run-model";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 type InsightItem = {
   title: string;
   text: string;
+};
+
+type CuratedInsightRow = {
+  id: string;
+  verse_ref: string;
+  book: string;
+  chapter: number;
+  verse: number;
+  mode: "insights" | "word" | "tension" | "why_this_phrase";
+  title: string;
+  text: string;
+  angle_note: string;
+  status: "draft" | "saved" | "hidden";
+  unfold_count: number;
+  promoted_from_unfold: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 function buildPrompt(
@@ -142,6 +160,38 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1);
 }
 
+function normalizeSavedInsights(rows: CuratedInsightRow[]): InsightItem[] {
+  return rows
+    .map((row) => ({
+      title: String(row.title ?? "").trim(),
+      text: String(row.text ?? "").trim(),
+    }))
+    .filter((item) => item.title && item.text);
+}
+
+async function loadSavedInsights(
+  book: string,
+  chapter: number,
+  verse: number
+): Promise<InsightItem[]> {
+  const supabase = getSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("curated_insights")
+    .select("*")
+    .eq("book", book)
+    .eq("chapter", chapter)
+    .eq("verse", verse)
+    .eq("status", "saved")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to load curated insights: ${error.message}`);
+  }
+
+  return normalizeSavedInsights((data ?? []) as CuratedInsightRow[]);
+}
+
 export async function POST(req: Request) {
   try {
     const { book, chapter, verse, focusWord, count } = await req.json();
@@ -153,7 +203,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const verseText = await getVerseText(book, chapter, verse);
+    const safeBook = String(book).trim();
+    const safeChapter = Number(chapter);
+    const safeVerse = Number(verse);
+
+    if (!safeBook || !Number.isInteger(safeChapter) || !Number.isInteger(safeVerse)) {
+      return NextResponse.json(
+        { error: "book, chapter, and verse must be valid." },
+        { status: 400 }
+      );
+    }
+
+    const verseText = await getVerseText(safeBook, safeChapter, safeVerse);
 
     if (!verseText) {
       return NextResponse.json(
@@ -162,47 +223,92 @@ export async function POST(req: Request) {
       );
     }
 
-    const reference = `${book} ${chapter}:${verse}`;
+    const reference = `${safeBook} ${safeChapter}:${safeVerse}`;
     const safeCount = Math.min(Math.max(Number(count ?? 12), 10), 20);
 
-    const prompt = buildPrompt(reference, verseText, focusWord, safeCount);
+    let savedInsights: InsightItem[] = [];
 
-    const result = await runModel({
-      prompt,
-      model: "gpt-5.4-mini",
-      maxOutputTokens: 3000,
-    });
-
-    if (!result.ok) {
-      return NextResponse.json(
-        {
-          error: result.error,
-          raw: result.raw || "",
-        },
-        { status: 500 }
-      );
+    try {
+      savedInsights = await loadSavedInsights(safeBook, safeChapter, safeVerse);
+    } catch (error) {
+      console.error("Curated insights lookup error:", error);
     }
 
-    const rawText = result.rawText;
+    const trimmedSavedInsights = savedInsights.slice(0, safeCount);
+    const missingCount = Math.max(safeCount - trimmedSavedInsights.length, 0);
 
-    let insights = parseInsights(rawText);
+    let generatedInsights: InsightItem[] = [];
 
-    if (!insights) {
-      const extracted = extractJsonArray(rawText);
-      if (extracted) {
-        insights = parseInsights(extracted);
+    if (missingCount > 0) {
+      const prompt = buildPrompt(reference, verseText, focusWord, missingCount);
+
+      const result = await runModel({
+        prompt,
+        model: "gpt-5.4-mini",
+        maxOutputTokens: 3000,
+      });
+
+      if (!result.ok) {
+        if (trimmedSavedInsights.length > 0) {
+          return NextResponse.json({
+            reference,
+            verseText,
+            focusWord: focusWord ?? "",
+            count: trimmedSavedInsights.length,
+            insights: trimmedSavedInsights,
+            savedCount: trimmedSavedInsights.length,
+            generatedCount: 0,
+            partial: true,
+          });
+        }
+
+        return NextResponse.json(
+          {
+            error: result.error,
+            raw: result.raw || "",
+          },
+          { status: 500 }
+        );
       }
+
+      const rawText = result.rawText;
+
+      let parsed = parseInsights(rawText);
+
+      if (!parsed) {
+        const extracted = extractJsonArray(rawText);
+        if (extracted) {
+          parsed = parseInsights(extracted);
+        }
+      }
+
+      if (!parsed) {
+        if (trimmedSavedInsights.length > 0) {
+          return NextResponse.json({
+            reference,
+            verseText,
+            focusWord: focusWord ?? "",
+            count: trimmedSavedInsights.length,
+            insights: trimmedSavedInsights,
+            savedCount: trimmedSavedInsights.length,
+            generatedCount: 0,
+            partial: true,
+          });
+        }
+
+        return NextResponse.json(
+          {
+            error: "Failed to parse insights JSON.",
+            raw: rawText || "Empty model response",
+          },
+          { status: 500 }
+        );
+      }
+
+      generatedInsights = parsed.slice(0, missingCount);
     }
 
-    if (!insights) {
-      return NextResponse.json(
-        {
-          error: "Failed to parse insights JSON.",
-          raw: rawText || "Empty model response",
-        },
-        { status: 500 }
-      );
-    }
+    const insights = [...trimmedSavedInsights, ...generatedInsights].slice(0, safeCount);
 
     return NextResponse.json({
       reference,
@@ -210,6 +316,8 @@ export async function POST(req: Request) {
       focusWord: focusWord ?? "",
       count: insights.length,
       insights,
+      savedCount: trimmedSavedInsights.length,
+      generatedCount: generatedInsights.length,
     });
   } catch (error) {
     console.error("Insights API error:", error);
