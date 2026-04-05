@@ -183,6 +183,31 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
           </div>
         </div>
 
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          {item.review_status === 'new' ? (
+            <form
+              action={`/api/moderator/unfolds/${item.id}/review`}
+              method="POST"
+            >
+              <input
+                type="hidden"
+                name="returnTo"
+                value={`/moderator/unfolds/${item.id}`}
+              />
+              <button
+                type="submit"
+                className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+              >
+                Mark as reviewed
+              </button>
+            </form>
+          ) : (
+            <div className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-600">
+              Status already: {formatStatus(item.review_status)}
+            </div>
+          )}
+        </div>
+
         <div className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
             <div className="flex flex-wrap items-center gap-2">
