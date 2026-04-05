@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 type UnfoldRow = {
   id: string
   verse_ref: string
