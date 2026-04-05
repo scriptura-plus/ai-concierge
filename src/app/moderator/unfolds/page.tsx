@@ -157,11 +157,12 @@ export default async function ModeratorUnfoldsPage() {
         ) : (
           <div className="space-y-4">
             {unfolds.map((item) => (
-              <article
+              <Link
                 key={item.id}
-                className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]"
+                href={`/moderator/unfolds/${item.id}`}
+                className="block rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(94,72,37,0.14)]"
               >
-                <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
+                <article className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
                       className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses(item.review_status)}`}
@@ -212,11 +213,12 @@ export default async function ModeratorUnfoldsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4">
+                  <div className="mt-4 flex items-center justify-between gap-4">
                     <p className="text-xs text-stone-500">ID: {item.id}</p>
+                    <span className="text-sm font-medium text-stone-700">Open →</span>
                   </div>
-                </div>
-              </article>
+                </article>
+              </Link>
             ))}
           </div>
         )}
