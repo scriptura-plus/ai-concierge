@@ -19,7 +19,7 @@ type Props = {
   unfoldText: string
 }
 
-function labelForOption(index: number) {
+function optionLabel(index: number) {
   if (index === 0) return 'Вариант 1'
   if (index === 1) return 'Вариант 2'
   return 'Вариант 3'
@@ -69,12 +69,16 @@ export default function InsightBuilder({
       const data = await res.json()
 
       if (!res.ok || !Array.isArray(data.options)) {
-        throw new Error(data.error || 'Не удалось сгенерировать варианты карточки.')
+        throw new Error(data.error || 'Не удалось сгенерировать варианты инсайта.')
+      }
+
+      if (typeof data.normalizedSelectedPassage === 'string' && data.normalizedSelectedPassage.trim()) {
+        setSelectedPassage(data.normalizedSelectedPassage.trim())
       }
 
       setOptions(data.options as InsightOption[])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сгенерировать варианты карточки.')
+      setError(err instanceof Error ? err.message : 'Не удалось сгенерировать варианты инсайта.')
     } finally {
       setLoading(false)
     }
@@ -101,13 +105,13 @@ export default function InsightBuilder({
       const data = await res.json()
 
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Не удалось сохранить выбранную карточку.')
+        throw new Error(data.error || 'Не удалось сохранить выбранный инсайт.')
       }
 
       setSuccess('Карточка сохранена в curated insights.')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сохранить выбранную карточку.')
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить выбранный инсайт.')
     } finally {
       setPromotingIndex(null)
     }
@@ -118,14 +122,14 @@ export default function InsightBuilder({
       <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
         <div className="mb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-            Построение карточки по фрагменту
+            Конструктор инсайта по фрагменту
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-            Собрать инсайт из выбранного фрагмента
+            Собрать карточку из выбранного фрагмента
           </h2>
           <p className="mt-2 text-sm leading-6 text-stone-600">
-            Вставь 1–2 сильных предложения из unfold. Выбранный фрагмент должен сохраниться дословно.
-            ИИ удержит тот же угол и предложит ровно 3 полноценных варианта карточки.
+            Вставь 1–2 «жемчужные» фразы из unfold. Выбранный фрагмент должен сохраниться дословно.
+            ИИ удержит тот же угол и предложит ровно 3 полноразмерных варианта карточки.
           </p>
         </div>
 
@@ -137,7 +141,7 @@ export default function InsightBuilder({
             value={selectedPassage}
             onChange={(e) => setSelectedPassage(e.target.value)}
             rows={6}
-            placeholder="Вставь 1–2 точных предложения из unfold..."
+            placeholder="Вставь сюда 1–2 точные фразы из unfold..."
             className="mt-2 w-full rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.98rem] leading-7 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-500"
           />
         </label>
@@ -178,7 +182,7 @@ export default function InsightBuilder({
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                    {labelForOption(index)}
+                    {optionLabel(index)}
                   </p>
 
                   <button
@@ -187,7 +191,7 @@ export default function InsightBuilder({
                     disabled={promotingIndex !== null}
                     className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {promotingIndex === index ? 'Сохранение...' : 'Сохранить'}
+                    {promotingIndex === index ? 'Сохранение...' : 'Использовать'}
                   </button>
                 </div>
 
