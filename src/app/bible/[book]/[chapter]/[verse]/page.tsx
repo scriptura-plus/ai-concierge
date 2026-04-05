@@ -99,6 +99,7 @@ type AppLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
 type TopTab = 'insights' | 'compare' | 'context' | 'lens'
 type LensKind = 'word' | 'tension' | 'phrase'
+type SourceMode = 'insights' | 'word' | 'tension' | 'why_this_phrase'
 
 type ArticleJob = {
   status: ArticleJobStatus
@@ -1071,6 +1072,13 @@ export default function VerseDetailPage({ params }: PageProps) {
     return activeTab
   }, [activeTab, selectedLens])
 
+  const currentSourceMode = useMemo<SourceMode>(() => {
+    if (activeTab === 'lens' && selectedLens === 'word') return 'word'
+    if (activeTab === 'lens' && selectedLens === 'tension') return 'tension'
+    if (activeTab === 'lens' && selectedLens === 'phrase') return 'why_this_phrase'
+    return 'insights'
+  }, [activeTab, selectedLens])
+
   const compareData = useMemo(() => compareByLanguage[appLanguage], [compareByLanguage, appLanguage])
   const contextData = useMemo(() => contextByLanguage[appLanguage], [contextByLanguage, appLanguage])
 
@@ -1588,6 +1596,9 @@ export default function VerseDetailPage({ params }: PageProps) {
           insightTitle: displayedCard.title,
           insightText: displayedCard.text,
           targetLanguage: appLanguage,
+          sourceMode: currentSourceMode,
+          sourceAngleNote: null,
+          sourceInsightId: null,
         }),
       })
 
