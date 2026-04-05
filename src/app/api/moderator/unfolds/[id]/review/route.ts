@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -31,10 +32,10 @@ export async function POST(req: Request, context: RouteContext) {
       )
     }
 
-    const redirectUrl = new URL(
-      returnTo || `/moderator/unfolds/${id}`,
-      req.url
-    )
+    revalidatePath('/moderator/unfolds')
+    revalidatePath(`/moderator/unfolds/${id}`)
+
+    const redirectUrl = new URL(returnTo || `/moderator/unfolds/${id}`, req.url)
 
     return NextResponse.redirect(redirectUrl, { status: 303 })
   } catch (error) {
