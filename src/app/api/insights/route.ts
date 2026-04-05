@@ -175,11 +175,12 @@ async function loadSavedInsights(
   verse: number
 ): Promise<InsightItem[]> {
   const supabase = getSupabaseServerClient();
+  const normalizedBook = book.trim().toLowerCase();
 
   const { data, error } = await supabase
     .from("curated_insights")
     .select("*")
-    .eq("book", book)
+    .eq("book", normalizedBook)
     .eq("chapter", chapter)
     .eq("verse", verse)
     .eq("status", "saved")
