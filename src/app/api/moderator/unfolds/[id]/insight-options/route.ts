@@ -14,15 +14,26 @@ type InsightOption = {
 
 type SourceMode = 'insights' | 'word' | 'tension' | 'why_this_phrase'
 
+type RussianNormalizationPayload = {
+  sourceTitleRu: string
+  sourceTextRu: string
+  unfoldTextRu: string
+  selectedPassageRu: string
+}
+
 function normalizeSourceMode(value: unknown): SourceMode {
-  return value === 'word' ||
-    value === 'tension' ||
-    value === 'why_this_phrase'
+  return value === 'word' || value === 'tension' || value === 'why_this_phrase'
     ? value
     : 'insights'
 }
 
-function buildPrompt(params: {
+function looksRussian(text: string): boolean {
+  const sample = text.slice(0, 800)
+  const matches = sample.match(/[А-Яа-яЁё]/g) ?? []
+  return matches.length >= 10
+}
+
+function buildRussianNormalizationPrompt(params: {
   reference: string
   sourceMode: SourceMode
   sourceTitle: string
@@ -31,63 +42,212 @@ function buildPrompt(params: {
   selectedPassage: string
 }) {
   return `
-You are building short premium-quality Bible insight cards for a moderator workflow.
+Ты подготавливаешь русский рабочий слой для модераторского процесса Scriptura+.
 
-REFERENCE:
+ССЫЛКА:
 ${params.reference}
 
-SOURCE MODE:
+РЕЖИМ:
 ${params.sourceMode}
 
-SOURCE INSIGHT TITLE:
+SOURCE TITLE:
 ${params.sourceTitle}
 
-SOURCE INSIGHT TEXT:
+SOURCE TEXT:
 ${params.sourceText}
 
 UNFOLD TEXT:
 ${params.unfoldText}
 
-SELECTED PASSAGE (SACRED - MUST STAY VERBATIM):
+SELECTED PASSAGE:
 ${params.selectedPassage}
 
-TASK:
-Generate exactly 3 short insight-card options.
+ЗАДАЧА:
+Переведи весь материал на естественный русский язык для работы модератора.
 
-CRITICAL RULES:
-- The selected passage is sacred.
-- Preserve the selected passage verbatim in every option.
-- Do not paraphrase it.
-- Do not shorten it.
-- Do not rewrite it.
-- Keep the SAME original insight angle.
-- Do NOT branch into adjacent ideas.
-- Do NOT introduce a new angle.
-- These are 3 packaging options for the same thought, not 3 different thoughts.
+ПРАВИЛА:
+- Сохрани тот же самый угол мысли.
+- Не добавляй новых идей.
+- Не сокращай смысл.
+- Не делай текст проповедническим.
+- Не превращай это в пересказ.
+- Верни только валидный JSON.
 
-CARD FORMAT:
-- Each option must have:
+ФОРМАТ:
+{
+  "sourceTitleRu": "...",
+  "sourceTextRu": "...",
+  "unfoldTextRu": "...",
+  "selectedPassageRu": "..."
+}
+`.trim()
+}
+
+function parseRussianNormalization(raw: string): RussianNormalizationPayload | null {
+  try {
+    const parsed = JSON.parse(raw)
+
+    if (typeof parsed?.sourceTitleRu !== 'string') return null
+    if (typeof parsed?.sourceTextRu !== 'string') return null
+    if (typeof parsed?.unfoldTextRu !== 'string') return null
+    if (typeof parsed?.selectedPassageRu !== 'string') return null
+
+    return {
+      sourceTitleRu: parsed.sourceTitleRu.trim(),
+      sourceTextRu: parsed.sourceTextRu.trim(),
+      unfoldTextRu: parsed.unfoldTextRu.trim(),
+      selectedPassageRu: parsed.selectedPassageRu.trim(),
+    }
+  } catch {
+    return null
+  }
+}
+
+function extractJsonObject(raw: string): string | null {
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
+
+  if (start === -1 || end === -1 || end <= start) return null
+  return raw.slice(start, end + 1)
+}
+
+async function normalizeInputsToRussian(params: {
+  reference: string
+  sourceMode: SourceMode
+  sourceTitle: string
+  sourceText: string
+  unfoldText: string
+  selectedPassage: string
+}): Promise<RussianNormalizationPayload> {
+  const alreadyRussian =
+    looksRussian(params.sourceTitle) &&
+    looksRussian(params.sourceText) &&
+    looksRussian(params.unfoldText) &&
+    looksRussian(params.selectedPassage)
+
+  if (alreadyRussian) {
+    return {
+      sourceTitleRu: params.sourceTitle.trim(),
+      sourceTextRu: params.sourceText.trim(),
+      unfoldTextRu: params.unfoldText.trim(),
+      selectedPassageRu: params.selectedPassage.trim(),
+    }
+  }
+
+  const prompt = buildRussianNormalizationPrompt(params)
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 2400,
+  })
+
+  if (!result.ok) {
+    throw new Error(result.error || 'Не удалось перевести рабочий материал в русский язык.')
+  }
+
+  const rawText = result.rawText
+  let normalized = parseRussianNormalization(rawText)
+
+  if (!normalized) {
+    const extracted = extractJsonObject(rawText)
+    if (extracted) {
+      normalized = parseRussianNormalization(extracted)
+    }
+  }
+
+  if (!normalized) {
+    throw new Error('Не удалось разобрать JSON русского рабочего слоя.')
+  }
+
+  return normalized
+}
+
+function buildPrompt(params: {
+  reference: string
+  sourceMode: SourceMode
+  sourceTitleRu: string
+  sourceTextRu: string
+  unfoldTextRu: string
+  selectedPassageRu: string
+}) {
+  return `
+Ты создаёшь карточки библейских инсайтов для модераторского процесса Scriptura+.
+
+Твоя задача — предложить 3 сильных варианта карточки на основе уже найденного угла и выбранного модератором фрагмента.
+
+ССЫЛКА:
+${params.reference}
+
+ИСХОДНЫЙ РЕЖИМ:
+${params.sourceMode}
+
+ИСХОДНЫЙ ЗАГОЛОВОК:
+${params.sourceTitleRu}
+
+ИСХОДНЫЙ ТЕКСТ ИНСАЙТА:
+${params.sourceTextRu}
+
+UNFOLD ТЕКСТ:
+${params.unfoldTextRu}
+
+ВЫБРАННЫЙ ФРАГМЕНТ:
+${params.selectedPassageRu}
+
+ГЛАВНЫЙ ПРИНЦИП:
+Это не пересказ.
+Это не комментарий.
+Это не проповедь.
+Это точная упаковка уже найденной мысли в формат сильной insight-card.
+
+КРИТИЧЕСКИЕ ПРАВИЛА:
+- Сохрани тот же самый угол мысли.
+- Не уходи в соседние идеи.
+- Не открывай новый угол.
+- Выбранный фрагмент должен остаться дословно в каждом варианте.
+- Не перефразируй выбранный фрагмент.
+- Не укорачивай выбранный фрагмент.
+- Эти 3 варианта отличаются подачей, а не направлением мысли.
+- Карточка должна быть по длине и плотности как обычный хороший insight.
+- Это должен быть полноценный card text, а не короткая обёртка вокруг цитаты.
+
+СТАНДАРТ КАЧЕСТВА:
+- Избегай банальности
+- Избегай расплывчатости
+- Избегай штампов
+- Избегай “религиозного канцелярита”
+- Каждый вариант должен звучать как достойная сохранения карточка
+- Карточка должна ощущаться завершённой, а не обрезанной
+
+СТИЛЬ:
+- ясно
+- современно
+- умно
+- плотно, но читабельно
+- выразительно без крикливости
+- без проповеднического тона
+
+ФОРМАТ:
+- Верни ровно 3 варианта
+- У каждого варианта должны быть:
   - "title"
   - "text"
-- "title" should be sharp, elegant, memorable.
-- "text" should be compact enough for one iPhone insight card.
-- Aim for about 3 sentences total.
-- The selected passage should sit naturally inside the card text.
-- The surrounding wording should be concise, premium, and clear.
-- Avoid clichés and preaching tone.
+- "title" должен быть коротким, точным, цепким
+- "text" должен быть из 4–5 предложений
+- "text" должен быть самодостаточным и готовым для карточки
 
-OUTPUT RULES:
-- Return ONLY valid JSON
-- No markdown
-- No code fences
-- No commentary outside JSON
-- Output must be a JSON array with exactly 3 items
+ПРАВИЛА ВЫВОДА:
+- Верни ТОЛЬКО валидный JSON
+- Без markdown
+- Без code fences
+- Без комментариев
+- Вывод должен быть JSON-массивом
 
-EXAMPLE SHAPE:
+ПРИМЕР ФОРМЫ:
 [
   {
-    "title": "A Strong Title",
-    "text": "Sentence one. Exact selected sentence here. Sentence three."
+    "title": "Сильный заголовок",
+    "text": "Первое предложение. Дословно сохранённый фрагмент. Третье предложение. Четвёртое предложение."
   }
 ]
 `.trim()
@@ -100,7 +260,7 @@ function parseOptions(raw: string): InsightOption[] | null {
     if (!Array.isArray(parsed)) return null
 
     const cleaned = parsed
-      .filter((item) => item && typeof item === 'object')
+      .filter((item) => item && typeof item === "object")
       .map((item) => ({
         title: String(item.title ?? '').trim(),
         text: String(item.text ?? '').trim(),
@@ -124,8 +284,19 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1)
 }
 
-function allOptionsPreservePassage(options: InsightOption[], selectedPassage: string) {
-  return options.every((option) => option.text.includes(selectedPassage))
+function allOptionsPreservePassage(options: InsightOption[], selectedPassageRu: string) {
+  return options.every((option) => option.text.includes(selectedPassageRu))
+}
+
+function allOptionsLookRussian(options: InsightOption[]): boolean {
+  return options.every((option) => looksRussian(`${option.title} ${option.text}`))
+}
+
+function allOptionsHaveEnoughSentences(options: InsightOption[]): boolean {
+  return options.every((option) => {
+    const count = option.text.split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length
+    return count >= 4
+  })
 }
 
 export async function POST(req: Request, _context: RouteContext) {
@@ -148,7 +319,7 @@ export async function POST(req: Request, _context: RouteContext) {
       )
     }
 
-    const prompt = buildPrompt({
+    const normalized = await normalizeInputsToRussian({
       reference,
       sourceMode,
       sourceTitle,
@@ -157,10 +328,19 @@ export async function POST(req: Request, _context: RouteContext) {
       selectedPassage,
     })
 
+    const prompt = buildPrompt({
+      reference,
+      sourceMode,
+      sourceTitleRu: normalized.sourceTitleRu,
+      sourceTextRu: normalized.sourceTextRu,
+      unfoldTextRu: normalized.unfoldTextRu,
+      selectedPassageRu: normalized.selectedPassageRu,
+    })
+
     const result = await runModel({
       prompt,
       model: 'gpt-5.4-mini',
-      maxOutputTokens: 2200,
+      maxOutputTokens: 2600,
     })
 
     if (!result.ok) {
@@ -186,29 +366,57 @@ export async function POST(req: Request, _context: RouteContext) {
     if (!options || options.length !== 3) {
       return NextResponse.json(
         {
-          error: 'Failed to parse exactly 3 insight options.',
+          error: 'Не удалось разобрать ровно 3 варианта карточки.',
           raw: rawText || 'Empty model response',
         },
         { status: 500 }
       )
     }
 
-    if (!allOptionsPreservePassage(options, selectedPassage)) {
+    if (!allOptionsPreservePassage(options, normalized.selectedPassageRu)) {
       return NextResponse.json(
         {
-          error: 'Model failed to preserve the selected passage verbatim in all options.',
+          error: 'Модель не сохранила выбранный фрагмент дословно во всех вариантах.',
           raw: rawText || 'Empty model response',
         },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ options })
+    if (!allOptionsLookRussian(options)) {
+      return NextResponse.json(
+        {
+          error: 'Модель не вернула русские варианты карточек.',
+          raw: rawText || 'Empty model response',
+        },
+        { status: 500 }
+      )
+    }
+
+    if (!allOptionsHaveEnoughSentences(options)) {
+      return NextResponse.json(
+        {
+          error: 'Варианты получились слишком короткими. Ожидался формат полноценной insight-card.',
+          raw: rawText || 'Empty model response',
+        },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      options,
+      normalizedSelectedPassage: normalized.selectedPassageRu,
+    })
   } catch (error) {
     console.error('Insight options API error:', error)
 
     return NextResponse.json(
-      { error: 'Something went wrong while generating insight options.' },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Что-то пошло не так при генерации вариантов карточки.',
+      },
       { status: 500 }
     )
   }
