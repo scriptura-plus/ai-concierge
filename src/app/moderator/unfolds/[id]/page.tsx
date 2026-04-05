@@ -40,17 +40,17 @@ type RussianModeratorPayload = {
 }
 
 function formatMode(mode: UnfoldDetailRow['source_mode']) {
-  if (mode === 'why_this_phrase') return 'Why This Phrase'
-  if (mode === 'word') return 'Word'
-  if (mode === 'tension') return 'Tension'
-  return 'Insights'
+  if (mode === 'why_this_phrase') return 'Почему эта фраза'
+  if (mode === 'word') return 'Слово'
+  if (mode === 'tension') return 'Напряжение'
+  return 'Инсайты'
 }
 
 function formatStatus(status: UnfoldDetailRow['review_status']) {
-  if (status === 'new') return 'New'
-  if (status === 'reviewed') return 'Reviewed'
-  if (status === 'promoted') return 'Promoted'
-  return 'Hidden'
+  if (status === 'new') return 'Новый'
+  if (status === 'reviewed') return 'Просмотрен'
+  if (status === 'promoted') return 'Сохранён'
+  return 'Скрыт'
 }
 
 function statusClasses(status: UnfoldDetailRow['review_status']) {
@@ -71,9 +71,9 @@ function statusClasses(status: UnfoldDetailRow['review_status']) {
 
 function formatDate(value: string) {
   try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
+    return new Intl.DateTimeFormat('ru-RU', {
       day: 'numeric',
+      month: 'short',
       year: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
@@ -257,7 +257,7 @@ async function loadUnfoldById(id: string): Promise<UnfoldDetailRow | null> {
     .maybeSingle()
 
   if (error) {
-    throw new Error(`Failed to load unfold event: ${error.message}`)
+    throw new Error(`Не удалось загрузить unfold event: ${error.message}`)
   }
 
   return (data ?? null) as UnfoldDetailRow | null
@@ -273,7 +273,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
     item = loaded ? await normalizeForRussianModerator(loaded) : null
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'Failed to load unfold event.'
+      error instanceof Error ? error.message : 'Не удалось загрузить unfold event.'
 
     return (
       <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
@@ -281,10 +281,10 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-                Moderator
+                Модератор
               </p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-                Unfold Review
+                Проверка unfold
               </h1>
             </div>
 
@@ -292,7 +292,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
               href="/moderator/unfolds"
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
-              Back to inbox
+              Назад во входящие
             </Link>
           </div>
 
@@ -314,10 +314,10 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-              Moderator
+              Модератор
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-              Unfold Review
+              Проверка unfold
             </h1>
             <p className="mt-2 text-sm text-stone-600">
               Единый русский рабочий слой для модератора, независимо от языка пользовательского unfold.
@@ -329,21 +329,21 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
               href="/moderator/insights"
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
-              Curated insights
+              Сохранённые карточки
             </Link>
 
             <Link
               href="/moderator/unfolds"
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
-              Back to inbox
+              Назад во входящие
             </Link>
 
             <Link
               href="/"
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
-              Home
+              Домой
             </Link>
           </div>
         </div>
@@ -352,7 +352,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
           <div
             className={`rounded-full border px-4 py-2 text-sm font-semibold ${statusClasses(item.review_status)}`}
           >
-            Current status: {formatStatus(item.review_status)}
+            Текущий статус: {formatStatus(item.review_status)}
           </div>
 
           {item.promoted_insight_id ? (
@@ -360,7 +360,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
               href={`/moderator/insights/${item.promoted_insight_id}`}
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
-              Open saved insight
+              Открыть сохранённую карточку
             </Link>
           ) : null}
 
@@ -376,7 +376,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
                   type="submit"
                   className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
                 >
-                  Mark as reviewed
+                  Отметить как просмотренное
                 </button>
               </form>
 
@@ -390,7 +390,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
                   type="submit"
                   className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
-                  Hide
+                  Скрыть
                 </button>
               </form>
             </>
@@ -405,7 +405,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
                 type="submit"
                 className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
               >
-                Hide
+                Скрыть
               </button>
             </form>
           ) : null}
@@ -434,25 +434,25 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
               </span>
 
               <span className="text-xs text-stone-500">
-                Created: {formatDate(item.created_at)}
+                Создано: {formatDate(item.created_at)}
               </span>
 
               <span className="text-xs text-stone-500">
-                Updated: {formatDate(item.updated_at)}
+                Обновлено: {formatDate(item.updated_at)}
               </span>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Reference
+                  Ссылка
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-stone-900">{item.verse_ref}</p>
               </div>
 
               <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  IDs
+                  Идентификаторы
                 </p>
                 <p className="mt-2 break-all text-sm leading-6 text-stone-700">
                   Event ID: {item.id}
@@ -468,7 +468,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
 
             <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                Source title
+                Исходный заголовок
               </p>
               <p className="mt-2 text-xl font-semibold leading-8 text-stone-900">
                 {item.source_title}
@@ -478,7 +478,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
             {item.source_angle_note ? (
               <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Source angle note
+                  Заметка об угле
                 </p>
                 <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
                   {item.source_angle_note}
@@ -489,7 +489,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Source text
+                  Исходный текст
                 </p>
                 <div className="mt-2 whitespace-pre-wrap text-[0.97rem] leading-8 text-stone-800">
                   {item.source_text}
@@ -498,14 +498,14 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
 
               <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Unfold title
+                  Заголовок unfold
                 </p>
                 <p className="mt-2 text-xl font-semibold leading-8 text-stone-900">
-                  {item.unfold_title ?? 'Untitled'}
+                  {item.unfold_title ?? 'Без заголовка'}
                 </p>
 
                 <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Unfold text
+                  Текст unfold
                 </p>
                 <div className="mt-2 whitespace-pre-wrap text-[0.97rem] leading-8 text-stone-800">
                   {item.unfold_text}
