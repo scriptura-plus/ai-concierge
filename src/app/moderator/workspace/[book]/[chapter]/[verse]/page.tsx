@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { runModel } from '@/lib/ai/run-model'
 import { getVerseText } from '@/lib/bible/getVerseText'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -57,6 +58,50 @@ function truncate(text: string, max = 240) {
   return `${clean.slice(0, max).trim()}…`
 }
 
+function looksRussian(text: string) {
+  const sample = text.slice(0, 400)
+  const cyrillicMatches = sample.match(/[А-Яа-яЁё]/g) ?? []
+  return cyrillicMatches.length >= 12
+}
+
+async function ensureRussianVerseText(reference: string, verseText: string): Promise<string> {
+  const clean = verseText.trim()
+
+  if (!clean) return ''
+  if (looksRussian(clean)) return clean
+
+  const prompt = `
+Translate the following Bible verse into Russian.
+
+REFERENCE:
+${reference}
+
+VERSE TEXT:
+${clean}
+
+RULES:
+- Return only the translated verse text
+- No explanation
+- No quotation marks
+- No JSON
+- No markdown
+- Natural, clear Russian
+`.trim()
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 300,
+  })
+
+  if (!result.ok) {
+    return clean
+  }
+
+  const translated = result.rawText.trim()
+  return translated || clean
+}
+
 async function loadSavedInsights(book: string, chapter: number, verse: number) {
   const supabase = getSupabaseServerClient()
 
@@ -111,7 +156,9 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
   let unfoldError = ''
 
   try {
-    verseText = (await getVerseText(book, chapter, verse)) ?? ''
+    const rawVerseText = (await getVerseText(book, chapter, verse)) ?? ''
+    verseText = await ensureRussianVerseText(reference, rawVerseText)
+
     if (!verseText) {
       verseError = 'Не удалось загрузить текст стиха.'
     }
@@ -122,13 +169,15 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
   try {
     savedInsights = await loadSavedInsights(book, chapter, verse)
   } catch (error) {
-    savedError = error instanceof Error ? error.message : 'Не удалось загрузить сохранённые карточки.'
+    savedError =
+      error instanceof Error ? error.message : 'Не удалось загрузить сохранённые карточки.'
   }
 
   try {
     pendingUnfoldCount = await loadPendingUnfoldCount(book, chapter, verse)
   } catch (error) {
-    unfoldError = error instanceof Error ? error.message : 'Не удалось загрузить количество unfold.'
+    unfoldError =
+      error instanceof Error ? error.message : 'Не удалось загрузить количество unfold.'
   }
 
   return (
@@ -349,7 +398,7 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
               Инструменты поиска
             </h2>
             <p className="mt-2 text-sm leading-6 text-stone-600">
-              Линзы здесь должны стать частью modеrator workspace, а не просто пользовательской
+              Линзы здесь должны стать частью moderator workspace, а не просто пользовательской
               вкладкой. Они нужны как отдельные способы добычи кандидатов по стиху.
             </p>
 
