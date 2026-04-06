@@ -78,7 +78,7 @@ const BOOKS: BookOption[] = [
 ]
 
 function sanitizePositiveInteger(value: string) {
-  const digits = value.replace(/[^\d]/g, '')
+  const digits = value.replace(/[^0-9]/g, '')
   if (!digits) return ''
   const normalized = String(Number(digits))
   return normalized === '0' ? '' : normalized
@@ -114,35 +114,42 @@ export default function ModeratorIndexPage() {
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-            Модератор
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-            Рабочий кабинет
-          </h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-            Новая логика кабинета: модератор работает не только от unfold-событий, а от самого
-            стиха. Сначала открывается конкретный стих, затем уже идёт поиск, огранка и сохранение
-            сильных карточек.
-          </p>
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
+              Модератор
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
+              Рабочий кабинет
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
+              Выбери стих и работай с ним как с отдельной средой. Unfold-входящие остаются
+              отдельным экраном и не смешиваются с основной ручной работой по стиху.
+            </p>
+          </div>
+
+          <Link
+            href="/"
+            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+          >
+            Домой
+          </Link>
         </div>
 
-        <section className="mb-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
+        <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
                 Verse Workspace
               </p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                Открыть стих как рабочую среду
+                Открыть стих
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-                Это первый переход к новой модели. Пока в качестве безопасного шага стих
-                открывается через основной reading screen, где уже работают saved cards, линзы,
-                unfold и двухфазная загрузка. Следующий этап — отдельный полноценный workspace на
-                один стих.
+                Это главный вход в ручную работу модератора. Следующий экран должен показывать
+                уже сохранённые карточки по стиху, а если их нет — сразу давать инструменты
+                генерации и сборки новых карточек.
               </p>
             </div>
 
@@ -222,56 +229,45 @@ export default function ModeratorIndexPage() {
           </div>
         </section>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <Link
-            href="/moderator/unfolds"
-            className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(94,72,37,0.14)]"
-          >
-            <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Модератор
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-stone-900">Входящие unfold</h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Разбирай новые unfold-события, скрывай шум и извлекай из них сильные карточки.
-              </p>
-            </div>
-          </Link>
-
-          <Link
-            href="/moderator/insights"
-            className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(94,72,37,0.14)]"
-          >
-            <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Модератор
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-stone-900">Сохранённые инсайты</h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Просматривай и очищай карточки, которые уже попадают в основной reading layer.
-              </p>
-            </div>
-          </Link>
-
-          <div className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-            <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Следующий этап
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-stone-900">Verse Workspace</h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Будущая цель — отдельная среда на один стих: полка saved cards, directed search,
-                passage builder, линзы и быстрые действия сохранения.
-              </p>
-              <div className="mt-4 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 text-sm leading-6 text-stone-700">
-                Сейчас этот блок служит ориентиром и напоминает, что центр модераторской работы —
-                сам стих, а не только inbox unfold-событий.
+        <section className="mt-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
+          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                  Отдельный режим
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
+                  Входящие unfold
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-stone-600">
+                  Этот экран нужен отдельно: разобрать пользовательские unfold-сигналы, выбрать
+                  полезные, скрыть шум и, если нужно, превратить хороший материал в карточку.
+                </p>
               </div>
+
+              <Link
+                href="/moderator/unfolds"
+                className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+              >
+                Открыть unfold inbox
+              </Link>
+            </div>
+
+            <div className="mt-4 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 text-sm leading-6 text-stone-700">
+              Основная ручная работа модератора должна происходить от выбранного стиха. Inbox —
+              это отдельный источник входящего материала, а не главный центр рабочего процесса.
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-6">
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link
+            href="/moderator/insights"
+            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+          >
+            Открыть библиотеку сохранённых карточек
+          </Link>
+
           <Link
             href="/"
             className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
