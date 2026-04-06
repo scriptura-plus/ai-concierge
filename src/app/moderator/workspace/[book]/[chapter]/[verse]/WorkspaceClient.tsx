@@ -20,10 +20,19 @@ type ExactBuilderResponse = {
   raw?: string
 }
 
+type SaveCardResponse = {
+  ok?: boolean
+  savedId?: string
+  error?: string
+}
+
 type WorkspaceClientProps = {
   reference: string
   verseText: string
   savedCards: SavedCard[]
+  book: string
+  chapter: number
+  verse: number
 }
 
 function normalizeText(value: string) {
@@ -40,12 +49,19 @@ export default function WorkspaceClient({
   reference,
   verseText,
   savedCards,
+  book,
+  chapter,
+  verse,
 }: WorkspaceClientProps) {
   const [exactInput, setExactInput] = useState('')
   const [exactOptions, setExactOptions] = useState<ExactBuilderOption[]>([])
   const [exactLoading, setExactLoading] = useState(false)
   const [exactError, setExactError] = useState('')
   const [exactRaw, setExactRaw] = useState('')
+
+  const [savingIndex, setSavingIndex] = useState<number | null>(null)
+  const [saveMessage, setSaveMessage] = useState('')
+  const [saveError, setSaveError] = useState('')
 
   const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
 
@@ -58,6 +74,8 @@ export default function WorkspaceClient({
     setExactLoading(true)
     setExactError('')
     setExactRaw('')
+    setSaveMessage('')
+    setSaveError('')
 
     try {
       const res = await fetch('/api/moderator/workspace/exact-builder', {
@@ -88,6 +106,43 @@ export default function WorkspaceClient({
       setExactError('Не удалось сгенерировать варианты.')
     } finally {
       setExactLoading(false)
+    }
+  }
+
+  async function saveOption(option: ExactBuilderOption, index: number) {
+    setSavingIndex(index)
+    setSaveMessage('')
+    setSaveError('')
+
+    try {
+      const res = await fetch('/api/moderator/workspace/save-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          verseText,
+          book,
+          chapter,
+          verse,
+          titleRu: option.title,
+          textRu: option.text,
+          mode: 'insights',
+          angleNote: sacredPassage || null,
+        }),
+      })
+
+      const data: SaveCardResponse = await res.json()
+
+      if (!res.ok || !data.ok) {
+        setSaveError(data.error || 'Не удалось сохранить карточку.')
+        return
+      }
+
+      setSaveMessage(`Карточка ${index + 1} сохранена.`)
+    } catch {
+      setSaveError('Не удалось сохранить карточку.')
+    } finally {
+      setSavingIndex(null)
     }
   }
 
@@ -134,6 +189,8 @@ export default function WorkspaceClient({
           </div>
 
           {exactError ? <p className="mt-3 text-sm text-red-700">{exactError}</p> : null}
+          {saveError ? <p className="mt-3 text-sm text-red-700">{saveError}</p> : null}
+          {saveMessage ? <p className="mt-3 text-sm text-emerald-700">{saveMessage}</p> : null}
 
           {exactRaw ? (
             <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
@@ -160,6 +217,17 @@ export default function WorkspaceClient({
                     {option.title}
                   </h3>
                   <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{option.text}</p>
+
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => void saveOption(option, index)}
+                      disabled={savingIndex === index}
+                      className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
+                    >
+                      {savingIndex === index ? 'Сохранение...' : 'Сохранить как карточку'}
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>
