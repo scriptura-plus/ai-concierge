@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { runModel } from '@/lib/ai/run-model'
 import { getVerseText } from '@/lib/bible/getVerseText'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
+import WorkspaceClient from './WorkspaceClient'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -180,6 +181,13 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
       error instanceof Error ? error.message : 'Не удалось загрузить количество unfold.'
   }
 
+  const savedCards = savedInsights.map((item) => ({
+    id: item.id,
+    title: item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка',
+    text: item.text_ru?.trim() || item.text_en?.trim() || '',
+    createdAt: item.created_at,
+  }))
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
       <div className="mx-auto w-full max-w-5xl">
@@ -192,9 +200,9 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
               {reference}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-              Это первый каркас отдельной рабочей среды по стиху. Здесь уже собираются saved cards,
-              статистика по текущему стиху и два основных направления будущей работы: точная огранка
-              мысли и направленный поиск новых карточек.
+              Это отдельная рабочая среда по стиху. Здесь собираются saved cards, статистика по
+              текущему стиху и два направления работы: точная огранка мысли и направленный поиск
+              новых карточек.
             </p>
           </div>
 
@@ -250,8 +258,8 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
               Следующий шаг
             </p>
             <p className="mt-2 text-base leading-7 text-stone-800">
-              Ниже — каркас двух рабочих полей. На следующем этапе они станут реальными инструментами
-              генерации и сборки карточек.
+              Поле 1 уже включено. Теперь можно вставлять 1–2 предложения и получать 3 варианта
+              карточки вокруг них.
             </p>
           </div>
         </div>
@@ -309,85 +317,7 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
           </div>
         </section>
 
-        <div className="grid gap-5 lg:grid-cols-2">
-          <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-            <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Поле 1
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                Точная огранка
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Сюда модератор вставляет 1–2 предложения, которые нельзя менять. AI должен только
-                достроить карточку вокруг них и предложить несколько вариантов упаковки.
-              </p>
-
-              <textarea
-                disabled
-                placeholder="Скоро здесь будет рабочее поле: вставь 1–2 предложения, которые нужно сохранить дословно."
-                className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-700 outline-none opacity-80"
-              />
-
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 opacity-60"
-                >
-                  Сгенерировать 3 варианта
-                </button>
-
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 opacity-60"
-                >
-                  Ещё варианты
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-            <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Поле 2
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                Куда копать
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-stone-600">
-                Сюда модератор формулирует направление поиска: какой угол интересует, что хочется
-                найти, какой оттенок мысли нужен. Это поле должно запускать directed search с нуля.
-              </p>
-
-              <textarea
-                disabled
-                placeholder="Скоро здесь будет рабочее поле: опиши, куда именно копать по этому стиху."
-                className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-700 outline-none opacity-80"
-              />
-
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 opacity-60"
-                >
-                  Сгенерировать идеи
-                </button>
-
-                <button
-                  type="button"
-                  disabled
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 opacity-60"
-                >
-                  Ещё глубже
-                </button>
-              </div>
-            </div>
-          </section>
-        </div>
+        <WorkspaceClient reference={reference} verseText={verseText} savedCards={savedCards} />
 
         <section className="mt-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
