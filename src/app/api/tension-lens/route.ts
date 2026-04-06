@@ -15,14 +15,33 @@ function buildPrompt(
 ) {
   const languageInstruction =
     targetLanguage === "ru"
-      ? "Write the full output in Russian."
+      ? `
+Write the full output in Russian.
+Every title and every card text must be fully in Russian.
+Do not use English in the final answer.
+`
       : targetLanguage === "es"
-        ? "Write the full output in Spanish."
+        ? `
+Write the full output in Spanish.
+Every title and every card text must be fully in Spanish.
+Do not use English in the final answer.
+`
         : targetLanguage === "fr"
-          ? "Write the full output in French."
+          ? `
+Write the full output in French.
+Every title and every card text must be fully in French.
+Do not use English in the final answer.
+`
           : targetLanguage === "de"
-            ? "Write the full output in German."
-            : "Write the full output in English.";
+            ? `
+Write the full output in German.
+Every title and every card text must be fully in German.
+Do not use English in the final answer.
+`
+            : `
+Write the full output in English.
+Every title and every card text must be fully in English.
+`;
 
   return `
 You are an elite close-reading analyst for Bible verses.
@@ -130,6 +149,38 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1);
 }
 
+function looksRussian(text: string): boolean {
+  const sample = text.slice(0, 1000);
+  const matches = sample.match(/[А-Яа-яЁё]/g) ?? [];
+  return matches.length >= 12;
+}
+
+function looksSpanish(text: string): boolean {
+  const sample = text.toLowerCase().slice(0, 1200);
+  return /(\b(el|la|los|las|una|uno|que|pero|como|porque|mientras)\b|[áéíóúñ])/i.test(sample);
+}
+
+function looksFrench(text: string): boolean {
+  const sample = text.toLowerCase().slice(0, 1200);
+  return /(\b(le|la|les|des|une|que|mais|dans|avec|sans)\b|[àâçéèêëîïôûùüÿœ])/i.test(sample);
+}
+
+function looksGerman(text: string): boolean {
+  const sample = text.toLowerCase().slice(0, 1200);
+  return /(\b(der|die|das|und|aber|nicht|mit|ohne|eine|einer)\b|[äöüß])/i.test(sample);
+}
+
+function cardsMatchLanguage(cards: LensCard[], targetLanguage: SupportedLanguage): boolean {
+  const joined = cards.map((card) => `${card.title} ${card.text}`).join(" ");
+
+  if (targetLanguage === "ru") return looksRussian(joined);
+  if (targetLanguage === "es") return looksSpanish(joined);
+  if (targetLanguage === "fr") return looksFrench(joined);
+  if (targetLanguage === "de") return looksGerman(joined);
+
+  return !looksRussian(joined);
+}
+
 export async function POST(req: Request) {
   try {
     const { reference, verseText, targetLanguage } = await req.json();
@@ -185,6 +236,16 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: "Failed to parse Tension lens JSON.",
+          raw: rawText || "Empty model response",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!cardsMatchLanguage(cards, safeLanguage)) {
+      return NextResponse.json(
+        {
+          error: `Model did not return ${safeLanguage} content for Tension lens.`,
           raw: rawText || "Empty model response",
         },
         { status: 500 }
