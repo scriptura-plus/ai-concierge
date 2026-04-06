@@ -67,12 +67,13 @@ export default function WorkspaceClient({
   const [exactRaw, setExactRaw] = useState('')
 
   const [savingIndex, setSavingIndex] = useState<number | null>(null)
+  const [savedIndexes, setSavedIndexes] = useState<number[]>([])
   const [saveMessage, setSaveMessage] = useState('')
   const [saveError, setSaveError] = useState('')
 
   const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
 
-  async function generateExactBuilder(mode: 'fresh' | 'more') {
+  async function generateExactBuilder() {
     if (!sacredPassage) {
       setExactError('Вставь 1–2 предложения, которые нужно сохранить дословно.')
       return
@@ -83,6 +84,7 @@ export default function WorkspaceClient({
     setExactRaw('')
     setSaveMessage('')
     setSaveError('')
+    setSavedIndexes([])
 
     try {
       const res = await fetch('/api/moderator/workspace/exact-builder', {
@@ -92,7 +94,7 @@ export default function WorkspaceClient({
           reference,
           verseText,
           sacredPassage,
-          mode,
+          mode: 'fresh',
         }),
       })
 
@@ -101,6 +103,7 @@ export default function WorkspaceClient({
       if (!res.ok || !Array.isArray(data.options) || data.options.length === 0) {
         setExactError(data.error || 'Не удалось сгенерировать варианты.')
         setExactRaw(data.raw || '')
+        setExactOptions([])
         return
       }
 
@@ -109,9 +112,7 @@ export default function WorkspaceClient({
       )
 
       if (strictlyValid.length === 0) {
-        setExactError(
-          'Модель не сохранила вставленный текст дословно. Попробуй ещё раз.'
-        )
+        setExactError('Модель не сохранила вставленный текст дословно. Попробуй ещё раз.')
         setExactRaw(data.raw || '')
         setExactOptions([])
         return
@@ -120,6 +121,7 @@ export default function WorkspaceClient({
       setExactOptions(strictlyValid)
     } catch {
       setExactError('Не удалось сгенерировать варианты.')
+      setExactOptions([])
     } finally {
       setExactLoading(false)
     }
@@ -128,6 +130,10 @@ export default function WorkspaceClient({
   async function saveOption(option: ExactBuilderOption, index: number) {
     if (!containsVerbatimSacredPassage(sacredPassage, option.text)) {
       setSaveError('Эту карточку нельзя сохранить: исходный фрагмент не сохранён дословно.')
+      return
+    }
+
+    if (savedIndexes.includes(index)) {
       return
     }
 
@@ -159,6 +165,7 @@ export default function WorkspaceClient({
         return
       }
 
+      setSavedIndexes((prev) => [...prev, index])
       setSaveMessage(`Карточка ${index + 1} сохранена.`)
       router.refresh()
     } catch {
@@ -182,6 +189,10 @@ export default function WorkspaceClient({
             Сюда модератор вставляет 1–2 предложения, которые нельзя менять. AI должен только
             достроить карточку вокруг них и предложить несколько вариантов упаковки.
           </p>
+          <p className="mt-2 rounded-[14px] border border-stone-300/60 bg-[#fffaf1] px-3 py-2 text-sm leading-6 text-stone-700">
+            Вставленный фрагмент сохраняется дословно. AI не переписывает его, а только достраивает
+            карточку вокруг него.
+          </p>
 
           <textarea
             value={exactInput}
@@ -193,20 +204,11 @@ export default function WorkspaceClient({
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => void generateExactBuilder('fresh')}
+              onClick={() => void generateExactBuilder()}
               disabled={exactLoading}
               className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
             >
               {exactLoading ? 'Генерация...' : 'Сгенерировать 3 варианта'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void generateExactBuilder('more')}
-              disabled={exactLoading || !sacredPassage}
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-60"
-            >
-              Ещё варианты
             </button>
           </div>
 
@@ -227,31 +229,44 @@ export default function WorkspaceClient({
 
           {exactOptions.length > 0 ? (
             <div className="mt-5 space-y-4">
-              {exactOptions.map((option, index) => (
-                <article
-                  key={`${option.title}-${index}`}
-                  className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                    Вариант {index + 1}
-                  </p>
-                  <h3 className="mt-2 text-xl font-semibold leading-tight text-stone-900">
-                    {option.title}
-                  </h3>
-                  <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{option.text}</p>
+              {exactOptions.map((option, index) => {
+                const isSaving = savingIndex === index
+                const isSaved = savedIndexes.includes(index)
 
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={() => void saveOption(option, index)}
-                      disabled={savingIndex === index}
-                      className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
-                    >
-                      {savingIndex === index ? 'Сохранение...' : 'Сохранить как карточку'}
-                    </button>
-                  </div>
-                </article>
-              ))}
+                return (
+                  <article
+                    key={`${option.title}-${index}`}
+                    className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                      Вариант {index + 1}
+                    </p>
+                    <h3 className="mt-2 text-xl font-semibold leading-tight text-stone-900">
+                      {option.title}
+                    </h3>
+                    <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{option.text}</p>
+
+                    <div className="mt-4 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => void saveOption(option, index)}
+                        disabled={isSaving || isSaved}
+                        className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
+                      >
+                        {isSaving
+                          ? 'Сохранение...'
+                          : isSaved
+                            ? 'Сохранено'
+                            : 'Сохранить как карточку'}
+                      </button>
+
+                      {isSaved ? (
+                        <span className="text-sm text-emerald-700">Карточка уже сохранена</span>
+                      ) : null}
+                    </div>
+                  </article>
+                )
+              })}
             </div>
           ) : null}
         </div>
