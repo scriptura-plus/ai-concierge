@@ -132,29 +132,33 @@ export async function POST(req: Request) {
 
     const supabase = getSupabaseServerClient()
 
+    const insertPayload = {
+      verse_ref: reference,
+      book,
+      chapter,
+      verse,
+      mode,
+      title: titleRu,
+      text: textRu,
+      title_ru: titleRu,
+      text_ru: textRu,
+      title_en: en.title,
+      text_en: en.text,
+      title_es: es.title,
+      text_es: es.text,
+      title_fr: fr.title,
+      text_fr: fr.text,
+      title_de: de.title,
+      text_de: de.text,
+      angle_note: angleNote,
+      status: 'saved',
+      unfold_count: 0,
+      promoted_from_unfold: false,
+    }
+
     const { data, error } = await supabase
       .from('curated_insights')
-      .insert({
-        verse_ref: reference,
-        book,
-        chapter,
-        verse,
-        mode,
-        title_ru: titleRu,
-        text_ru: textRu,
-        title_en: en.title,
-        text_en: en.text,
-        title_es: es.title,
-        text_es: es.text,
-        title_fr: fr.title,
-        text_fr: fr.text,
-        title_de: de.title,
-        text_de: de.text,
-        angle_note: angleNote,
-        status: 'saved',
-        unfold_count: 0,
-        promoted_from_unfold: false,
-      })
+      .insert(insertPayload)
       .select('id')
       .single()
 
