@@ -1,11 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 
 type BookOption = {
   slug: string
   label: string
+}
+
+type InboxCountResponse = {
+  pendingCount?: number
+  error?: string
 }
 
 const BOOKS: BookOption[] = [
@@ -89,6 +94,8 @@ export default function ModeratorIndexPage() {
   const [chapter, setChapter] = useState('3')
   const [verse, setVerse] = useState('16')
   const [error, setError] = useState('')
+  const [pendingCount, setPendingCount] = useState<number | null>(null)
+  const [countError, setCountError] = useState('')
 
   const selectedBook = useMemo(
     () => BOOKS.find((item) => item.slug === book) ?? BOOKS[0],
@@ -97,8 +104,43 @@ export default function ModeratorIndexPage() {
 
   const workspaceHref = useMemo(() => {
     if (!book || !chapter || !verse) return ''
-    return `/bible/${book}/${chapter}/${verse}`
+    return `/moderator/workspace/${book}/${chapter}/${verse}`
   }, [book, chapter, verse])
+
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadInboxCount() {
+      try {
+        const res = await fetch('/api/moderator/unfolds/count', {
+          cache: 'no-store',
+        })
+
+        const data: InboxCountResponse = await res.json()
+
+        if (isCancelled) return
+
+        if (!res.ok) {
+          setCountError(data.error || 'Не удалось загрузить очередь unfold.')
+          setPendingCount(null)
+          return
+        }
+
+        setPendingCount(typeof data.pendingCount === 'number' ? data.pendingCount : 0)
+        setCountError('')
+      } catch {
+        if (isCancelled) return
+        setCountError('Не удалось загрузить очередь unfold.')
+        setPendingCount(null)
+      }
+    }
+
+    void loadInboxCount()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
 
   function handleOpenVerseWorkspace(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -124,8 +166,8 @@ export default function ModeratorIndexPage() {
               Рабочий кабинет
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-              Выбери стих и работай с ним как с отдельной средой. Unfold-входящие остаются
-              отдельным экраном и не смешиваются с основной ручной работой по стиху.
+              Здесь два маршрута работы: либо открыть конкретный стих и перейти в рабочую среду,
+              либо отдельно разобрать входящие unfold-сигналы.
             </p>
           </div>
 
@@ -144,12 +186,11 @@ export default function ModeratorIndexPage() {
                 Verse Workspace
               </p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                Открыть стих
+                Начать работу со стихом
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-                Это главный вход в ручную работу модератора. Следующий экран должен показывать
-                уже сохранённые карточки по стиху, а если их нет — сразу давать инструменты
-                генерации и сборки новых карточек.
+                После выбора ты попадёшь сразу в отдельный модераторский workspace по стиху, а не
+                в обычный пользовательский reading screen.
               </p>
             </div>
 
@@ -205,24 +246,13 @@ export default function ModeratorIndexPage() {
                   type="submit"
                   className="w-full rounded-[18px] bg-stone-900 px-4 py-3 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
                 >
-                  Открыть стих
+                  Начать работу
                 </button>
               </div>
             </form>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <div className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm text-stone-700">
-                Текущий выбор: {selectedBook.label} {chapter || '—'}:{verse || '—'}
-              </div>
-
-              {workspaceHref ? (
-                <Link
-                  href={workspaceHref}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                >
-                  Открыть напрямую
-                </Link>
-              ) : null}
+            <div className="mt-4 rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm text-stone-700">
+              Текущий выбор: {selectedBook.label} {chapter || '—'}:{verse || '—'}
             </div>
 
             {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
@@ -234,28 +264,35 @@ export default function ModeratorIndexPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-2xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                  Отдельный режим
+                  Очередь сигналов
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
                   Входящие unfold
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-stone-600">
-                  Этот экран нужен отдельно: разобрать пользовательские unfold-сигналы, выбрать
-                  полезные, скрыть шум и, если нужно, превратить хороший материал в карточку.
-                </p>
+
+                {countError ? (
+                  <p className="mt-2 text-sm leading-6 text-red-700">{countError}</p>
+                ) : pendingCount === null ? (
+                  <p className="mt-2 text-sm leading-6 text-stone-600">
+                    Загружаем состояние очереди…
+                  </p>
+                ) : pendingCount > 0 ? (
+                  <p className="mt-2 text-sm leading-6 text-stone-600">
+                    Сейчас ждут обзора: <span className="font-semibold text-stone-900">{pendingCount}</span>
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-stone-600">
+                    Свежих unfold-сигналов сейчас нет.
+                  </p>
+                )}
               </div>
 
               <Link
                 href="/moderator/unfolds"
                 className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
               >
-                Открыть unfold inbox
+                Открыть inbox
               </Link>
-            </div>
-
-            <div className="mt-4 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 text-sm leading-6 text-stone-700">
-              Основная ручная работа модератора должна происходить от выбранного стиха. Inbox —
-              это отдельный источник входящего материала, а не главный центр рабочего процесса.
             </div>
           </div>
         </section>
@@ -265,7 +302,7 @@ export default function ModeratorIndexPage() {
             href="/moderator/insights"
             className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
           >
-            Открыть библиотеку сохранённых карточек
+            Библиотека сохранённых карточек
           </Link>
 
           <Link
