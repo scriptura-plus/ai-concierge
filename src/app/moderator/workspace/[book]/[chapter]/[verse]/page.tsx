@@ -258,8 +258,8 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
               Следующий шаг
             </p>
             <p className="mt-2 text-base leading-7 text-stone-800">
-              Поле 1 уже включено. Теперь можно вставлять 1–2 предложения и получать 3 варианта
-              карточки вокруг них.
+              Поле 1 уже включено. Теперь можно вставлять 1–2 предложения, получать 3 варианта и
+              сохранять любой из них как карточку.
             </p>
           </div>
         </div>
@@ -317,7 +317,14 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
           </div>
         </section>
 
-        <WorkspaceClient reference={reference} verseText={verseText} savedCards={savedCards} />
+        <WorkspaceClient
+          reference={reference}
+          verseText={verseText}
+          savedCards={savedCards}
+          book={book}
+          chapter={chapter}
+          verse={verse}
+        />
 
         <section className="mt-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
