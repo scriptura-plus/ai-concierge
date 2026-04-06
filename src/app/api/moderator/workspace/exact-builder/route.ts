@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server'
 import { runModel } from '@/lib/ai/run-model'
 
-type ExactBuilderOption = {
+type RawFrameOption = {
+  title: string
+  before_text: string
+  after_text: string
+}
+
+type FinalOption = {
   title: string
   text: string
 }
 
-function parseOptions(raw: string): ExactBuilderOption[] | null {
+function parseRawOptions(raw: string): RawFrameOption[] | null {
   try {
     const parsed = JSON.parse(raw)
 
@@ -16,9 +22,10 @@ function parseOptions(raw: string): ExactBuilderOption[] | null {
       .filter((item) => item && typeof item === 'object')
       .map((item) => ({
         title: String(item.title ?? '').trim(),
-        text: String(item.text ?? '').trim(),
+        before_text: String(item.before_text ?? '').trim(),
+        after_text: String(item.after_text ?? '').trim(),
       }))
-      .filter((item) => item.title && item.text)
+      .filter((item) => item.title && (item.before_text || item.after_text))
       .slice(0, 3)
 
     return cleaned.length ? cleaned : null
@@ -48,6 +55,11 @@ function containsVerbatimSacredPassage(sacredPassage: string, candidateText: str
   return normalizedCandidate.includes(normalizedSacred)
 }
 
+function assembleCardText(beforeText: string, sacredPassage: string, afterText: string) {
+  const parts = [beforeText.trim(), sacredPassage.trim(), afterText.trim()].filter(Boolean)
+  return parts.join(' ')
+}
+
 function buildPrompt(params: {
   reference: string
   verseText: string
@@ -72,24 +84,21 @@ SACRED PASSAGE:
 ${params.sacredPassage}
 
 TASK:
-Turn the sacred passage into 3 short Russian insight cards.
+Generate framing text around the sacred passage for 3 short Russian insight cards.
 
-NON-NEGOTIABLE RULE:
-Every option MUST contain the sacred passage verbatim inside the card text.
-Do not paraphrase it.
-Do not shorten it.
-Do not replace words.
-Do not quote a different sentence instead.
-Do not substitute the verse text for the sacred passage.
-You may only add framing sentences before or after it.
+IMPORTANT:
+You must NOT rewrite the sacred passage.
+You must NOT include the sacred passage inside before_text or after_text.
+The sacred passage will be inserted later by the server exactly as given.
 
-CRITICAL:
-The sacred passage must appear inside the "text" field exactly as given.
-If you fail to preserve it exactly, the output is invalid.
+You are only generating:
+- a short title
+- before_text: 1-2 Russian sentences before the sacred passage
+- after_text: 1-3 Russian sentences after the sacred passage
 
 ${variationInstruction}
 
-OUTPUT GOAL:
+QUALITY GOAL:
 Each option should feel like a ready short comment card:
 - compact
 - clear
@@ -98,6 +107,7 @@ Each option should feel like a ready short comment card:
 - suitable for a strong meeting comment
 - not preachy
 - not bloated
+- each option should package the same insight differently
 
 OUTPUT RULES:
 - Return ONLY valid JSON
@@ -107,14 +117,16 @@ OUTPUT RULES:
 - Output must be a JSON array of exactly 3 objects
 - Each object must have:
   - "title": short Russian title
-  - "text": 4-6 Russian sentences
-- The sacred passage must be visibly included inside each "text"
+  - "before_text": brief framing text before the sacred passage
+  - "after_text": brief continuation after the sacred passage
+- Do not include the sacred passage itself in either field
 
 FORMAT:
 [
   {
     "title": "...",
-    "text": "..."
+    "before_text": "...",
+    "after_text": "..."
   }
 ]
 `.trim()
@@ -144,16 +156,16 @@ async function generateOptions(params: {
   }
 
   const rawText = result.rawText
-  let options = parseOptions(rawText)
+  let rawOptions = parseRawOptions(rawText)
 
-  if (!options) {
+  if (!rawOptions) {
     const extracted = extractJsonArray(rawText)
     if (extracted) {
-      options = parseOptions(extracted)
+      rawOptions = parseRawOptions(extracted)
     }
   }
 
-  if (!options) {
+  if (!rawOptions) {
     return {
       ok: false as const,
       error: 'Failed to parse exact builder options.',
@@ -162,14 +174,19 @@ async function generateOptions(params: {
     }
   }
 
-  const strictOptions = options.filter((option) =>
+  const finalOptions: FinalOption[] = rawOptions.map((option) => ({
+    title: option.title,
+    text: assembleCardText(option.before_text, params.sacredPassage, option.after_text),
+  }))
+
+  const strictOptions = finalOptions.filter((option) =>
     containsVerbatimSacredPassage(params.sacredPassage, option.text)
   )
 
   if (strictOptions.length === 0) {
     return {
       ok: false as const,
-      error: 'Model did not preserve the sacred passage verbatim.',
+      error: 'Model did not produce valid framing around the sacred passage.',
       raw: rawText || '',
       options: null,
     }
@@ -206,8 +223,8 @@ export async function POST(req: Request) {
       mode,
     })
 
-    if (firstPass.ok) {
-      return NextResponse.json({ options: firstPass.options })
+    if (firstPass.ok && firstPass.options && firstPass.options.length >= 3) {
+      return NextResponse.json({ options: firstPass.options.slice(0, 3) })
     }
 
     const retryPass = await generateOptions({
@@ -217,13 +234,27 @@ export async function POST(req: Request) {
       mode,
     })
 
-    if (retryPass.ok) {
-      return NextResponse.json({ options: retryPass.options })
+    if (retryPass.ok && retryPass.options && retryPass.options.length > 0) {
+      const merged = [...(firstPass.options ?? []), ...retryPass.options]
+      const unique: FinalOption[] = []
+      const seen = new Set()
+
+      for (const option of merged) {
+        const key = `${option.title}|||${option.text}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        unique.push(option)
+      }
+
+      if (unique.length > 0) {
+        return NextResponse.json({ options: unique.slice(0, 3) })
+      }
     }
 
     return NextResponse.json(
       {
-        error: retryPass.error || firstPass.error || 'Failed to generate exact builder options.',
+        error:
+          retryPass.error || firstPass.error || 'Failed to generate exact builder options.',
         raw: retryPass.raw || firstPass.raw || '',
       },
       { status: 500 }
