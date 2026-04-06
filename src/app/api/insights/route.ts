@@ -3,6 +3,8 @@ import { getVerseText } from "@/lib/bible/getVerseText";
 import { runModel } from "@/lib/ai/run-model";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
+type SupportedLanguage = "en" | "ru" | "es" | "fr" | "de";
+
 type InsightItem = {
   title: string;
   text: string;
@@ -10,32 +12,157 @@ type InsightItem = {
 
 type CuratedInsightRow = {
   id: string;
-  verse_ref: string;
-  book: string;
-  chapter: number;
-  verse: number;
   mode: "insights" | "word" | "tension" | "why_this_phrase";
-  title: string;
-  text: string;
-  angle_note: string;
+  title_en: string | null;
+  text_en: string | null;
+  title_ru: string | null;
+  text_ru: string | null;
+  title_es: string | null;
+  text_es: string | null;
+  title_fr: string | null;
+  text_fr: string | null;
+  title_de: string | null;
+  text_de: string | null;
+  angle_note: string | null;
   status: "draft" | "saved" | "hidden";
-  unfold_count: number;
-  promoted_from_unfold: boolean;
   created_at: string;
-  updated_at: string;
 };
 
-function buildPrompt(
-  reference: string,
-  verseText: string,
-  focusWord?: string,
-  count = 12
-) {
-  const focusBlock = focusWord?.trim()
+function languageInstruction(targetLanguage: SupportedLanguage) {
+  if (targetLanguage === "ru") {
+    return `
+Write the full output in Russian.
+Every title and every card text must be fully in Russian.
+Do not use English in the final answer.
+`;
+  }
+
+  if (targetLanguage === "es") {
+    return `
+Write the full output in Spanish.
+Every title and every card text must be fully in Spanish.
+Do not use English in the final answer.
+`;
+  }
+
+  if (targetLanguage === "fr") {
+    return `
+Write the full output in French.
+Every title and every card text must be fully in French.
+Do not use English in the final answer.
+`;
+  }
+
+  if (targetLanguage === "de") {
+    return `
+Write the full output in German.
+Every title and every card text must be fully in German.
+Do not use English in the final answer.
+`;
+  }
+
+  return `
+Write the full output in English.
+Every title and every card text must be fully in English.
+`;
+}
+
+function pickLocalizedValue(
+  row: CuratedInsightRow,
+  targetLanguage: SupportedLanguage
+): InsightItem | null {
+  const title =
+    targetLanguage === "ru"
+      ? row.title_ru
+      : targetLanguage === "es"
+        ? row.title_es
+        : targetLanguage === "fr"
+          ? row.title_fr
+          : targetLanguage === "de"
+            ? row.title_de
+            : row.title_en;
+
+  const text =
+    targetLanguage === "ru"
+      ? row.text_ru
+      : targetLanguage === "es"
+        ? row.text_es
+        : targetLanguage === "fr"
+          ? row.text_fr
+          : targetLanguage === "de"
+            ? row.text_de
+            : row.text_en;
+
+  if (!title?.trim() || !text?.trim()) {
+    return null;
+  }
+
+  return {
+    title: title.trim(),
+    text: text.trim(),
+  };
+}
+
+function buildAvoidRepeatsBlock(savedRows: CuratedInsightRow[]) {
+  if (!savedRows.length) {
+    return `
+NO SAVED INSIGHTS YET:
+You are generating the full set from scratch.
+`.trim();
+  }
+
+  const lines = savedRows
+    .map((row, index) => {
+      const baseTitle =
+        row.title_en?.trim() ||
+        row.title_ru?.trim() ||
+        row.title_es?.trim() ||
+        row.title_fr?.trim() ||
+        row.title_de?.trim() ||
+        "Untitled";
+
+      const baseText =
+        row.text_en?.trim() ||
+        row.text_ru?.trim() ||
+        row.text_es?.trim() ||
+        row.text_fr?.trim() ||
+        row.text_de?.trim() ||
+        "";
+
+      return `${index + 1}. MODE: ${row.mode}
+TITLE: ${baseTitle}
+ANGLE NOTE: ${row.angle_note ?? ""}
+TEXT: ${baseText}`;
+    })
+    .join("\n\n");
+
+  return `
+ALREADY SAVED INSIGHTS:
+The following cards are already saved for this verse.
+
+${lines}
+
+CRITICAL NON-DUPLICATION RULE:
+- Do not regenerate the same angle.
+- Do not paraphrase any saved card.
+- Do not produce a card that substantially overlaps a saved card.
+- Search for fresh, clearly different angles only.
+`.trim();
+}
+
+function buildPrompt(params: {
+  reference: string;
+  verseText: string;
+  focusWord?: string;
+  count: number;
+  targetLanguage: SupportedLanguage;
+  savedRows: CuratedInsightRow[];
+}) {
+  const focusBlock = params.focusWord?.trim()
     ? `
 FOCUS MODE:
 Pay special attention to this word or phrase:
-"${focusWord.trim()}"
+"${params.focusWord.trim()}"
 
 If possible, let many of the insights revolve around that focal point from different angles.
 `
@@ -45,16 +172,20 @@ No specific word or phrase was provided.
 Generate insights based on the verse as a whole.
 `;
 
+  const avoidRepeatsBlock = buildAvoidRepeatsBlock(params.savedRows);
+
   return `
 You are an elite generator of biblical insight cards.
 
-Your task is to produce ${count} distinct, non-obvious, high-value insight cards based on this Bible verse.
+Your task is to produce ${params.count} distinct, non-obvious, high-value insight cards based on this Bible verse.
 
 REFERENCE:
-${reference}
+${params.reference}
 
 VERSE TEXT:
-${verseText}
+${params.verseText}
+
+${languageInstruction(params.targetLanguage)}
 
 CORE PRINCIPLE:
 This is not commentary.
@@ -97,6 +228,8 @@ Across the full set, vary the type of insight. Draw from different angles such a
 - an insight based on what the verse does NOT say but the reader might expect
 
 ${focusBlock}
+
+${avoidRepeatsBlock}
 
 STYLE:
 - Clear
@@ -160,29 +293,38 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1);
 }
 
-function normalizeSavedInsights(rows: CuratedInsightRow[]): InsightItem[] {
-  return rows
-    .map((row) => ({
-      title: String(row.title ?? "").trim(),
-      text: String(row.text ?? "").trim(),
-    }))
-    .filter((item) => item.title && item.text);
-}
-
-async function loadSavedInsights(
-  book: string,
-  chapter: number,
-  verse: number
-): Promise<InsightItem[]> {
+async function loadSavedInsights(params: {
+  book: string;
+  chapter: number;
+  verse: number;
+  targetLanguage: SupportedLanguage;
+}): Promise<{ localized: InsightItem[]; rows: CuratedInsightRow[] }> {
   const supabase = getSupabaseServerClient();
-  const normalizedBook = book.trim().toLowerCase();
 
   const { data, error } = await supabase
     .from("curated_insights")
-    .select("*")
-    .eq("book", normalizedBook)
-    .eq("chapter", chapter)
-    .eq("verse", verse)
+    .select(
+      `
+      id,
+      mode,
+      title_en,
+      text_en,
+      title_ru,
+      text_ru,
+      title_es,
+      text_es,
+      title_fr,
+      text_fr,
+      title_de,
+      text_de,
+      angle_note,
+      status,
+      created_at
+    `
+    )
+    .eq("book", params.book.toLowerCase())
+    .eq("chapter", params.chapter)
+    .eq("verse", params.verse)
     .eq("status", "saved")
     .order("created_at", { ascending: true });
 
@@ -190,12 +332,25 @@ async function loadSavedInsights(
     throw new Error(`Failed to load curated insights: ${error.message}`);
   }
 
-  return normalizeSavedInsights((data ?? []) as CuratedInsightRow[]);
+  const rows = (data ?? []) as CuratedInsightRow[];
+
+  const localized = rows
+    .map((row) => pickLocalizedValue(row, params.targetLanguage))
+    .filter(Boolean) as InsightItem[];
+
+  return { localized, rows };
 }
 
 export async function POST(req: Request) {
   try {
-    const { book, chapter, verse, focusWord, count } = await req.json();
+    const {
+      book,
+      chapter,
+      verse,
+      focusWord,
+      count,
+      targetLanguage,
+    } = await req.json();
 
     if (!book || !chapter || !verse) {
       return NextResponse.json(
@@ -204,16 +359,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const safeLanguage: SupportedLanguage =
+      targetLanguage === "ru" ||
+      targetLanguage === "es" ||
+      targetLanguage === "fr" ||
+      targetLanguage === "de"
+        ? targetLanguage
+        : "en";
+
     const safeBook = String(book).trim();
     const safeChapter = Number(chapter);
     const safeVerse = Number(verse);
-
-    if (!safeBook || !Number.isInteger(safeChapter) || !Number.isInteger(safeVerse)) {
-      return NextResponse.json(
-        { error: "book, chapter, and verse must be valid." },
-        { status: 400 }
-      );
-    }
 
     const verseText = await getVerseText(safeBook, safeChapter, safeVerse);
 
@@ -225,23 +381,28 @@ export async function POST(req: Request) {
     }
 
     const reference = `${safeBook} ${safeChapter}:${safeVerse}`;
-    const safeCount = Math.min(Math.max(Number(count ?? 12), 10), 20);
+    const safeCount = Math.min(Math.max(Number(count ?? 12), 1), 20);
 
-    let savedInsights: InsightItem[] = [];
+    const { localized: savedInsights, rows: savedRows } = await loadSavedInsights({
+      book: safeBook,
+      chapter: safeChapter,
+      verse: safeVerse,
+      targetLanguage: safeLanguage,
+    });
 
-    try {
-      savedInsights = await loadSavedInsights(safeBook, safeChapter, safeVerse);
-    } catch (error) {
-      console.error("Curated insights lookup error:", error);
-    }
-
-    const trimmedSavedInsights = savedInsights.slice(0, safeCount);
-    const missingCount = Math.max(safeCount - trimmedSavedInsights.length, 0);
+    const remainingCount = Math.max(safeCount - savedInsights.length, 0);
 
     let generatedInsights: InsightItem[] = [];
 
-    if (missingCount > 0) {
-      const prompt = buildPrompt(reference, verseText, focusWord, missingCount);
+    if (remainingCount > 0) {
+      const prompt = buildPrompt({
+        reference,
+        verseText,
+        focusWord,
+        count: remainingCount,
+        targetLanguage: safeLanguage,
+        savedRows,
+      });
 
       const result = await runModel({
         prompt,
@@ -250,23 +411,13 @@ export async function POST(req: Request) {
       });
 
       if (!result.ok) {
-        if (trimmedSavedInsights.length > 0) {
-          return NextResponse.json({
-            reference,
-            verseText,
-            focusWord: focusWord ?? "",
-            count: trimmedSavedInsights.length,
-            insights: trimmedSavedInsights,
-            savedCount: trimmedSavedInsights.length,
-            generatedCount: 0,
-            partial: true,
-          });
-        }
-
         return NextResponse.json(
           {
             error: result.error,
             raw: result.raw || "",
+            savedInsights,
+            savedCount: savedInsights.length,
+            generatedCount: 0,
           },
           { status: 500 }
         );
@@ -284,41 +435,36 @@ export async function POST(req: Request) {
       }
 
       if (!parsed) {
-        if (trimmedSavedInsights.length > 0) {
-          return NextResponse.json({
-            reference,
-            verseText,
-            focusWord: focusWord ?? "",
-            count: trimmedSavedInsights.length,
-            insights: trimmedSavedInsights,
-            savedCount: trimmedSavedInsights.length,
-            generatedCount: 0,
-            partial: true,
-          });
-        }
-
         return NextResponse.json(
           {
             error: "Failed to parse insights JSON.",
             raw: rawText || "Empty model response",
+            savedInsights,
+            savedCount: savedInsights.length,
+            generatedCount: 0,
           },
           { status: 500 }
         );
       }
 
-      generatedInsights = parsed.slice(0, missingCount);
+      generatedInsights = parsed.slice(0, remainingCount);
     }
 
-    const insights = [...trimmedSavedInsights, ...generatedInsights].slice(0, safeCount);
+    const insights = [...savedInsights, ...generatedInsights];
 
     return NextResponse.json({
       reference,
       verseText,
       focusWord: focusWord ?? "",
-      count: insights.length,
-      insights,
-      savedCount: trimmedSavedInsights.length,
+      targetLanguage: safeLanguage,
+
+      savedCount: savedInsights.length,
       generatedCount: generatedInsights.length,
+      count: insights.length,
+
+      savedInsights,
+      generatedInsights,
+      insights,
     });
   } catch (error) {
     console.error("Insights API error:", error);
