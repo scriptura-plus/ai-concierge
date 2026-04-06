@@ -1,7 +1,10 @@
 import Link from 'next/link'
+import { unstable_noStore as noStore } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
 
 type UnfoldRow = {
   id: string
@@ -101,6 +104,8 @@ async function loadUnfolds(): Promise<UnfoldRow[]> {
 }
 
 export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) {
+  noStore()
+
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const filter = normalizeFilter(resolvedSearchParams?.filter)
 
@@ -253,7 +258,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
                   <div className="mt-4 grid gap-4 lg:grid-cols-2">
                     <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Source text
+                        Исходный текст
                       </p>
                       <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
                         {truncate(item.source_text, 240)}
