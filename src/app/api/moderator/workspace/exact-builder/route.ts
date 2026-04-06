@@ -38,6 +38,16 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1)
 }
 
+function normalizeForCompare(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function containsVerbatimSacredPassage(sacredPassage: string, candidateText: string) {
+  const normalizedSacred = normalizeForCompare(sacredPassage)
+  const normalizedCandidate = normalizeForCompare(candidateText)
+  return normalizedCandidate.includes(normalizedSacred)
+}
+
 function buildPrompt(params: {
   reference: string
   verseText: string
@@ -65,11 +75,17 @@ TASK:
 Turn the sacred passage into 3 short Russian insight cards.
 
 NON-NEGOTIABLE RULE:
-The sacred passage must remain verbatim inside each option.
+Every option MUST contain the sacred passage verbatim inside the card text.
 Do not paraphrase it.
-Do not replace words.
 Do not shorten it.
-You may build around it, but you must preserve it exactly as given.
+Do not replace words.
+Do not quote a different sentence instead.
+Do not substitute the verse text for the sacred passage.
+You may only add framing sentences before or after it.
+
+CRITICAL:
+The sacred passage must appear inside the "text" field exactly as given.
+If you fail to preserve it exactly, the output is invalid.
 
 ${variationInstruction}
 
@@ -92,6 +108,7 @@ OUTPUT RULES:
 - Each object must have:
   - "title": short Russian title
   - "text": 4-6 Russian sentences
+- The sacred passage must be visibly included inside each "text"
 
 FORMAT:
 [
@@ -101,6 +118,69 @@ FORMAT:
   }
 ]
 `.trim()
+}
+
+async function generateOptions(params: {
+  reference: string
+  verseText: string
+  sacredPassage: string
+  mode: 'fresh' | 'more'
+}) {
+  const prompt = buildPrompt(params)
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 2200,
+  })
+
+  if (!result.ok) {
+    return {
+      ok: false as const,
+      error: result.error || 'Model request failed.',
+      raw: result.raw || '',
+      options: null,
+    }
+  }
+
+  const rawText = result.rawText
+  let options = parseOptions(rawText)
+
+  if (!options) {
+    const extracted = extractJsonArray(rawText)
+    if (extracted) {
+      options = parseOptions(extracted)
+    }
+  }
+
+  if (!options) {
+    return {
+      ok: false as const,
+      error: 'Failed to parse exact builder options.',
+      raw: rawText || 'Empty model response',
+      options: null,
+    }
+  }
+
+  const strictOptions = options.filter((option) =>
+    containsVerbatimSacredPassage(params.sacredPassage, option.text)
+  )
+
+  if (strictOptions.length === 0) {
+    return {
+      ok: false as const,
+      error: 'Model did not preserve the sacred passage verbatim.',
+      raw: rawText || '',
+      options: null,
+    }
+  }
+
+  return {
+    ok: true as const,
+    error: '',
+    raw: rawText || '',
+    options: strictOptions,
+  }
 }
 
 export async function POST(req: Request) {
@@ -119,50 +199,35 @@ export async function POST(req: Request) {
       )
     }
 
-    const prompt = buildPrompt({
+    const firstPass = await generateOptions({
       reference,
       verseText,
       sacredPassage,
       mode,
     })
 
-    const result = await runModel({
-      prompt,
-      model: 'gpt-5.4-mini',
-      maxOutputTokens: 2200,
+    if (firstPass.ok) {
+      return NextResponse.json({ options: firstPass.options })
+    }
+
+    const retryPass = await generateOptions({
+      reference,
+      verseText,
+      sacredPassage,
+      mode,
     })
 
-    if (!result.ok) {
-      return NextResponse.json(
-        {
-          error: result.error || 'Model request failed.',
-          raw: result.raw || '',
-        },
-        { status: 500 }
-      )
+    if (retryPass.ok) {
+      return NextResponse.json({ options: retryPass.options })
     }
 
-    const rawText = result.rawText
-    let options = parseOptions(rawText)
-
-    if (!options) {
-      const extracted = extractJsonArray(rawText)
-      if (extracted) {
-        options = parseOptions(extracted)
-      }
-    }
-
-    if (!options) {
-      return NextResponse.json(
-        {
-          error: 'Failed to parse exact builder options.',
-          raw: rawText || 'Empty model response',
-        },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({ options })
+    return NextResponse.json(
+      {
+        error: retryPass.error || firstPass.error || 'Failed to generate exact builder options.',
+        raw: retryPass.raw || firstPass.raw || '',
+      },
+      { status: 500 }
+    )
   } catch (error) {
     console.error('Exact builder API error:', error)
 
