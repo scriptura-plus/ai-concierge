@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 type SavedCard = {
   id: string
@@ -39,9 +40,13 @@ function normalizeText(value: string) {
   return value.replace(/\r/g, '').trim()
 }
 
-function looksContainedVerbatim(sacredPassage: string, candidateText: string) {
-  const normalizedSacred = sacredPassage.replace(/\s+/g, ' ').trim()
-  const normalizedCandidate = candidateText.replace(/\s+/g, ' ').trim()
+function normalizeForCompare(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function containsVerbatimSacredPassage(sacredPassage: string, candidateText: string) {
+  const normalizedSacred = normalizeForCompare(sacredPassage)
+  const normalizedCandidate = normalizeForCompare(candidateText)
   return normalizedCandidate.includes(normalizedSacred)
 }
 
@@ -53,6 +58,8 @@ export default function WorkspaceClient({
   chapter,
   verse,
 }: WorkspaceClientProps) {
+  const router = useRouter()
+
   const [exactInput, setExactInput] = useState('')
   const [exactOptions, setExactOptions] = useState<ExactBuilderOption[]>([])
   const [exactLoading, setExactLoading] = useState(false)
@@ -97,11 +104,20 @@ export default function WorkspaceClient({
         return
       }
 
-      const filtered = data.options.filter((item) =>
-        looksContainedVerbatim(sacredPassage, `${item.title} ${item.text}`)
+      const strictlyValid = data.options.filter((item) =>
+        containsVerbatimSacredPassage(sacredPassage, item.text)
       )
 
-      setExactOptions(filtered.length > 0 ? filtered : data.options)
+      if (strictlyValid.length === 0) {
+        setExactError(
+          'Модель не сохранила вставленный текст дословно. Попробуй ещё раз.'
+        )
+        setExactRaw(data.raw || '')
+        setExactOptions([])
+        return
+      }
+
+      setExactOptions(strictlyValid)
     } catch {
       setExactError('Не удалось сгенерировать варианты.')
     } finally {
@@ -110,6 +126,11 @@ export default function WorkspaceClient({
   }
 
   async function saveOption(option: ExactBuilderOption, index: number) {
+    if (!containsVerbatimSacredPassage(sacredPassage, option.text)) {
+      setSaveError('Эту карточку нельзя сохранить: исходный фрагмент не сохранён дословно.')
+      return
+    }
+
     setSavingIndex(index)
     setSaveMessage('')
     setSaveError('')
@@ -139,6 +160,7 @@ export default function WorkspaceClient({
       }
 
       setSaveMessage(`Карточка ${index + 1} сохранена.`)
+      router.refresh()
     } catch {
       setSaveError('Не удалось сохранить карточку.')
     } finally {
