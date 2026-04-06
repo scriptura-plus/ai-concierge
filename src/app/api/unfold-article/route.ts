@@ -211,9 +211,12 @@ async function saveUnfoldEvent(params: {
   sourceText: string;
   sourceAngleNote?: unknown;
   article: ArticlePayload;
-}) {
+}): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const parsedRef = parseReference(params.reference);
-  if (!parsedRef) return;
+
+  if (!parsedRef) {
+    return { ok: false, error: "Could not parse reference for unfold event." };
+  }
 
   const supabase = getSupabaseServerClient();
 
@@ -227,25 +230,34 @@ async function saveUnfoldEvent(params: {
       ? params.sourceAngleNote.trim()
       : null;
 
-  const { error } = await supabase.from("unfold_events").insert({
-    verse_ref: parsedRef.verse_ref,
-    book: parsedRef.book,
-    chapter: parsedRef.chapter,
-    verse: parsedRef.verse,
-    source_insight_id: sourceInsightId,
-    source_mode: normalizeSourceMode(params.sourceMode),
-    source_title: params.sourceTitle,
-    source_text: params.sourceText,
-    source_angle_note: sourceAngleNote,
-    unfold_title: params.article.title,
-    unfold_text: buildUnfoldText(params.article),
-    review_status: "new",
-    promoted_insight_id: null,
-  });
+  const { data, error } = await supabase
+    .from("unfold_events")
+    .insert({
+      verse_ref: parsedRef.verse_ref,
+      book: parsedRef.book,
+      chapter: parsedRef.chapter,
+      verse: parsedRef.verse,
+      source_insight_id: sourceInsightId,
+      source_mode: normalizeSourceMode(params.sourceMode),
+      source_title: params.sourceTitle,
+      source_text: params.sourceText,
+      source_angle_note: sourceAngleNote,
+      unfold_title: params.article.title,
+      unfold_text: buildUnfoldText(params.article),
+      review_status: "new",
+      promoted_insight_id: null,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    throw new Error(`Failed to save unfold event: ${error.message}`);
+  if (error || !data?.id) {
+    return {
+      ok: false,
+      error: `Failed to save unfold event: ${error?.message ?? "Unknown insert error."}`,
+    };
   }
+
+  return { ok: true, id: data.id as string };
 }
 
 export async function POST(req: Request) {
@@ -333,21 +345,22 @@ export async function POST(req: Request) {
       );
     }
 
-    try {
-      await saveUnfoldEvent({
-        reference: safeReference,
-        sourceMode,
-        sourceInsightId,
-        sourceTitle: safeInsightTitle,
-        sourceText: safeInsightText,
-        sourceAngleNote,
-        article,
-      });
-    } catch (error) {
-      console.error("Unfold event save error:", error);
-    }
+    const saveResult = await saveUnfoldEvent({
+      reference: safeReference,
+      sourceMode,
+      sourceInsightId,
+      sourceTitle: safeInsightTitle,
+      sourceText: safeInsightText,
+      sourceAngleNote,
+      article,
+    });
 
-    return NextResponse.json({ article });
+    return NextResponse.json({
+      article,
+      eventSaved: saveResult.ok,
+      eventId: saveResult.ok ? saveResult.id : null,
+      eventError: saveResult.ok ? null : saveResult.error,
+    });
   } catch (error) {
     console.error("Unfold article API error:", error);
     return NextResponse.json(
