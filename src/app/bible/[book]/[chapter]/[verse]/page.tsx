@@ -27,6 +27,11 @@ type InsightsApiResponse = {
   reference?: string
   verseText?: string
   insights?: InsightItem[]
+  savedInsights?: InsightItem[]
+  generatedInsights?: InsightItem[]
+  savedCount?: number
+  generatedCount?: number
+  count?: number
   error?: string
   raw?: string
 }
@@ -97,6 +102,7 @@ type ContextApiResponse = {
 
 type AppLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
+type InsightsStage = 'idle' | 'loading_saved' | 'filling' | 'ready' | 'failed'
 type TopTab = 'insights' | 'compare' | 'context' | 'lens'
 type LensKind = 'word' | 'tension' | 'phrase'
 type SourceMode = 'insights' | 'word' | 'tension' | 'why_this_phrase'
@@ -782,6 +788,17 @@ function emptyContextMap(): Record<AppLanguage, ContextPayload | null> {
   return { en: null, ru: null, es: null, fr: null, de: null }
 }
 
+function formatBookLabel(bookSlug: string) {
+  return bookSlug
+    .split('-')
+    .filter(Boolean)
+    .map((part) => {
+      if (/^\d+$/.test(part)) return part
+      return part.charAt(0).toUpperCase() + part.slice(1)
+    })
+    .join(' ')
+}
+
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
   const [chapter, setChapter] = useState('')
@@ -793,7 +810,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [verseError, setVerseError] = useState('')
 
   const [insights, setInsights] = useState<InsightItem[]>([])
-  const [insightsLoading, setInsightsLoading] = useState(false)
+  const [insightsStage, setInsightsStage] = useState<InsightsStage>('idle')
   const [insightsError, setInsightsError] = useState('')
   const [rawOutput, setRawOutput] = useState('')
 
@@ -858,8 +875,10 @@ export default function VerseDetailPage({ params }: PageProps) {
   const insightsRequestIdRef = useRef(0)
 
   const t = UI_TEXT[appLanguage]
-  const modesReady = !insightsLoading && !insightsError && insights.length > 0
-  const interactionsLocked = verseLoading || !modesReady
+  const insightsBlockingLoad = insightsStage === 'loading_saved' && insights.length === 0
+  const insightsBackgroundFill = insightsStage === 'filling'
+  const modesReady = insights.length > 0
+  const interactionsLocked = verseLoading || insightsBlockingLoad
 
   useEffect(() => {
     async function loadInitial() {
@@ -912,7 +931,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setVerseText('')
       setTranslatedVerseTexts({})
       setInsights([])
-      setInsightsLoading(false)
+      setInsightsStage('idle')
       setInsightsError('')
       setRawOutput('')
       setWordLensCardsByLanguage(emptyLensMap())
@@ -980,52 +999,93 @@ export default function VerseDetailPage({ params }: PageProps) {
     loadVerseOnly()
   }, [book, chapter, verse])
 
-  useEffect(() => {
+  async function loadInsightsTwoPhase() {
     if (!book || !chapter || !verse || !verseText || verseError) return
 
-    async function loadInsights() {
-      const requestId = ++insightsRequestIdRef.current
+    const requestId = ++insightsRequestIdRef.current
 
-      setInsightsLoading(true)
-      setInsightsError('')
-      setRawOutput('')
+    setInsightsError('')
+    setRawOutput('')
+    setInsightsStage('loading_saved')
 
-      try {
-        const res = await fetch('/api/insights', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ book, chapter, verse, count: 12 }),
-        })
+    let savedSnapshot: InsightItem[] = []
 
-        const data: InsightsApiResponse = await res.json()
+    try {
+      const savedRes = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book, chapter, verse, count: 0, targetLanguage: 'en' }),
+      })
 
-        if (requestId !== insightsRequestIdRef.current) return
+      const savedData: InsightsApiResponse = await savedRes.json()
 
-        if (!res.ok) {
-          setInsightsError(data.error || 'API request failed.')
-          setRawOutput(data.raw || '')
+      if (requestId !== insightsRequestIdRef.current) return
+
+      if (savedRes.ok) {
+        const receivedSaved = Array.isArray(savedData.savedInsights)
+          ? savedData.savedInsights
+          : Array.isArray(savedData.insights)
+            ? savedData.insights
+            : []
+
+        if (receivedSaved.length > 0) {
+          savedSnapshot = receivedSaved
+          setInsights(receivedSaved)
+          setCurrentIndex(0)
+          setInsightsStage('filling')
+        }
+      }
+
+      const fullRes = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book, chapter, verse, count: 12, targetLanguage: 'en' }),
+      })
+
+      const fullData: InsightsApiResponse = await fullRes.json()
+
+      if (requestId !== insightsRequestIdRef.current) return
+
+      if (!fullRes.ok) {
+        if (savedSnapshot.length > 0) {
+          setInsightsStage('ready')
           return
         }
 
-        const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
-
-        if (receivedInsights.length > 0) {
-          setInsights(receivedInsights)
-        } else {
-          setInsightsError(data.error || 'No insights returned.')
-          setRawOutput(data.raw || '')
-        }
-      } catch {
-        if (requestId !== insightsRequestIdRef.current) return
-        setInsightsError('Error loading insights.')
-      } finally {
-        if (requestId === insightsRequestIdRef.current) {
-          setInsightsLoading(false)
-        }
+        setInsightsError(fullData.error || 'API request failed.')
+        setRawOutput(fullData.raw || '')
+        setInsightsStage('failed')
+        return
       }
-    }
 
-    loadInsights()
+      const fullInsights = Array.isArray(fullData.insights) ? fullData.insights : []
+
+      if (fullInsights.length > 0) {
+        setInsights(fullInsights)
+        setInsightsStage('ready')
+      } else if (savedSnapshot.length > 0) {
+        setInsightsStage('ready')
+      } else {
+        setInsightsError(fullData.error || 'No insights returned.')
+        setRawOutput(fullData.raw || '')
+        setInsightsStage('failed')
+      }
+    } catch {
+      if (requestId !== insightsRequestIdRef.current) return
+
+      if (savedSnapshot.length > 0) {
+        setInsightsStage('ready')
+        return
+      }
+
+      setInsightsError('Error loading insights.')
+      setInsightsStage('failed')
+    }
+  }
+
+  useEffect(() => {
+    if (!book || !chapter || !verse || !verseText || verseError) return
+    void loadInsightsTwoPhase()
   }, [book, chapter, verse, verseText, verseError])
 
   useEffect(() => {
@@ -1036,7 +1096,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const formattedReference = useMemo(() => {
     if (!book || !chapter || !verse) return ''
-    return `${book.charAt(0).toUpperCase() + book.slice(1)} ${chapter}:${verse}`
+    return `${formatBookLabel(book)} ${chapter}:${verse}`
   }, [book, chapter, verse])
 
   const verseTranslationKey = useMemo(() => {
@@ -2100,11 +2160,11 @@ export default function VerseDetailPage({ params }: PageProps) {
       return renderArticleView()
     }
 
-    if (insightsLoading) {
+    if (insightsBlockingLoad) {
       return renderInsightsSkeleton()
     }
 
-    if (insightsError) {
+    if (insightsError && insights.length === 0) {
       return (
         <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
           <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
@@ -2116,41 +2176,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             <button
               type="button"
               onClick={() => {
-                if (!book || !chapter || !verse || !verseText) return
-                const requestId = ++insightsRequestIdRef.current
-                setInsightsLoading(true)
-                setInsightsError('')
-                setRawOutput('')
-                fetch('/api/insights', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ book, chapter, verse, count: 12 }),
-                })
-                  .then(async (res) => {
-                    const data: InsightsApiResponse = await res.json()
-                    if (requestId !== insightsRequestIdRef.current) return
-                    if (!res.ok) {
-                      setInsightsError(data.error || 'API request failed.')
-                      setRawOutput(data.raw || '')
-                      return
-                    }
-                    const receivedInsights = Array.isArray(data?.insights) ? data.insights : []
-                    if (receivedInsights.length > 0) {
-                      setInsights(receivedInsights)
-                    } else {
-                      setInsightsError(data.error || 'No insights returned.')
-                      setRawOutput(data.raw || '')
-                    }
-                  })
-                  .catch(() => {
-                    if (requestId !== insightsRequestIdRef.current) return
-                    setInsightsError('Error loading insights.')
-                  })
-                  .finally(() => {
-                    if (requestId === insightsRequestIdRef.current) {
-                      setInsightsLoading(false)
-                    }
-                  })
+                void loadInsightsTwoPhase()
               }}
               className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
             >
@@ -2175,9 +2201,16 @@ export default function VerseDetailPage({ params }: PageProps) {
     return (
       <div className="tab-panel-enter mt-5">
         {currentCards.length > 0 && !activeArticleKey && (
-          <p className="mb-4 text-sm font-medium text-stone-500">
-            {currentIndex + 1} / {currentCards.length}
-          </p>
+          <div className="mb-4">
+            <p className="text-sm font-medium text-stone-500">
+              {currentIndex + 1} / {currentCards.length}
+            </p>
+            {insightsBackgroundFill && activeTab === 'insights' && (
+              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-stone-400">
+                {t.preparingModes}
+              </p>
+            )}
+          </div>
         )}
 
         <div
@@ -2851,7 +2884,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         {!verseLoading && !verseError && activeTab === 'lens' && renderLensView()}
       </div>
 
-      {displayedCard && !insightsLoading && !insightsError && (
+      {displayedCard && !insightsBlockingLoad && !insightsError && (
         <div className="pointer-events-none fixed -left-[9999px] top-0 z-[-1]">
           <div
             ref={exportCardRef}
