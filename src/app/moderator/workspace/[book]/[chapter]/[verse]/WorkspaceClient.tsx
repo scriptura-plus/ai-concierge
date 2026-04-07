@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type SavedCard = {
@@ -77,6 +77,20 @@ type WorkspaceClientProps = {
   verse: number
 }
 
+type PersistedWorkspaceState = {
+  exactInput: string
+  exactOptions: ExactBuilderOption[]
+  exactRaw: string
+  directionInput: string
+  directionArticle: DirectionArticle | null
+  directionRaw: string
+  wordLensPayload: WordMapNode[] | null
+  wordLensRaw: string
+  deepWordIndex: number | null
+  deepWordArticle: DeepWordArticle | null
+  deepWordRaw: string
+}
+
 function normalizeText(value: string) {
   return value.replace(/\r/g, '').trim()
 }
@@ -91,6 +105,17 @@ function containsVerbatimSacredPassage(sacredPassage: string, candidateText: str
   return normalizedCandidate.includes(normalizedSacred)
 }
 
+function buildDeepArticleText(article: DeepWordArticle) {
+  return [
+    article.title,
+    '',
+    article.lead,
+    '',
+    ...article.body,
+    ...(article.quote ? ['', `“${article.quote}”`] : []),
+  ].join('\n\n')
+}
+
 export default function WorkspaceClient({
   reference,
   verseText,
@@ -100,6 +125,11 @@ export default function WorkspaceClient({
   verse,
 }: WorkspaceClientProps) {
   const router = useRouter()
+
+  const storageKey = useMemo(
+    () => `moderator-workspace-state:${book}:${chapter}:${verse}`,
+    [book, chapter, verse]
+  )
 
   const [exactInput, setExactInput] = useState('')
   const [exactOptions, setExactOptions] = useState<ExactBuilderOption[]>([])
@@ -129,8 +159,109 @@ export default function WorkspaceClient({
   const [deepWordError, setDeepWordError] = useState('')
   const [deepWordRaw, setDeepWordRaw] = useState('')
 
+  const [articleActionMessage, setArticleActionMessage] = useState('')
+  const [isHydrated, setIsHydrated] = useState(false)
+
   const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
   const directionRequest = useMemo(() => normalizeText(directionInput), [directionInput])
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey)
+      if (!raw) {
+        setIsHydrated(true)
+        return
+      }
+
+      const parsed = JSON.parse(raw) as Partial<PersistedWorkspaceState>
+
+      setExactInput(typeof parsed.exactInput === 'string' ? parsed.exactInput : '')
+      setExactOptions(Array.isArray(parsed.exactOptions) ? parsed.exactOptions : [])
+      setExactRaw(typeof parsed.exactRaw === 'string' ? parsed.exactRaw : '')
+
+      setDirectionInput(typeof parsed.directionInput === 'string' ? parsed.directionInput : '')
+      setDirectionArticle(parsed.directionArticle ?? null)
+      setDirectionRaw(typeof parsed.directionRaw === 'string' ? parsed.directionRaw : '')
+
+      setWordLensPayload(Array.isArray(parsed.wordLensPayload) ? parsed.wordLensPayload : null)
+      setWordLensRaw(typeof parsed.wordLensRaw === 'string' ? parsed.wordLensRaw : '')
+
+      setDeepWordIndex(typeof parsed.deepWordIndex === 'number' ? parsed.deepWordIndex : null)
+      setDeepWordArticle(parsed.deepWordArticle ?? null)
+      setDeepWordRaw(typeof parsed.deepWordRaw === 'string' ? parsed.deepWordRaw : '')
+    } catch {
+      // ignore broken persisted state
+    } finally {
+      setIsHydrated(true)
+    }
+  }, [storageKey])
+
+  useEffect(() => {
+    if (!isHydrated) return
+
+    const payload: PersistedWorkspaceState = {
+      exactInput,
+      exactOptions,
+      exactRaw,
+      directionInput,
+      directionArticle,
+      directionRaw,
+      wordLensPayload,
+      wordLensRaw,
+      deepWordIndex,
+      deepWordArticle,
+      deepWordRaw,
+    }
+
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(payload))
+    } catch {
+      // ignore storage issues
+    }
+  }, [
+    isHydrated,
+    storageKey,
+    exactInput,
+    exactOptions,
+    exactRaw,
+    directionInput,
+    directionArticle,
+    directionRaw,
+    wordLensPayload,
+    wordLensRaw,
+    deepWordIndex,
+    deepWordArticle,
+    deepWordRaw,
+  ])
+
+  async function copyDeepArticle(article: DeepWordArticle) {
+    try {
+      await navigator.clipboard.writeText(buildDeepArticleText(article))
+      setArticleActionMessage('Статья скопирована.')
+    } catch {
+      setArticleActionMessage('Не удалось скопировать статью.')
+    }
+  }
+
+  async function shareDeepArticle(article: DeepWordArticle) {
+    const text = buildDeepArticleText(article)
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: article.title,
+          text,
+        })
+        setArticleActionMessage('Статья отправлена в меню «Поделиться».')
+        return
+      }
+
+      await navigator.clipboard.writeText(text)
+      setArticleActionMessage('Меню «Поделиться» недоступно. Текст скопирован.')
+    } catch {
+      setArticleActionMessage('Не удалось поделиться статьёй.')
+    }
+  }
 
   async function generateExactBuilder() {
     if (!sacredPassage) {
@@ -279,6 +410,7 @@ export default function WorkspaceClient({
     setDeepWordArticle(null)
     setDeepWordError('')
     setDeepWordRaw('')
+    setArticleActionMessage('')
 
     try {
       const res = await fetch('/api/moderator/workspace/word-lens', {
@@ -312,6 +444,7 @@ export default function WorkspaceClient({
     setDeepWordRaw('')
     setDeepWordIndex(index)
     setDeepWordArticle(null)
+    setArticleActionMessage('')
 
     try {
       const res = await fetch('/api/moderator/workspace/word-lens/deep', {
@@ -693,6 +826,28 @@ export default function WorkspaceClient({
                           <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
                             {deepWordArticle.quote}
                           </blockquote>
+                        ) : null}
+
+                        <div className="mt-5 flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => void copyDeepArticle(deepWordArticle)}
+                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                          >
+                            Скопировать
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => void shareDeepArticle(deepWordArticle)}
+                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                          >
+                            Поделиться
+                          </button>
+                        </div>
+
+                        {articleActionMessage ? (
+                          <p className="mt-3 text-sm text-stone-700">{articleActionMessage}</p>
                         ) : null}
                       </article>
                     ) : null}
