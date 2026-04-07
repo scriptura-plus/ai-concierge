@@ -40,29 +40,17 @@ type DirectionSearchResponse = {
   raw?: string
 }
 
-type WordReference = {
-  reference: string
-  quote: string
-  note: string
-}
-
-type WordLensPayload = {
+type WordMapNode = {
   focus_label: string
   original_word: string
   transliteration: string
   core_meaning: string
   why_it_matters: string
-  cross_references: WordReference[]
-  article: {
-    title: string
-    lead: string
-    body: string[]
-    quote?: string
-  }
+  dig_deeper_hint: string
 }
 
 type ModeratorWordLensResponse = {
-  payload?: WordLensPayload
+  payload?: WordMapNode[]
   error?: string
   raw?: string
 }
@@ -117,7 +105,7 @@ export default function WorkspaceClient({
   const [directionError, setDirectionError] = useState('')
   const [directionRaw, setDirectionRaw] = useState('')
 
-  const [wordLensPayload, setWordLensPayload] = useState<WordLensPayload | null>(null)
+  const [wordLensPayload, setWordLensPayload] = useState<WordMapNode[] | null>(null)
   const [wordLensLoading, setWordLensLoading] = useState(false)
   const [wordLensError, setWordLensError] = useState('')
   const [wordLensRaw, setWordLensRaw] = useState('')
@@ -281,7 +269,7 @@ export default function WorkspaceClient({
 
       const data: ModeratorWordLensResponse = await res.json()
 
-      if (!res.ok || !data.payload) {
+      if (!res.ok || !data.payload || data.payload.length === 0) {
         setWordLensError(data.error || 'Не удалось сгенерировать линзу «Слово».')
         setWordLensRaw(data.raw || '')
         return
@@ -488,9 +476,9 @@ export default function WorkspaceClient({
                 Слово
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-                Эта линза выбирает одно ключевое слово или выражение, которое реально несёт
-                смысловую нагрузку в стихе, показывает его исходную форму, транслитерацию,
-                semantic core, места в Писании и даёт длинный исследовательский разворот.
+                Эта линза строит semantic map стиха и показывает 3–5 ключевых слов или выражений,
+                которые реально несут смысловую нагрузку. Это не одна трактовка, а карта лучших
+                направлений, куда можно копать дальше.
               </p>
             </div>
 
@@ -500,7 +488,7 @@ export default function WorkspaceClient({
               disabled={wordLensLoading}
               className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
             >
-              {wordLensLoading ? 'Генерация...' : 'Запустить линзу «Слово»'}
+              {wordLensLoading ? 'Генерация...' : 'Построить карту слов'}
             </button>
           </div>
 
@@ -518,91 +506,69 @@ export default function WorkspaceClient({
           ) : null}
 
           {wordLensPayload ? (
-            <div className="mt-5 space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+            <div className="mt-5 space-y-4">
+              {wordLensPayload.map((item, index) => (
+                <article
+                  key={`${item.focus_label}-${index}`}
+                  className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
+                >
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                    Выбранное слово / выражение
+                    Узел {index + 1}
                   </p>
-                  <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
-                    {wordLensPayload.focus_label}
-                  </p>
-                </div>
 
-                <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                    Исходное слово
-                  </p>
-                  <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
-                    {wordLensPayload.original_word}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-stone-700">
-                    {wordLensPayload.transliteration}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                    Semantic core
-                  </p>
-                  <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                    {wordLensPayload.core_meaning}
-                  </p>
-                </div>
-
-                <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                    Почему это важно
-                  </p>
-                  <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                    {wordLensPayload.why_it_matters}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Где ещё это работает в Писании
-                </p>
-
-                <div className="mt-4 space-y-4">
-                  {wordLensPayload.cross_references.map((item, index) => (
-                    <div key={`${item.reference}-${index}`} className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
-                      <p className="text-sm font-semibold text-stone-900">{item.reference}</p>
-                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">“{item.quote}”</p>
-                      <p className="mt-2 text-sm leading-6 text-stone-700">{item.note}</p>
+                  <div className="mt-3 grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                        Слово / выражение в стихе
+                      </p>
+                      <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
+                        {item.focus_label}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              <article className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Исследовательский разворот
-                </p>
-                <h3 className="mt-2 text-2xl font-semibold leading-tight text-stone-900">
-                  {wordLensPayload.article.title}
-                </h3>
-                <p className="mt-4 text-[1rem] leading-8 text-stone-900">
-                  {wordLensPayload.article.lead}
-                </p>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                        Исходное слово
+                      </p>
+                      <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
+                        {item.original_word}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-stone-700">
+                        {item.transliteration}
+                      </p>
+                    </div>
+                  </div>
 
-                <div className="mt-5 space-y-5">
-                  {wordLensPayload.article.body.map((paragraph, index) => (
-                    <p key={`${index}-${paragraph.slice(0, 24)}`} className="text-[0.98rem] leading-8 text-stone-800">
-                      {paragraph}
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                        Semantic core
+                      </p>
+                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                        {item.core_meaning}
+                      </p>
+                    </div>
+
+                    <div className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                        Почему это важно
+                      </p>
+                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                        {item.why_it_matters}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                      Куда копать дальше
                     </p>
-                  ))}
-                </div>
-
-                {wordLensPayload.article.quote ? (
-                  <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
-                    {wordLensPayload.article.quote}
-                  </blockquote>
-                ) : null}
-              </article>
+                    <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                      {item.dig_deeper_hint}
+                    </p>
+                  </div>
+                </article>
+              ))}
             </div>
           ) : null}
         </div>
