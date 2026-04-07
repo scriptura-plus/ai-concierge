@@ -55,6 +55,19 @@ type ModeratorWordLensResponse = {
   raw?: string
 }
 
+type DeepWordArticle = {
+  title: string
+  lead: string
+  body: string[]
+  quote?: string
+}
+
+type DeepWordArticleResponse = {
+  article?: DeepWordArticle
+  error?: string
+  raw?: string
+}
+
 type WorkspaceClientProps = {
   reference: string
   verseText: string
@@ -109,6 +122,12 @@ export default function WorkspaceClient({
   const [wordLensLoading, setWordLensLoading] = useState(false)
   const [wordLensError, setWordLensError] = useState('')
   const [wordLensRaw, setWordLensRaw] = useState('')
+
+  const [deepWordIndex, setDeepWordIndex] = useState<number | null>(null)
+  const [deepWordArticle, setDeepWordArticle] = useState<DeepWordArticle | null>(null)
+  const [deepWordLoadingIndex, setDeepWordLoadingIndex] = useState<number | null>(null)
+  const [deepWordError, setDeepWordError] = useState('')
+  const [deepWordRaw, setDeepWordRaw] = useState('')
 
   const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
   const directionRequest = useMemo(() => normalizeText(directionInput), [directionInput])
@@ -256,6 +275,10 @@ export default function WorkspaceClient({
     setWordLensError('')
     setWordLensRaw('')
     setWordLensPayload(null)
+    setDeepWordIndex(null)
+    setDeepWordArticle(null)
+    setDeepWordError('')
+    setDeepWordRaw('')
 
     try {
       const res = await fetch('/api/moderator/workspace/word-lens', {
@@ -280,6 +303,45 @@ export default function WorkspaceClient({
       setWordLensError('Не удалось сгенерировать линзу «Слово».')
     } finally {
       setWordLensLoading(false)
+    }
+  }
+
+  async function generateDeepWordArticle(node: WordMapNode, index: number) {
+    setDeepWordLoadingIndex(index)
+    setDeepWordError('')
+    setDeepWordRaw('')
+    setDeepWordIndex(index)
+    setDeepWordArticle(null)
+
+    try {
+      const res = await fetch('/api/moderator/workspace/word-lens/deep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          verseText,
+          focus_label: node.focus_label,
+          original_word: node.original_word,
+          transliteration: node.transliteration,
+          core_meaning: node.core_meaning,
+          why_it_matters: node.why_it_matters,
+          dig_deeper_hint: node.dig_deeper_hint,
+        }),
+      })
+
+      const data: DeepWordArticleResponse = await res.json()
+
+      if (!res.ok || !data.article) {
+        setDeepWordError(data.error || 'Не удалось сгенерировать глубокое исследование по слову.')
+        setDeepWordRaw(data.raw || '')
+        return
+      }
+
+      setDeepWordArticle(data.article)
+    } catch {
+      setDeepWordError('Не удалось сгенерировать глубокое исследование по слову.')
+    } finally {
+      setDeepWordLoadingIndex(null)
     }
   }
 
@@ -477,8 +539,8 @@ export default function WorkspaceClient({
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
                 Эта линза строит semantic map стиха и показывает 3–5 ключевых слов или выражений,
-                которые реально несут смысловую нагрузку. Это не одна трактовка, а карта лучших
-                направлений, куда можно копать дальше.
+                которые реально несут смысловую нагрузку. Из любого узла можно сразу пойти в
+                глубокое word-study исследование.
               </p>
             </div>
 
@@ -507,68 +569,136 @@ export default function WorkspaceClient({
 
           {wordLensPayload ? (
             <div className="mt-5 space-y-4">
-              {wordLensPayload.map((item, index) => (
-                <article
-                  key={`${item.focus_label}-${index}`}
-                  className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                    Узел {index + 1}
-                  </p>
+              {wordLensPayload.map((item, index) => {
+                const isDeepLoading = deepWordLoadingIndex === index
+                const isDeepOpen = deepWordIndex === index && !!deepWordArticle
 
-                  <div className="mt-3 grid gap-4 md:grid-cols-2">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Слово / выражение в стихе
-                      </p>
-                      <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
-                        {item.focus_label}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Исходное слово
-                      </p>
-                      <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
-                        {item.original_word}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-stone-700">
-                        {item.transliteration}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Semantic core
-                      </p>
-                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                        {item.core_meaning}
-                      </p>
-                    </div>
-
-                    <div className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Почему это важно
-                      </p>
-                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                        {item.why_it_matters}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
+                return (
+                  <article
+                    key={`${item.focus_label}-${index}`}
+                    className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
+                  >
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                      Куда копать дальше
+                      Узел {index + 1}
                     </p>
-                    <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                      {item.dig_deeper_hint}
-                    </p>
-                  </div>
-                </article>
-              ))}
+
+                    <div className="mt-3 grid gap-4 md:grid-cols-2">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                          Слово / выражение в стихе
+                        </p>
+                        <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
+                          {item.focus_label}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                          Исходное слово
+                        </p>
+                        <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
+                          {item.original_word}
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-stone-700">
+                          {item.transliteration}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                          Semantic core
+                        </p>
+                        <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                          {item.core_meaning}
+                        </p>
+                      </div>
+
+                      <div className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                          Почему это важно
+                        </p>
+                        <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                          {item.why_it_matters}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                        Куда копать дальше
+                      </p>
+                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                        {item.dig_deeper_hint}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => void generateDeepWordArticle(item, index)}
+                        disabled={isDeepLoading}
+                        className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
+                      >
+                        {isDeepLoading ? 'Генерация...' : 'Копать глубже'}
+                      </button>
+
+                      {isDeepOpen ? (
+                        <span className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700">
+                          Открыто текущее исследование
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {deepWordIndex === index && deepWordError ? (
+                      <p className="mt-3 text-sm text-red-700">{deepWordError}</p>
+                    ) : null}
+
+                    {deepWordIndex === index && deepWordRaw ? (
+                      <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fdf9f1] px-4 py-4">
+                        <summary className="cursor-pointer text-sm font-medium text-stone-700">
+                          Показать raw output
+                        </summary>
+                        <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                          {deepWordRaw}
+                        </pre>
+                      </details>
+                    ) : null}
+
+                    {deepWordIndex === index && deepWordArticle ? (
+                      <article className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fdf9f1] px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                          Глубокое исследование
+                        </p>
+                        <h3 className="mt-2 text-2xl font-semibold leading-tight text-stone-900">
+                          {deepWordArticle.title}
+                        </h3>
+                        <p className="mt-4 text-[1rem] leading-8 text-stone-900">
+                          {deepWordArticle.lead}
+                        </p>
+
+                        <div className="mt-5 space-y-5">
+                          {deepWordArticle.body.map((paragraph, paragraphIndex) => (
+                            <p
+                              key={`${paragraphIndex}-${paragraph.slice(0, 24)}`}
+                              className="text-[0.98rem] leading-8 text-stone-800"
+                            >
+                              {paragraph}
+                            </p>
+                          ))}
+                        </div>
+
+                        {deepWordArticle.quote ? (
+                          <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
+                            {deepWordArticle.quote}
+                          </blockquote>
+                        ) : null}
+                      </article>
+                    ) : null}
+                  </article>
+                )
+              })}
             </div>
           ) : null}
         </div>
