@@ -115,6 +115,36 @@ OUTPUT REQUIREMENTS
 `.trim()
 }
 
+function buildRepairPrompt(raw: string) {
+  return `
+You are a JSON repair tool.
+
+You will receive model output that was SUPPOSED to be valid JSON for this schema:
+
+{
+  "title": "...",
+  "lead": "...",
+  "body": ["...", "...", "..."],
+  "quote": "optional short line"
+}
+
+TASK:
+Convert the content into valid JSON matching exactly that schema.
+
+RULES:
+- Return ONLY valid JSON
+- No markdown
+- No commentary
+- Preserve the Russian meaning and phrasing as much as possible
+- "body" must be an array of 3-5 substantial paragraphs
+- If there is no quote, omit the quote field
+- Do not add explanations
+
+RAW INPUT:
+${raw}
+`.trim()
+}
+
 function extractJsonObject(raw: string): string | null {
   const start = raw.indexOf('{')
   const end = raw.lastIndexOf('}')
@@ -147,6 +177,30 @@ function parseArticle(raw: string): ArticlePayload | null {
   } catch {
     return null
   }
+}
+
+async function repairArticle(raw: string): Promise<ArticlePayload | null> {
+  const repairPrompt = buildRepairPrompt(raw)
+
+  const repairResult = await runModel({
+    prompt: repairPrompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 2200,
+  })
+
+  if (!repairResult.ok) return null
+
+  const repairedRaw = repairResult.rawText
+  let repaired = parseArticle(repairedRaw)
+
+  if (!repaired) {
+    const extracted = extractJsonObject(repairedRaw)
+    if (extracted) {
+      repaired = parseArticle(extracted)
+    }
+  }
+
+  return repaired
 }
 
 function looksRussian(text: string): boolean {
@@ -228,6 +282,10 @@ export async function POST(req: Request) {
       if (extracted) {
         article = parseArticle(extracted)
       }
+    }
+
+    if (!article) {
+      article = await repairArticle(rawText)
     }
 
     if (!article) {
