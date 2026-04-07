@@ -11,14 +11,15 @@ export async function GET() {
 
     const { count, error } = await supabase
       .from('unfold_events')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('review_status', 'new')
 
     if (error) {
-      return NextResponse.json(
-        { error: `Failed to load pending unfold count: ${error.message}` },
-        { status: 500 }
-      )
+      console.error('Failed to load pending unfold count:', error.message)
+
+      return NextResponse.json({
+        pendingCount: 0,
+      })
     }
 
     return NextResponse.json({
@@ -27,9 +28,8 @@ export async function GET() {
   } catch (error) {
     console.error('Pending unfold count API error:', error)
 
-    return NextResponse.json(
-      { error: 'Something went wrong while loading pending unfold count.' },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      pendingCount: 0,
+    })
   }
 }
