@@ -40,6 +40,33 @@ type DirectionSearchResponse = {
   raw?: string
 }
 
+type WordReference = {
+  reference: string
+  quote: string
+  note: string
+}
+
+type WordLensPayload = {
+  focus_label: string
+  original_word: string
+  transliteration: string
+  core_meaning: string
+  why_it_matters: string
+  cross_references: WordReference[]
+  article: {
+    title: string
+    lead: string
+    body: string[]
+    quote?: string
+  }
+}
+
+type ModeratorWordLensResponse = {
+  payload?: WordLensPayload
+  error?: string
+  raw?: string
+}
+
 type WorkspaceClientProps = {
   reference: string
   verseText: string
@@ -89,6 +116,11 @@ export default function WorkspaceClient({
   const [directionLoading, setDirectionLoading] = useState(false)
   const [directionError, setDirectionError] = useState('')
   const [directionRaw, setDirectionRaw] = useState('')
+
+  const [wordLensPayload, setWordLensPayload] = useState<WordLensPayload | null>(null)
+  const [wordLensLoading, setWordLensLoading] = useState(false)
+  const [wordLensError, setWordLensError] = useState('')
+  const [wordLensRaw, setWordLensRaw] = useState('')
 
   const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
   const directionRequest = useMemo(() => normalizeText(directionInput), [directionInput])
@@ -231,181 +263,346 @@ export default function WorkspaceClient({
     }
   }
 
+  async function generateWordLens() {
+    setWordLensLoading(true)
+    setWordLensError('')
+    setWordLensRaw('')
+    setWordLensPayload(null)
+
+    try {
+      const res = await fetch('/api/moderator/workspace/word-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          verseText,
+        }),
+      })
+
+      const data: ModeratorWordLensResponse = await res.json()
+
+      if (!res.ok || !data.payload) {
+        setWordLensError(data.error || 'Не удалось сгенерировать линзу «Слово».')
+        setWordLensRaw(data.raw || '')
+        return
+      }
+
+      setWordLensPayload(data.payload)
+    } catch {
+      setWordLensError('Не удалось сгенерировать линзу «Слово».')
+    } finally {
+      setWordLensLoading(false)
+    }
+  }
+
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-        <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-            Поле 1
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-            Точная огранка
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            Сюда модератор вставляет 1–2 предложения, которые нельзя менять. AI должен только
-            достроить карточку вокруг них и предложить несколько вариантов упаковки.
-          </p>
-          <p className="mt-2 rounded-[14px] border border-stone-300/60 bg-[#fffaf1] px-3 py-2 text-sm leading-6 text-stone-700">
-            Вставленный фрагмент сохраняется дословно. AI не переписывает его, а только достраивает
-            карточку вокруг него.
-          </p>
+    <div className="space-y-5">
+      <div className="grid gap-5 lg:grid-cols-2">
+        <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
+          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+              Поле 1
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
+              Точная огранка
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-stone-600">
+              Сюда модератор вставляет 1–2 предложения, которые нельзя менять. AI должен только
+              достроить карточку вокруг них и предложить несколько вариантов упаковки.
+            </p>
+            <p className="mt-2 rounded-[14px] border border-stone-300/60 bg-[#fffaf1] px-3 py-2 text-sm leading-6 text-stone-700">
+              Вставленный фрагмент сохраняется дословно. AI не переписывает его, а только достраивает
+              карточку вокруг него.
+            </p>
 
-          <textarea
-            value={exactInput}
-            onChange={(e) => setExactInput(e.target.value)}
-            placeholder="Вставь 1–2 предложения, которые нужно сохранить дословно."
-            className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
-          />
+            <textarea
+              value={exactInput}
+              onChange={(e) => setExactInput(e.target.value)}
+              placeholder="Вставь 1–2 предложения, которые нужно сохранить дословно."
+              className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
+            />
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => void generateExactBuilder()}
-              disabled={exactLoading}
-              className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
-            >
-              {exactLoading ? 'Генерация...' : 'Сгенерировать 3 варианта'}
-            </button>
-          </div>
-
-          {exactError ? <p className="mt-3 text-sm text-red-700">{exactError}</p> : null}
-          {saveError ? <p className="mt-3 text-sm text-red-700">{saveError}</p> : null}
-          {saveMessage ? <p className="mt-3 text-sm text-emerald-700">{saveMessage}</p> : null}
-
-          {exactRaw ? (
-            <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-              <summary className="cursor-pointer text-sm font-medium text-stone-700">
-                Показать raw output
-              </summary>
-              <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                {exactRaw}
-              </pre>
-            </details>
-          ) : null}
-
-          {exactOptions.length > 0 ? (
-            <div className="mt-5 space-y-4">
-              {exactOptions.map((option, index) => {
-                const isSaving = savingIndex === index
-                const isSaved = savedIndexes.includes(index)
-
-                return (
-                  <article
-                    key={`${option.title}-${index}`}
-                    className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                      Вариант {index + 1}
-                    </p>
-                    <h3 className="mt-2 text-xl font-semibold leading-tight text-stone-900">
-                      {option.title}
-                    </h3>
-                    <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{option.text}</p>
-
-                    <div className="mt-4 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => void saveOption(option, index)}
-                        disabled={isSaving || isSaved}
-                        className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
-                      >
-                        {isSaving
-                          ? 'Сохранение...'
-                          : isSaved
-                            ? 'Сохранено'
-                            : 'Сохранить как карточку'}
-                      </button>
-
-                      {isSaved ? (
-                        <span className="text-sm text-emerald-700">Карточка уже сохранена</span>
-                      ) : null}
-                    </div>
-                  </article>
-                )
-              })}
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void generateExactBuilder()}
+                disabled={exactLoading}
+                className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
+              >
+                {exactLoading ? 'Генерация...' : 'Сгенерировать 3 варианта'}
+              </button>
             </div>
-          ) : null}
-        </div>
-      </section>
+
+            {exactError ? <p className="mt-3 text-sm text-red-700">{exactError}</p> : null}
+            {saveError ? <p className="mt-3 text-sm text-red-700">{saveError}</p> : null}
+            {saveMessage ? <p className="mt-3 text-sm text-emerald-700">{saveMessage}</p> : null}
+
+            {exactRaw ? (
+              <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                <summary className="cursor-pointer text-sm font-medium text-stone-700">
+                  Показать raw output
+                </summary>
+                <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                  {exactRaw}
+                </pre>
+              </details>
+            ) : null}
+
+            {exactOptions.length > 0 ? (
+              <div className="mt-5 space-y-4">
+                {exactOptions.map((option, index) => {
+                  const isSaving = savingIndex === index
+                  const isSaved = savedIndexes.includes(index)
+
+                  return (
+                    <article
+                      key={`${option.title}-${index}`}
+                      className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                        Вариант {index + 1}
+                      </p>
+                      <h3 className="mt-2 text-xl font-semibold leading-tight text-stone-900">
+                        {option.title}
+                      </h3>
+                      <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{option.text}</p>
+
+                      <div className="mt-4 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => void saveOption(option, index)}
+                          disabled={isSaving || isSaved}
+                          className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
+                        >
+                          {isSaving
+                            ? 'Сохранение...'
+                            : isSaved
+                              ? 'Сохранено'
+                              : 'Сохранить как карточку'}
+                        </button>
+
+                        {isSaved ? (
+                          <span className="text-sm text-emerald-700">Карточка уже сохранена</span>
+                        ) : null}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
+          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+              Поле 2
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
+              Куда копать
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-stone-600">
+              Сюда модератор формулирует направление поиска: какой угол интересует, что хочется
+              найти, какой оттенок мысли нужен. Сейчас это поле генерирует длинный unfold-style
+              разворот мысли по заданному направлению.
+            </p>
+
+            <textarea
+              value={directionInput}
+              onChange={(e) => setDirectionInput(e.target.value)}
+              placeholder="Опиши, куда именно копать по этому стиху. Например: почему здесь знание связано не с объемом информации, а с типом отношения?"
+              className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
+            />
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void generateDirectionArticle()}
+                disabled={directionLoading}
+                className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
+              >
+                {directionLoading ? 'Генерация...' : 'Сгенерировать исследование'}
+              </button>
+            </div>
+
+            {directionError ? <p className="mt-3 text-sm text-red-700">{directionError}</p> : null}
+
+            {directionRaw ? (
+              <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                <summary className="cursor-pointer text-sm font-medium text-stone-700">
+                  Показать raw output
+                </summary>
+                <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                  {directionRaw}
+                </pre>
+              </details>
+            ) : null}
+
+            {directionArticle ? (
+              <article className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Исследование
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold leading-tight text-stone-900">
+                  {directionArticle.title}
+                </h3>
+                <p className="mt-4 text-[1rem] leading-8 text-stone-900">{directionArticle.lead}</p>
+
+                <div className="mt-5 space-y-5">
+                  {directionArticle.body.map((paragraph, index) => (
+                    <p key={`${index}-${paragraph.slice(0, 24)}`} className="text-[0.98rem] leading-8 text-stone-800">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+
+                {directionArticle.quote ? (
+                  <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
+                    {directionArticle.quote}
+                  </blockquote>
+                ) : null}
+              </article>
+            ) : savedCards.length > 0 ? (
+              <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Уже сохранено по стиху
+                </p>
+                <p className="mt-2 text-sm leading-6 text-stone-700">
+                  Сначала можно посмотреть, какие формулировки уже существуют, а потом запускать
+                  новое исследование по другому углу.
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      </div>
 
       <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
         <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-            Поле 2
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-            Куда копать
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            Сюда модератор формулирует направление поиска: какой угол интересует, что хочется
-            найти, какой оттенок мысли нужен. Сейчас это поле генерирует длинный unfold-style
-            разворот мысли по заданному направлению.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Линза 1
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
+                Слово
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
+                Эта линза выбирает одно ключевое слово или выражение, которое реально несёт
+                смысловую нагрузку в стихе, показывает его исходную форму, транслитерацию,
+                semantic core, места в Писании и даёт длинный исследовательский разворот.
+              </p>
+            </div>
 
-          <textarea
-            value={directionInput}
-            onChange={(e) => setDirectionInput(e.target.value)}
-            placeholder="Опиши, куда именно копать по этому стиху. Например: почему здесь знание связано не с объемом информации, а с типом отношения?"
-            className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
-          />
-
-          <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={() => void generateDirectionArticle()}
-              disabled={directionLoading}
+              onClick={() => void generateWordLens()}
+              disabled={wordLensLoading}
               className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
             >
-              {directionLoading ? 'Генерация...' : 'Сгенерировать исследование'}
+              {wordLensLoading ? 'Генерация...' : 'Запустить линзу «Слово»'}
             </button>
           </div>
 
-          {directionError ? <p className="mt-3 text-sm text-red-700">{directionError}</p> : null}
+          {wordLensError ? <p className="mt-3 text-sm text-red-700">{wordLensError}</p> : null}
 
-          {directionRaw ? (
+          {wordLensRaw ? (
             <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <summary className="cursor-pointer text-sm font-medium text-stone-700">
                 Показать raw output
               </summary>
               <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                {directionRaw}
+                {wordLensRaw}
               </pre>
             </details>
           ) : null}
 
-          {directionArticle ? (
-            <article className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                Исследование
-              </p>
-              <h3 className="mt-2 text-2xl font-semibold leading-tight text-stone-900">
-                {directionArticle.title}
-              </h3>
-              <p className="mt-4 text-[1rem] leading-8 text-stone-900">{directionArticle.lead}</p>
-
-              <div className="mt-5 space-y-5">
-                {directionArticle.body.map((paragraph, index) => (
-                  <p key={`${index}-${paragraph.slice(0, 24)}`} className="text-[0.98rem] leading-8 text-stone-800">
-                    {paragraph}
+          {wordLensPayload ? (
+            <div className="mt-5 space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                    Выбранное слово / выражение
                   </p>
-                ))}
+                  <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
+                    {wordLensPayload.focus_label}
+                  </p>
+                </div>
+
+                <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                    Исходное слово
+                  </p>
+                  <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
+                    {wordLensPayload.original_word}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-stone-700">
+                    {wordLensPayload.transliteration}
+                  </p>
+                </div>
               </div>
 
-              {directionArticle.quote ? (
-                <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
-                  {directionArticle.quote}
-                </blockquote>
-              ) : null}
-            </article>
-          ) : savedCards.length > 0 ? (
-            <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                Уже сохранено по стиху
-              </p>
-              <p className="mt-2 text-sm leading-6 text-stone-700">
-                Сначала можно посмотреть, какие формулировки уже существуют, а потом запускать
-                новое исследование по другому углу.
-              </p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                    Semantic core
+                  </p>
+                  <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                    {wordLensPayload.core_meaning}
+                  </p>
+                </div>
+
+                <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                    Почему это важно
+                  </p>
+                  <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                    {wordLensPayload.why_it_matters}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Где ещё это работает в Писании
+                </p>
+
+                <div className="mt-4 space-y-4">
+                  {wordLensPayload.cross_references.map((item, index) => (
+                    <div key={`${item.reference}-${index}`} className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
+                      <p className="text-sm font-semibold text-stone-900">{item.reference}</p>
+                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">“{item.quote}”</p>
+                      <p className="mt-2 text-sm leading-6 text-stone-700">{item.note}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <article className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Исследовательский разворот
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold leading-tight text-stone-900">
+                  {wordLensPayload.article.title}
+                </h3>
+                <p className="mt-4 text-[1rem] leading-8 text-stone-900">
+                  {wordLensPayload.article.lead}
+                </p>
+
+                <div className="mt-5 space-y-5">
+                  {wordLensPayload.article.body.map((paragraph, index) => (
+                    <p key={`${index}-${paragraph.slice(0, 24)}`} className="text-[0.98rem] leading-8 text-stone-800">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+
+                {wordLensPayload.article.quote ? (
+                  <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
+                    {wordLensPayload.article.quote}
+                  </blockquote>
+                ) : null}
+              </article>
             </div>
           ) : null}
         </div>
