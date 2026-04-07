@@ -1,5 +1,3 @@
-src/app/api/moderator/unfolds/pending-count/route.ts
-
 import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
