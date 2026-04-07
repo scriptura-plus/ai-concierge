@@ -23,6 +23,13 @@ INPUTS:
 
 Write the full output in Russian.
 
+IMPORTANT TRANSLITERATION RULE
+
+Whenever you provide transliteration, write it in readable Russian transliteration, not in Latin letters.
+Example:
+- not "patach ozen"
+- but "патах озен"
+
 MISSION
 
 Your task is not to choose one random interesting word.
@@ -61,7 +68,7 @@ The most likely original-language form behind it
 Only when reasonably identifiable.
 
 3. transliteration
-A readable transliteration.
+A readable Russian transliteration.
 
 4. core_meaning
 A concise semantic core in Russian.
