@@ -148,6 +148,7 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
   const verse = Number(resolved.verse)
 
   const reference = formatReference(book, resolved.chapter, resolved.verse)
+  const insightsLibraryHref = `/moderator/insights?filter=saved&book=${book}&chapter=${resolved.chapter}&verse=${resolved.verse}`
 
   let verseText = ''
   let verseError = ''
@@ -277,7 +278,7 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
               </div>
 
               <Link
-                href="/moderator/insights"
+                href={insightsLibraryHref}
                 className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
               >
                 Открыть всю библиотеку
