@@ -27,6 +27,19 @@ type SaveCardResponse = {
   error?: string
 }
 
+type DirectionArticle = {
+  title: string
+  lead: string
+  body: string[]
+  quote?: string
+}
+
+type DirectionSearchResponse = {
+  article?: DirectionArticle
+  error?: string
+  raw?: string
+}
+
 type WorkspaceClientProps = {
   reference: string
   verseText: string
@@ -71,7 +84,14 @@ export default function WorkspaceClient({
   const [saveMessage, setSaveMessage] = useState('')
   const [saveError, setSaveError] = useState('')
 
+  const [directionInput, setDirectionInput] = useState('')
+  const [directionArticle, setDirectionArticle] = useState<DirectionArticle | null>(null)
+  const [directionLoading, setDirectionLoading] = useState(false)
+  const [directionError, setDirectionError] = useState('')
+  const [directionRaw, setDirectionRaw] = useState('')
+
   const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
+  const directionRequest = useMemo(() => normalizeText(directionInput), [directionInput])
 
   async function generateExactBuilder() {
     if (!sacredPassage) {
@@ -133,9 +153,7 @@ export default function WorkspaceClient({
       return
     }
 
-    if (savedIndexes.includes(index)) {
-      return
-    }
+    if (savedIndexes.includes(index)) return
 
     setSavingIndex(index)
     setSaveMessage('')
@@ -172,6 +190,44 @@ export default function WorkspaceClient({
       setSaveError('Не удалось сохранить карточку.')
     } finally {
       setSavingIndex(null)
+    }
+  }
+
+  async function generateDirectionArticle() {
+    if (!directionRequest) {
+      setDirectionError('Опиши, куда именно копать по этому стиху.')
+      return
+    }
+
+    setDirectionLoading(true)
+    setDirectionError('')
+    setDirectionRaw('')
+    setDirectionArticle(null)
+
+    try {
+      const res = await fetch('/api/moderator/workspace/direction-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          verseText,
+          directionRequest,
+        }),
+      })
+
+      const data: DirectionSearchResponse = await res.json()
+
+      if (!res.ok || !data.article) {
+        setDirectionError(data.error || 'Не удалось сгенерировать исследование.')
+        setDirectionRaw(data.raw || '')
+        return
+      }
+
+      setDirectionArticle(data.article)
+    } catch {
+      setDirectionError('Не удалось сгенерировать исследование.')
+    } finally {
+      setDirectionLoading(false)
     }
   }
 
@@ -282,41 +338,73 @@ export default function WorkspaceClient({
           </h2>
           <p className="mt-2 text-sm leading-6 text-stone-600">
             Сюда модератор формулирует направление поиска: какой угол интересует, что хочется
-            найти, какой оттенок мысли нужен. Это поле будет следующим этапом.
+            найти, какой оттенок мысли нужен. Сейчас это поле генерирует длинный unfold-style
+            разворот мысли по заданному направлению.
           </p>
 
           <textarea
-            disabled
-            placeholder="Скоро здесь будет рабочее поле: опиши, куда именно копать по этому стиху."
-            className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-700 outline-none opacity-80"
+            value={directionInput}
+            onChange={(e) => setDirectionInput(e.target.value)}
+            placeholder="Опиши, куда именно копать по этому стиху. Например: почему здесь знание связано не с объемом информации, а с типом отношения?"
+            className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
           />
 
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
-              disabled
-              className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 opacity-60"
+              onClick={() => void generateDirectionArticle()}
+              disabled={directionLoading}
+              className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
             >
-              Сгенерировать идеи
-            </button>
-
-            <button
-              type="button"
-              disabled
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 opacity-60"
-            >
-              Ещё глубже
+              {directionLoading ? 'Генерация...' : 'Сгенерировать исследование'}
             </button>
           </div>
 
-          {savedCards.length > 0 ? (
+          {directionError ? <p className="mt-3 text-sm text-red-700">{directionError}</p> : null}
+
+          {directionRaw ? (
+            <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+              <summary className="cursor-pointer text-sm font-medium text-stone-700">
+                Показать raw output
+              </summary>
+              <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                {directionRaw}
+              </pre>
+            </details>
+          ) : null}
+
+          {directionArticle ? (
+            <article className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                Исследование
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold leading-tight text-stone-900">
+                {directionArticle.title}
+              </h3>
+              <p className="mt-4 text-[1rem] leading-8 text-stone-900">{directionArticle.lead}</p>
+
+              <div className="mt-5 space-y-5">
+                {directionArticle.body.map((paragraph, index) => (
+                  <p key={`${index}-${paragraph.slice(0, 24)}`} className="text-[0.98rem] leading-8 text-stone-800">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+
+              {directionArticle.quote ? (
+                <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
+                  {directionArticle.quote}
+                </blockquote>
+              ) : null}
+            </article>
+          ) : savedCards.length > 0 ? (
             <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
                 Уже сохранено по стиху
               </p>
               <p className="mt-2 text-sm leading-6 text-stone-700">
                 Сначала можно посмотреть, какие формулировки уже существуют, а потом запускать
-                directed search по новым углам.
+                новое исследование по другому углу.
               </p>
             </div>
           ) : null}
