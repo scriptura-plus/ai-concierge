@@ -326,34 +326,6 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
           chapter={chapter}
           verse={verse}
         />
-
-        <section className="mt-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-              Линзы
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-              Инструменты поиска
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-stone-600">
-              Линзы здесь должны стать частью moderator workspace, а не просто пользовательской
-              вкладкой. Они нужны как отдельные способы добычи кандидатов по стиху.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              {['Слово', 'Напряжение', 'Почему именно эта фраза'].map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  disabled
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 opacity-60"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
       </div>
     </main>
   )
