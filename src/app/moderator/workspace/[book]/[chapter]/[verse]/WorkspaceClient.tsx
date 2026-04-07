@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 type SavedCard = {
   id: string
@@ -124,8 +123,6 @@ export default function WorkspaceClient({
   chapter,
   verse,
 }: WorkspaceClientProps) {
-  const router = useRouter()
-
   const storageKey = useMemo(
     () => `moderator-workspace-state:${book}:${chapter}:${verse}`,
     [book, chapter, verse]
@@ -355,7 +352,6 @@ export default function WorkspaceClient({
 
       setSavedIndexes((prev) => [...prev, index])
       setSaveMessage(`Карточка ${index + 1} сохранена.`)
-      router.refresh()
     } catch {
       setSaveError('Не удалось сохранить карточку.')
     } finally {
