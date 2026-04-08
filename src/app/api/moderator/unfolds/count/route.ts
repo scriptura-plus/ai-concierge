@@ -10,6 +10,7 @@ export async function GET() {
     const supabase = getSupabaseServerClient()
 
     const { count, error } = await supabase
+      .schema('private')
       .from('unfold_events')
       .select('id', { count: 'exact', head: true })
       .eq('review_status', 'new')
