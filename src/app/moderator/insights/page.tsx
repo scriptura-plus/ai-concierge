@@ -28,9 +28,6 @@ type FilterMode = 'saved' | 'hidden' | 'all'
 type PageProps = {
   searchParams?: Promise<{
     filter?: string
-    book?: string
-    chapter?: string
-    verse?: string
   }>
 }
 
@@ -93,21 +90,11 @@ function pickRuText(item: CuratedInsightRow) {
   return item.text_ru?.trim() || item.text_en?.trim() || ''
 }
 
-function formatBookLabel(bookSlug: string) {
-  return bookSlug
-    .split('-')
-    .filter(Boolean)
-    .map((part) => {
-      if (/^\d+$/.test(part)) return part
-      return part.charAt(0).toUpperCase() + part.slice(1)
-    })
-    .join(' ')
-}
-
 async function loadCuratedInsights(): Promise<CuratedInsightRow[]> {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
+    .schema('private')
     .from('curated_insights')
     .select(
       'id, verse_ref, book, chapter, verse, mode, title_ru, text_ru, title_en, text_en, angle_note, status, unfold_count, promoted_from_unfold, source_language, created_at, updated_at'
@@ -125,24 +112,6 @@ async function loadCuratedInsights(): Promise<CuratedInsightRow[]> {
 export default async function ModeratorInsightsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const filter = normalizeFilter(resolvedSearchParams?.filter)
-
-  const workspaceBook = String(resolvedSearchParams?.book ?? '').trim()
-  const workspaceChapter = String(resolvedSearchParams?.chapter ?? '').trim()
-  const workspaceVerse = String(resolvedSearchParams?.verse ?? '').trim()
-
-  const hasWorkspaceContext = Boolean(workspaceBook && workspaceChapter && workspaceVerse)
-
-  const workspaceHref = hasWorkspaceContext
-    ? `/moderator/workspace/${workspaceBook}/${workspaceChapter}/${workspaceVerse}`
-    : '/moderator'
-
-  const workspaceLabel = hasWorkspaceContext
-    ? `Вернуться в ${formatBookLabel(workspaceBook)} ${workspaceChapter}:${workspaceVerse}`
-    : 'Вернуться в рабочее пространство'
-
-  const filterSuffix = hasWorkspaceContext
-    ? `&book=${workspaceBook}&chapter=${workspaceChapter}&verse=${workspaceVerse}`
-    : ''
 
   let insights: CuratedInsightRow[] = []
   let loadError = ''
@@ -176,13 +145,6 @@ export default async function ModeratorInsightsPage({ searchParams }: PageProps)
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              href={workspaceHref}
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {workspaceLabel}
-            </Link>
-
             <Link
               href="/moderator/unfolds"
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
@@ -235,7 +197,7 @@ export default async function ModeratorInsightsPage({ searchParams }: PageProps)
 
         <div className="mb-5 flex flex-wrap gap-3">
           <Link
-            href={`/moderator/insights?filter=saved${filterSuffix}`}
+            href="/moderator/insights?filter=saved"
             className={`rounded-full border px-4 py-2 text-sm font-medium transition ${filterClasses(
               filter === 'saved'
             )}`}
@@ -244,7 +206,7 @@ export default async function ModeratorInsightsPage({ searchParams }: PageProps)
           </Link>
 
           <Link
-            href={`/moderator/insights?filter=hidden${filterSuffix}`}
+            href="/moderator/insights?filter=hidden"
             className={`rounded-full border px-4 py-2 text-sm font-medium transition ${filterClasses(
               filter === 'hidden'
             )}`}
@@ -253,7 +215,7 @@ export default async function ModeratorInsightsPage({ searchParams }: PageProps)
           </Link>
 
           <Link
-            href={`/moderator/insights?filter=all${filterSuffix}`}
+            href="/moderator/insights?filter=all"
             className={`rounded-full border px-4 py-2 text-sm font-medium transition ${filterClasses(
               filter === 'all'
             )}`}
@@ -350,22 +312,6 @@ export default async function ModeratorInsightsPage({ searchParams }: PageProps)
             ))}
           </div>
         )}
-
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href={workspaceHref}
-            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-          >
-            {workspaceLabel}
-          </Link>
-
-          <Link
-            href="/moderator"
-            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-          >
-            Рабочий кабинет
-          </Link>
-        </div>
       </div>
     </main>
   )
