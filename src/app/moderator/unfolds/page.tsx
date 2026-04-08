@@ -143,7 +143,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
           </div>
 
           <Link
-            href="/"
+            href="/moderator"
             className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
           >
             Домой
