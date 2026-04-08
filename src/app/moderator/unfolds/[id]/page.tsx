@@ -232,6 +232,7 @@ async function loadUnfoldById(id: string): Promise<UnfoldDetailRow | null> {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
+    .schema('private')
     .from('unfold_events')
     .select(
       `
