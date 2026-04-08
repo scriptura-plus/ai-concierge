@@ -107,6 +107,7 @@ async function loadSavedInsights(book: string, chapter: number, verse: number) {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
+    .schema('private')
     .from('curated_insights')
     .select('id, title_ru, text_ru, title_en, text_en, created_at')
     .eq('book', book.toLowerCase())
@@ -126,6 +127,7 @@ async function loadPendingUnfoldCount(book: string, chapter: number, verse: numb
   const supabase = getSupabaseServerClient()
 
   const { count, error } = await supabase
+    .schema('private')
     .from('unfold_events')
     .select('*', { count: 'exact', head: true })
     .eq('book', book.toLowerCase())
