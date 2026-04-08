@@ -91,6 +91,7 @@ async function loadUnfolds(): Promise<UnfoldRow[]> {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
+    .schema('private')
     .from('unfold_events')
     .select('id, verse_ref, source_mode, source_title, source_text, unfold_text, review_status, created_at')
     .order('created_at', { ascending: false })
