@@ -73,6 +73,7 @@ async function loadInsightById(id: string): Promise<CuratedInsightDetailRow | nu
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
+    .schema('private')
     .from('curated_insights')
     .select(
       'id, verse_ref, book, chapter, verse, mode, title_ru, text_ru, title_en, text_en, title_es, text_es, title_fr, text_fr, title_de, text_de, angle_note, status, unfold_count, promoted_from_unfold, source_language, created_at, updated_at'
