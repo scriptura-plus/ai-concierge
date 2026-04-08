@@ -115,6 +115,17 @@ function buildDeepArticleText(article: DeepWordArticle) {
   ].join('\n\n')
 }
 
+function buildDirectionArticleText(article: DirectionArticle) {
+  return [
+    article.title,
+    '',
+    article.lead,
+    '',
+    ...article.body,
+    ...(article.quote ? ['', `“${article.quote}”`] : []),
+  ].join('\n\n')
+}
+
 export default function WorkspaceClient({
   reference,
   verseText,
@@ -157,6 +168,7 @@ export default function WorkspaceClient({
   const [deepWordRaw, setDeepWordRaw] = useState('')
 
   const [articleActionMessage, setArticleActionMessage] = useState('')
+  const [directionActionMessage, setDirectionActionMessage] = useState('')
   const [isHydrated, setIsHydrated] = useState(false)
 
   const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
@@ -260,6 +272,35 @@ export default function WorkspaceClient({
     }
   }
 
+  async function copyDirectionArticle(article: DirectionArticle) {
+    try {
+      await navigator.clipboard.writeText(buildDirectionArticleText(article))
+      setDirectionActionMessage('Исследование скопировано.')
+    } catch {
+      setDirectionActionMessage('Не удалось скопировать исследование.')
+    }
+  }
+
+  async function shareDirectionArticle(article: DirectionArticle) {
+    const text = buildDirectionArticleText(article)
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: article.title,
+          text,
+        })
+        setDirectionActionMessage('Исследование отправлено в меню «Поделиться».')
+        return
+      }
+
+      await navigator.clipboard.writeText(text)
+      setDirectionActionMessage('Меню «Поделиться» недоступно. Текст скопирован.')
+    } catch {
+      setDirectionActionMessage('Не удалось поделиться исследованием.')
+    }
+  }
+
   async function generateExactBuilder() {
     if (!sacredPassage) {
       setExactError('Вставь 1–2 предложения, которые нужно сохранить дословно.')
@@ -272,6 +313,7 @@ export default function WorkspaceClient({
     setSaveMessage('')
     setSaveError('')
     setSavedIndexes([])
+    setDirectionActionMessage('')
 
     try {
       const res = await fetch('/api/moderator/workspace/exact-builder', {
@@ -369,6 +411,7 @@ export default function WorkspaceClient({
     setDirectionError('')
     setDirectionRaw('')
     setDirectionArticle(null)
+    setDirectionActionMessage('')
 
     try {
       const res = await fetch('/api/moderator/workspace/direction-search', {
@@ -639,6 +682,28 @@ export default function WorkspaceClient({
                   <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
                     {directionArticle.quote}
                   </blockquote>
+                ) : null}
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void copyDirectionArticle(directionArticle)}
+                    className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                  >
+                    Скопировать
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void shareDirectionArticle(directionArticle)}
+                    className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                  >
+                    Поделиться
+                  </button>
+                </div>
+
+                {directionActionMessage ? (
+                  <p className="mt-3 text-sm text-stone-700">{directionActionMessage}</p>
                 ) : null}
               </article>
             ) : savedCards.length > 0 ? (
