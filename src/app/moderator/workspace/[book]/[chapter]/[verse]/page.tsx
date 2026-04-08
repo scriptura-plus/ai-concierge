@@ -214,14 +214,7 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
               href="/moderator"
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
-              Назад
-            </Link>
-
-            <Link
-              href={`/bible/${book}/${resolved.chapter}/${resolved.verse}`}
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              Открыть reading screen
+              Home
             </Link>
           </div>
         </div>
