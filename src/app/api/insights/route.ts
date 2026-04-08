@@ -302,7 +302,6 @@ async function loadSavedInsights(params: {
   const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
-    .schema("private")
     .from("curated_insights")
     .select(
       `
