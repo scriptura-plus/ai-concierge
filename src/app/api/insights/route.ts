@@ -384,12 +384,37 @@ export async function POST(req: Request) {
     const reference = `${safeBook} ${safeChapter}:${safeVerse}`;
     const safeCount = Math.min(Math.max(Number(count ?? 12), 1), 20);
 
-    const { localized: savedInsights, rows: savedRows } = await loadSavedInsights({
-      book: safeBook,
-      chapter: safeChapter,
-      verse: safeVerse,
-      targetLanguage: safeLanguage,
-    });
+    let savedInsights: InsightItem[] = [];
+    let savedRows: CuratedInsightRow[] = [];
+
+    try {
+      const loaded = await loadSavedInsights({
+        book: safeBook,
+        chapter: safeChapter,
+        verse: safeVerse,
+        targetLanguage: safeLanguage,
+      });
+
+      savedInsights = loaded.localized;
+      savedRows = loaded.rows;
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? `loadSavedInsights failed: ${error.message}`
+              : "loadSavedInsights failed.",
+          debug: {
+            reference,
+            safeBook,
+            safeChapter,
+            safeVerse,
+            targetLanguage: safeLanguage,
+          },
+        },
+        { status: 500 }
+      );
+    }
 
     const remainingCount = Math.max(safeCount - savedInsights.length, 0);
 
@@ -414,8 +439,15 @@ export async function POST(req: Request) {
       if (!result.ok) {
         return NextResponse.json(
           {
-            error: result.error,
+            error: result.error || "runModel failed.",
             raw: result.raw || "",
+            debug: {
+              stage: "runModel",
+              reference,
+              savedCount: savedInsights.length,
+              remainingCount,
+              targetLanguage: safeLanguage,
+            },
             savedInsights,
             savedCount: savedInsights.length,
             generatedCount: 0,
@@ -440,6 +472,13 @@ export async function POST(req: Request) {
           {
             error: "Failed to parse insights JSON.",
             raw: rawText || "Empty model response",
+            debug: {
+              stage: "parseInsights",
+              reference,
+              savedCount: savedInsights.length,
+              remainingCount,
+              targetLanguage: safeLanguage,
+            },
             savedInsights,
             savedCount: savedInsights.length,
             generatedCount: 0,
@@ -458,11 +497,9 @@ export async function POST(req: Request) {
       verseText,
       focusWord: focusWord ?? "",
       targetLanguage: safeLanguage,
-
       savedCount: savedInsights.length,
       generatedCount: generatedInsights.length,
       count: insights.length,
-
       savedInsights,
       generatedInsights,
       insights,
@@ -472,7 +509,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       {
-        error: "Something went wrong while generating insights.",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while generating insights.",
       },
       { status: 500 }
     );
