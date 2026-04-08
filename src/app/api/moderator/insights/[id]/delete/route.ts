@@ -21,6 +21,7 @@ export async function POST(req: Request, context: RouteContext) {
     const supabase = getSupabaseServerClient()
 
     const { error } = await supabase
+      .schema('private')
       .from('curated_insights')
       .delete()
       .eq('id', id)
