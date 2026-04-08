@@ -55,18 +55,18 @@ function formatStatus(status: UnfoldDetailRow['review_status']) {
 
 function statusClasses(status: UnfoldDetailRow['review_status']) {
   if (status === 'new') {
-    return 'border-amber-400 bg-amber-100 text-amber-900'
+    return 'border-amber-400/80 bg-amber-100 text-amber-900'
   }
 
   if (status === 'promoted') {
-    return 'border-emerald-400 bg-emerald-100 text-emerald-900'
+    return 'border-emerald-400/80 bg-emerald-100 text-emerald-900'
   }
 
   if (status === 'reviewed') {
-    return 'border-sky-400 bg-sky-100 text-sky-900'
+    return 'border-sky-400/80 bg-sky-100 text-sky-900'
   }
 
-  return 'border-stone-400 bg-stone-200 text-stone-700'
+  return 'border-stone-400/80 bg-stone-200 text-stone-700'
 }
 
 function formatDate(value: string) {
@@ -264,6 +264,24 @@ async function loadUnfoldById(id: string): Promise<UnfoldDetailRow | null> {
   return (data ?? null) as UnfoldDetailRow | null
 }
 
+function ParchmentShell({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <section
+      className={`rounded-[30px] border border-[#dbc79b] bg-[linear-gradient(180deg,#f4e7c6_0%,#eddcb6_48%,#e9d5ab_100%)] p-5 shadow-[0_18px_40px_rgba(84,61,24,0.14),inset_0_1px_0_rgba(255,251,240,0.65)] ${className}`}
+    >
+      <div className="rounded-[24px] border border-[#d9c59e] bg-[radial-gradient(circle_at_top,#fbf3df_0%,#f4e7cb_52%,#ecd9b8_100%)] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,250,239,0.75),inset_0_-8px_18px_rgba(177,140,82,0.08)]">
+        {children}
+      </div>
+    </section>
+  )
+}
+
 export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
   const { id } = await params
 
@@ -277,7 +295,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
       error instanceof Error ? error.message : 'Не удалось загрузить unfold event.'
 
     return (
-      <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
+      <main className="min-h-screen bg-[linear-gradient(180deg,#f7f1e2_0%,#efe5cf_46%,#f5efe3_100%)] px-4 py-6 text-stone-900">
         <div className="mx-auto w-full max-w-4xl">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
@@ -310,7 +328,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f7f1e2_0%,#efe5cf_46%,#f5efe3_100%)] px-4 py-6 text-stone-900">
       <div className="mx-auto w-full max-w-4xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -341,7 +359,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
             </Link>
 
             <Link
-              href="/"
+              href="/moderator"
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
               Домой
@@ -351,7 +369,7 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
 
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <div
-            className={`rounded-full border px-4 py-2 text-sm font-semibold ${statusClasses(item.review_status)}`}
+            className={`rounded-full border px-4 py-2 text-sm font-semibold shadow-sm ${statusClasses(item.review_status)}`}
           >
             Текущий статус: {formatStatus(item.review_status)}
           </div>
@@ -421,100 +439,98 @@ export default async function ModeratorUnfoldDetailPage({ params }: PageProps) {
           unfoldText={item.unfold_text}
         />
 
-        <div className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses(item.review_status)}`}
-              >
-                {formatStatus(item.review_status)}
-              </span>
+        <ParchmentShell>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses(item.review_status)}`}
+            >
+              {formatStatus(item.review_status)}
+            </span>
 
-              <span className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1 text-xs font-medium text-stone-700">
-                {formatMode(item.source_mode)}
-              </span>
+            <span className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1 text-xs font-medium text-stone-700">
+              {formatMode(item.source_mode)}
+            </span>
 
-              <span className="text-xs text-stone-500">
-                Создано: {formatDate(item.created_at)}
-              </span>
+            <span className="text-xs text-stone-500">
+              Создано: {formatDate(item.created_at)}
+            </span>
 
-              <span className="text-xs text-stone-500">
-                Обновлено: {formatDate(item.updated_at)}
-              </span>
-            </div>
+            <span className="text-xs text-stone-500">
+              Обновлено: {formatDate(item.updated_at)}
+            </span>
+          </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Ссылка
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-stone-900">{item.verse_ref}</p>
-              </div>
-
-              <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Идентификаторы
-                </p>
-                <p className="mt-2 break-all text-sm leading-6 text-stone-700">
-                  Event ID: {item.id}
-                </p>
-                <p className="mt-2 break-all text-sm leading-6 text-stone-700">
-                  Source insight ID: {item.source_insight_id ?? 'NULL'}
-                </p>
-                <p className="mt-2 break-all text-sm leading-6 text-stone-700">
-                  Promoted insight ID: {item.promoted_insight_id ?? 'NULL'}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="rounded-[20px] border border-[#d8c39a] bg-[linear-gradient(180deg,#fff9eb_0%,#f8edd5_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,251,241,0.85)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                Исходный заголовок
+                Ссылка
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-stone-900">{item.verse_ref}</p>
+            </div>
+
+            <div className="rounded-[20px] border border-[#d8c39a] bg-[linear-gradient(180deg,#fff9eb_0%,#f8edd5_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,251,241,0.85)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                Идентификаторы
+              </p>
+              <p className="mt-2 break-all text-sm leading-6 text-stone-700">
+                Event ID: {item.id}
+              </p>
+              <p className="mt-2 break-all text-sm leading-6 text-stone-700">
+                Source insight ID: {item.source_insight_id ?? 'NULL'}
+              </p>
+              <p className="mt-2 break-all text-sm leading-6 text-stone-700">
+                Promoted insight ID: {item.promoted_insight_id ?? 'NULL'}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-[20px] border border-[#d8c39a] bg-[linear-gradient(180deg,#fff9eb_0%,#f8edd5_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,251,241,0.85)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+              Исходный заголовок
+            </p>
+            <p className="mt-2 text-xl font-semibold leading-8 text-stone-900">
+              {item.source_title}
+            </p>
+          </div>
+
+          {item.source_angle_note ? (
+            <div className="mt-5 rounded-[20px] border border-[#d8c39a] bg-[linear-gradient(180deg,#fff9eb_0%,#f8edd5_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,251,241,0.85)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                Заметка об угле
+              </p>
+              <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                {item.source_angle_note}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-[20px] border border-[#d8c39a] bg-[linear-gradient(180deg,#fff9eb_0%,#f8edd5_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,251,241,0.85)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                Исходный текст
+              </p>
+              <div className="mt-2 whitespace-pre-wrap text-[0.97rem] leading-8 text-stone-800">
+                {item.source_text}
+              </div>
+            </div>
+
+            <div className="rounded-[20px] border border-[#d8c39a] bg-[linear-gradient(180deg,#fff9eb_0%,#f8edd5_100%)] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,251,241,0.85)]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                Заголовок unfold
               </p>
               <p className="mt-2 text-xl font-semibold leading-8 text-stone-900">
-                {item.source_title}
+                {item.unfold_title ?? 'Без заголовка'}
               </p>
-            </div>
 
-            {item.source_angle_note ? (
-              <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Заметка об угле
-                </p>
-                <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                  {item.source_angle_note}
-                </p>
-              </div>
-            ) : null}
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Исходный текст
-                </p>
-                <div className="mt-2 whitespace-pre-wrap text-[0.97rem] leading-8 text-stone-800">
-                  {item.source_text}
-                </div>
-              </div>
-
-              <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Заголовок unfold
-                </p>
-                <p className="mt-2 text-xl font-semibold leading-8 text-stone-900">
-                  {item.unfold_title ?? 'Без заголовка'}
-                </p>
-
-                <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Текст unfold
-                </p>
-                <div className="mt-2 whitespace-pre-wrap text-[0.97rem] leading-8 text-stone-800">
-                  {item.unfold_text}
-                </div>
+              <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                Текст unfold
+              </p>
+              <div className="mt-2 whitespace-pre-wrap text-[0.97rem] leading-8 text-stone-800">
+                {item.unfold_text}
               </div>
             </div>
           </div>
-        </div>
+        </ParchmentShell>
       </div>
     </main>
   )
