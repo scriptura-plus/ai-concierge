@@ -1,333 +1,272 @@
 import Link from 'next/link'
-import { runModel } from '@/lib/ai/run-model'
-import { getVerseText } from '@/lib/bible/getVerseText'
-import { getSupabaseServerClient } from '@/lib/supabase/server'
-import WorkspaceClient from './WorkspaceClient'
-
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+import { notFound } from 'next/navigation'
+import { getBookById } from '@/lib/bible/books'
 
 type PageProps = {
   params: Promise<{
     book: string
-    chapter: string
-    verse: string
   }>
 }
 
-type SavedInsightRow = {
-  id: string
-  title_ru: string | null
-  text_ru: string | null
-  title_en: string | null
-  text_en: string | null
-  created_at: string
+const RU_BOOK_LABELS: Record<string, string> = {
+  Genesis: 'Бытие',
+  Exodus: 'Исход',
+  Leviticus: 'Левит',
+  Numbers: 'Числа',
+  Deuteronomy: 'Второзаконие',
+  Joshua: 'Иисус Навин',
+  Judges: 'Судей',
+  Ruth: 'Руфь',
+  '1 Samuel': '1 Самуила',
+  '2 Samuel': '2 Самуила',
+  '1 Kings': '1 Царей',
+  '2 Kings': '2 Царей',
+  '1 Chronicles': '1 Летопись',
+  '2 Chronicles': '2 Летопись',
+  Ezra: 'Ездра',
+  Nehemiah: 'Неемия',
+  Esther: 'Эсфирь',
+  Job: 'Иов',
+  Psalms: 'Псалмы',
+  Proverbs: 'Притчи',
+  Ecclesiastes: 'Экклезиаст',
+  'Song of Solomon': 'Песня Соломона',
+  Isaiah: 'Исаия',
+  Jeremiah: 'Иеремия',
+  Lamentations: 'Плач Иеремии',
+  Ezekiel: 'Иезекииль',
+  Daniel: 'Даниил',
+  Hosea: 'Осия',
+  Joel: 'Иоиль',
+  Amos: 'Амос',
+  Obadiah: 'Авдий',
+  Jonah: 'Иона',
+  Micah: 'Михей',
+  Nahum: 'Наум',
+  Habakkuk: 'Аввакум',
+  Zephaniah: 'Софония',
+  Haggai: 'Аггей',
+  Zechariah: 'Захария',
+  Malachi: 'Малахия',
+  Matthew: 'Матфея',
+  Mark: 'Марка',
+  Luke: 'Луки',
+  John: 'Иоанна',
+  Acts: 'Деяния',
+  Romans: 'Римлянам',
+  '1 Corinthians': '1 Коринфянам',
+  '2 Corinthians': '2 Коринфянам',
+  Galatians: 'Галатам',
+  Ephesians: 'Эфесянам',
+  Philippians: 'Филиппийцам',
+  Colossians: 'Колоссянам',
+  '1 Thessalonians': '1 Фессалоникийцам',
+  '2 Thessalonians': '2 Фессалоникийцам',
+  '1 Timothy': '1 Тимофею',
+  '2 Timothy': '2 Тимофею',
+  Titus: 'Титу',
+  Philemon: 'Филимону',
+  Hebrews: 'Евреям',
+  James: 'Иакова',
+  '1 Peter': '1 Петра',
+  '2 Peter': '2 Петра',
+  '1 John': '1 Иоанна',
+  '2 John': '2 Иоанна',
+  '3 John': '3 Иоанна',
+  Jude: 'Иуды',
+  Revelation: 'Откровение',
 }
 
-function formatBookLabel(bookSlug: string) {
-  return bookSlug
-    .split('-')
-    .filter(Boolean)
-    .map((part) => {
-      if (/^\d+$/.test(part)) return part
-      return part.charAt(0).toUpperCase() + part.slice(1)
-    })
-    .join(' ')
+function ruTitle(title: string) {
+  return RU_BOOK_LABELS[title] ?? title
 }
 
-function formatReference(book: string, chapter: string, verse: string) {
-  return `${formatBookLabel(book)} ${chapter}:${verse}`
+type Tone = {
+  background: string
+  border: string
+  color: string
 }
 
-function formatDate(value: string) {
-  try {
-    return new Intl.DateTimeFormat('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(value))
-  } catch {
-    return value
+function getChapterTone(title: string): Tone {
+  const torah = new Set([
+    'Genesis',
+    'Exodus',
+    'Leviticus',
+    'Numbers',
+    'Deuteronomy',
+  ])
+
+  const historical = new Set([
+    'Joshua',
+    'Judges',
+    'Ruth',
+    '1 Samuel',
+    '2 Samuel',
+    '1 Kings',
+    '2 Kings',
+    '1 Chronicles',
+    '2 Chronicles',
+    'Ezra',
+    'Nehemiah',
+    'Esther',
+  ])
+
+  const wisdom = new Set([
+    'Job',
+    'Psalms',
+    'Proverbs',
+    'Ecclesiastes',
+    'Song of Solomon',
+  ])
+
+  const majorProphets = new Set([
+    'Isaiah',
+    'Jeremiah',
+    'Lamentations',
+    'Ezekiel',
+    'Daniel',
+  ])
+
+  const minorProphets = new Set([
+    'Hosea',
+    'Joel',
+    'Amos',
+    'Obadiah',
+    'Jonah',
+    'Micah',
+    'Nahum',
+    'Habakkuk',
+    'Zephaniah',
+    'Haggai',
+    'Zechariah',
+    'Malachi',
+  ])
+
+  const gospels = new Set(['Matthew', 'Mark', 'Luke', 'John'])
+  const acts = new Set(['Acts'])
+
+  const pauline = new Set([
+    'Romans',
+    '1 Corinthians',
+    '2 Corinthians',
+    'Galatians',
+    'Ephesians',
+    'Philippians',
+    'Colossians',
+    '1 Thessalonians',
+    '2 Thessalonians',
+    '1 Timothy',
+    '2 Timothy',
+    'Titus',
+    'Philemon',
+    'Hebrews',
+  ])
+
+  const generalLetters = new Set([
+    'James',
+    '1 Peter',
+    '2 Peter',
+    '1 John',
+    '2 John',
+    '3 John',
+    'Jude',
+  ])
+
+  const revelation = new Set(['Revelation'])
+
+  if (torah.has(title)) {
+    return { background: '#5B5A60', border: '#4E4D53', color: '#F7F7F4' }
   }
-}
 
-function truncate(text: string, max = 240) {
-  const clean = text.replace(/\s+/g, ' ').trim()
-  if (clean.length <= max) return clean
-  return `${clean.slice(0, max).trim()}…`
-}
-
-function looksRussian(text: string) {
-  const sample = text.slice(0, 400)
-  const cyrillicMatches = sample.match(/[А-Яа-яЁё]/g) ?? []
-  return cyrillicMatches.length >= 12
-}
-
-async function ensureRussianVerseText(reference: string, verseText: string): Promise<string> {
-  const clean = verseText.trim()
-
-  if (!clean) return ''
-  if (looksRussian(clean)) return clean
-
-  const prompt = `
-Translate the following Bible verse into Russian.
-
-REFERENCE:
-${reference}
-
-VERSE TEXT:
-${clean}
-
-RULES:
-- Return only the translated verse text
-- No explanation
-- No quotation marks
-- No JSON
-- No markdown
-- Natural, clear Russian
-`.trim()
-
-  const result = await runModel({
-    prompt,
-    model: 'gpt-5.4-mini',
-    maxOutputTokens: 300,
-  })
-
-  if (!result.ok) {
-    return clean
+  if (historical.has(title)) {
+    return { background: '#6B6763', border: '#5D5956', color: '#F7F6F2' }
   }
 
-  const translated = result.rawText.trim()
-  return translated || clean
+  if (wisdom.has(title)) {
+    return { background: '#635F66', border: '#56525A', color: '#F7F6F3' }
+  }
+
+  if (majorProphets.has(title)) {
+    return { background: '#4F5258', border: '#45474C', color: '#F8F7F4' }
+  }
+
+  if (minorProphets.has(title)) {
+    return { background: '#5D615C', border: '#50534F', color: '#F8F7F3' }
+  }
+
+  if (gospels.has(title)) {
+    return { background: '#5B6068', border: '#4E535A', color: '#F8F7F4' }
+  }
+
+  if (acts.has(title)) {
+    return { background: '#74717A', border: '#63606A', color: '#F8F7F4' }
+  }
+
+  if (pauline.has(title)) {
+    return { background: '#69656E', border: '#5A5760', color: '#F8F7F4' }
+  }
+
+  if (generalLetters.has(title)) {
+    return { background: '#5F646B', border: '#51555B', color: '#F8F7F4' }
+  }
+
+  if (revelation.has(title)) {
+    return { background: '#4A4E55', border: '#404349', color: '#F8F7F4' }
+  }
+
+  return { background: '#66626B', border: '#59555E', color: '#F8F7F4' }
 }
 
-async function loadSavedInsights(book: string, chapter: number, verse: number) {
-  const supabase = getSupabaseServerClient()
+export default async function ModeratorChapterSelectPage({ params }: PageProps) {
+  const { book } = await params
+  const selectedBook = getBookById(book)
 
-  const { data, error } = await supabase
-    .schema('private')
-    .from('curated_insights')
-    .select('id, title_ru, text_ru, title_en, text_en, created_at')
-    .eq('book', book.toLowerCase())
-    .eq('chapter', chapter)
-    .eq('verse', verse)
-    .eq('status', 'saved')
-    .order('created_at', { ascending: true })
-
-  if (error) {
-    throw new Error(`Failed to load saved insights: ${error.message}`)
+  if (!selectedBook) {
+    notFound()
   }
 
-  return (data ?? []) as SavedInsightRow[]
-}
+  const tone = getChapterTone(selectedBook.title)
 
-async function loadPendingUnfoldCount(book: string, chapter: number, verse: number) {
-  const supabase = getSupabaseServerClient()
-
-  const { count, error } = await supabase
-    .schema('private')
-    .from('unfold_events')
-    .select('*', { count: 'exact', head: true })
-    .eq('book', book.toLowerCase())
-    .eq('chapter', chapter)
-    .eq('verse', verse)
-    .eq('review_status', 'new')
-
-  if (error) {
-    throw new Error(`Failed to load pending unfold count: ${error.message}`)
-  }
-
-  return count ?? 0
-}
-
-export default async function ModeratorVerseWorkspacePage({ params }: PageProps) {
-  const resolved = await params
-
-  const book = resolved.book
-  const chapter = Number(resolved.chapter)
-  const verse = Number(resolved.verse)
-
-  const reference = formatReference(book, resolved.chapter, resolved.verse)
-  const insightsLibraryHref = `/moderator/insights?filter=saved&book=${book}&chapter=${resolved.chapter}&verse=${resolved.verse}`
-
-  let verseText = ''
-  let verseError = ''
-  let savedInsights: SavedInsightRow[] = []
-  let savedError = ''
-  let pendingUnfoldCount = 0
-  let unfoldError = ''
-
-  try {
-    const rawVerseText = (await getVerseText(book, chapter, verse)) ?? ''
-    verseText = await ensureRussianVerseText(reference, rawVerseText)
-
-    if (!verseText) {
-      verseError = 'Не удалось загрузить текст стиха.'
-    }
-  } catch {
-    verseError = 'Не удалось загрузить текст стиха.'
-  }
-
-  try {
-    savedInsights = await loadSavedInsights(book, chapter, verse)
-  } catch (error) {
-    savedError =
-      error instanceof Error ? error.message : 'Не удалось загрузить сохранённые карточки.'
-  }
-
-  try {
-    pendingUnfoldCount = await loadPendingUnfoldCount(book, chapter, verse)
-  } catch (error) {
-    unfoldError =
-      error instanceof Error ? error.message : 'Не удалось загрузить количество unfold.'
-  }
-
-  const savedCards = savedInsights.map((item) => ({
-    id: item.id,
-    title: item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка',
-    text: item.text_ru?.trim() || item.text_en?.trim() || '',
-    createdAt: item.created_at,
-  }))
+  const chapters = Array.from(
+    { length: selectedBook.chapters },
+    (_, index) => index + 1
+  )
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-              Verse Workspace
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-              {reference}
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-              Это отдельная рабочая среда по стиху. Здесь собираются saved cards, статистика по
-              текущему стиху и два направления работы: точная огранка мысли и направленный поиск
-              новых карточек.
-            </p>
-          </div>
+    <main className="min-h-screen bg-[linear-gradient(180deg,#F7F5EF_0%,#F3F0E8_46%,#F6F3EC_100%)] px-4 py-6">
+      <div className="mx-auto flex w-full max-w-md flex-col">
+        <Link
+          href="/moderator"
+          className="mb-6 text-sm text-stone-500 transition-colors duration-200 hover:text-stone-700"
+        >
+          ← Назад
+        </Link>
 
-          <div className="flex flex-wrap gap-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-stone-500">
+          Выбор главы
+        </p>
+
+        <h1 className="mb-6 text-3xl font-semibold tracking-tight text-stone-950">
+          {ruTitle(selectedBook.title)}
+        </h1>
+
+        <div className="grid grid-cols-4 gap-3">
+          {chapters.map((chapter) => (
             <Link
-              href="/moderator"
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+              key={chapter}
+              href={`/moderator/workspace/${selectedBook.id}/${chapter}`}
+              className="flex aspect-square items-center justify-center rounded-[18px] border text-lg font-medium shadow-[0_6px_18px_rgba(32,28,24,0.08)] transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(32,28,24,0.12)] active:scale-[0.99]"
+              style={{
+                backgroundColor: tone.background,
+                borderColor: tone.border,
+                color: tone.color,
+                WebkitTapHighlightColor: 'transparent',
+              }}
             >
-              Назад
+              {chapter}
             </Link>
-
-            <Link
-              href={`/bible/${book}/${resolved.chapter}/${resolved.verse}`}
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              Открыть reading screen
-            </Link>
-          </div>
+          ))}
         </div>
-
-        <section className="mb-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-              Стих
-            </p>
-
-            {verseError ? (
-              <p className="mt-3 text-sm text-red-700">{verseError}</p>
-            ) : (
-              <p className="mt-3 text-[1.05rem] leading-8 text-stone-800 italic">{verseText}</p>
-            )}
-          </div>
-        </section>
-
-        <div className="mb-5 grid gap-4 md:grid-cols-3">
-          <div className="rounded-[24px] border border-stone-300/70 bg-[#fffaf1] px-5 py-5 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-              Сохранённых карточек
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-stone-900">{savedInsights.length}</p>
-          </div>
-
-          <div className="rounded-[24px] border border-stone-300/70 bg-[#fffaf1] px-5 py-5 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-              Unfold ждут обзора
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-stone-900">{pendingUnfoldCount}</p>
-            {unfoldError ? <p className="mt-2 text-sm text-red-700">{unfoldError}</p> : null}
-          </div>
-
-          <div className="rounded-[24px] border border-stone-300/70 bg-[#fffaf1] px-5 py-5 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-              Следующий шаг
-            </p>
-            <p className="mt-2 text-base leading-7 text-stone-800">
-              Поле 1 уже включено. Теперь можно вставлять 1–2 предложения, получать 3 варианта и
-              сохранять любой из них как карточку.
-            </p>
-          </div>
-        </div>
-
-        <section className="mb-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                  Сохранённые карточки
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                  Что уже есть по этому стиху
-                </h2>
-              </div>
-
-              <Link
-                href={insightsLibraryHref}
-                className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-              >
-                Открыть всю библиотеку
-              </Link>
-            </div>
-
-            {savedError ? (
-              <p className="text-sm text-red-700">{savedError}</p>
-            ) : savedInsights.length === 0 ? (
-              <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 text-sm leading-6 text-stone-700">
-                По этому стиху пока нет сохранённых карточек. Следующий этап — чтобы сразу под этим
-                блоком можно было генерировать новые кандидаты и сохранять лучшие.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {savedInsights.map((item) => {
-                  const title = item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка'
-                  const text = item.text_ru?.trim() || item.text_en?.trim() || ''
-
-                  return (
-                    <article
-                      key={item.id}
-                      className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-lg font-semibold leading-7 text-stone-900">{title}</p>
-                        <span className="text-xs text-stone-500">{formatDate(item.created_at)}</span>
-                      </div>
-                      <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">
-                        {truncate(text, 320)}
-                      </p>
-                    </article>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <WorkspaceClient
-          reference={reference}
-          verseText={verseText}
-          savedCards={savedCards}
-          book={book}
-          chapter={chapter}
-          verse={verse}
-        />
       </div>
     </main>
   )
