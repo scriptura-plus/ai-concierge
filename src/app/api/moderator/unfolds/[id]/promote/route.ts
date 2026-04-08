@@ -243,6 +243,7 @@ export async function POST(req: Request, context: RouteContext) {
     }
 
     const { data: inserted, error: insertError } = await supabase
+      .schema('private')
       .from('curated_insights')
       .insert(insertPayload)
       .select('id')
@@ -260,6 +261,7 @@ export async function POST(req: Request, context: RouteContext) {
     const promotedInsightId = inserted.id as string
 
     const { error: updateError } = await supabase
+      .schema('private')
       .from('unfold_events')
       .update({
         review_status: 'promoted',
