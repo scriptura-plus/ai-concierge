@@ -157,6 +157,7 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await supabase
+      .schema('private')
       .from('curated_insights')
       .insert(insertPayload)
       .select('id')
