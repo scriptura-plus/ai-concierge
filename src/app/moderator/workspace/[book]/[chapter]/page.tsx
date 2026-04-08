@@ -228,14 +228,13 @@ export default async function ModeratorVerseSelectPage({ params }: PageProps) {
     notFound()
   }
 
-  const versesInChapter = selectedBook.verses[numericChapter - 1]
+  const versesInChapter = selectedBook.versesPerChapter[numericChapter - 1]
 
   if (!versesInChapter) {
     notFound()
   }
 
   const tone = getVerseTone(selectedBook.title)
-
   const verses = Array.from({ length: versesInChapter }, (_, index) => index + 1)
 
   return (
