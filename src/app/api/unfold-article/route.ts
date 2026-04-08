@@ -312,6 +312,7 @@ async function saveUnfoldEvent(params: {
       : null
 
   const { data, error } = await supabase
+    .schema('private')
     .from('unfold_events')
     .insert({
       verse_ref: parsedRef.verse_ref,
