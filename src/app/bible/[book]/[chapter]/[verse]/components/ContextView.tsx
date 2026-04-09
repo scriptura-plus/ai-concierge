@@ -9,15 +9,12 @@ type ContextPayload = {
   takeaway: string
 }
 
-type ContextMode = 'paragraph' | 'book' | 'bible'
-
 type ContextViewProps = {
   isReady: boolean
   isLoading: boolean
   error: string
   data: ContextPayload | null
-  selectedMode: ContextMode | null
-
+  selectedMode: 'narrow' | 'wide' | null
   title: string
   leadFallback: string
   takeawayFallback: string
@@ -26,26 +23,20 @@ type ContextViewProps = {
   loadingLabel: string
   loadingText: string
   unavailableLabel: string
-
   point1: string
   point2: string
   point3: string
-
-  paragraphLabel: string
-  bookLabel: string
-  bibleLabel: string
+  narrowLabel: string
+  wideLabel: string
   changeLabel: string
-
   tryAgainLabel: string
   backToTopLabel: string
   copyLabel: string
   copiedLabel: string
   copyFailedLabel: string
   shareLabel: string
-
   copyStatus: 'idle' | 'copied' | 'failed'
   shareStatus: string
-
   onRetry: () => void
   onBackToTop: () => void
   onCopy: () => void
@@ -95,17 +86,6 @@ function renderStructuredPanel(
   )
 }
 
-function modeLabel(
-  selectedMode: ContextMode | null,
-  paragraphLabel: string,
-  bookLabel: string,
-  bibleLabel: string
-) {
-  if (selectedMode === 'paragraph') return paragraphLabel
-  if (selectedMode === 'book') return bookLabel
-  return bibleLabel
-}
-
 export default function ContextView({
   isReady,
   isLoading,
@@ -123,9 +103,8 @@ export default function ContextView({
   point1,
   point2,
   point3,
-  paragraphLabel,
-  bookLabel,
-  bibleLabel,
+  narrowLabel,
+  wideLabel,
   changeLabel,
   tryAgainLabel,
   backToTopLabel,
@@ -141,7 +120,7 @@ export default function ContextView({
   onShare,
   onChangeMode,
 }: ContextViewProps) {
-  if (!isReady || !selectedMode) {
+  if (!isReady) {
     return renderStructuredPanel(
       title,
       leadFallback,
@@ -169,20 +148,9 @@ export default function ContextView({
     return (
       <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-stone-300/80 bg-[#fffaf1]/80 px-3 py-1.5 text-sm font-medium text-stone-600 shadow-[0_4px_12px_rgba(94,72,37,0.06)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
-              <span>{modeLabel(selectedMode, paragraphLabel, bookLabel, bibleLabel)}</span>
-            </div>
-            <button
-              type="button"
-              onClick={onChangeMode}
-              className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-            >
-              {changeLabel}
-            </button>
-          </div>
-
+          <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+            {unavailableLabel}
+          </p>
           <p className="text-[1.08rem] leading-9 text-stone-800">{error}</p>
 
           <button
@@ -214,8 +182,9 @@ export default function ContextView({
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-stone-300/80 bg-[#fffaf1]/80 px-3 py-1.5 text-sm font-medium text-stone-600 shadow-[0_4px_12px_rgba(94,72,37,0.06)]">
             <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
-            <span>{modeLabel(selectedMode, paragraphLabel, bookLabel, bibleLabel)}</span>
+            <span>{selectedMode === 'narrow' ? narrowLabel : wideLabel}</span>
           </div>
+
           <button
             type="button"
             onClick={onChangeMode}
