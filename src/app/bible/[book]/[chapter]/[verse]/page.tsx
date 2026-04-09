@@ -2247,17 +2247,17 @@ export default function VerseDetailPage({ params }: PageProps) {
 
               <p className="text-fade text-[1.08rem] leading-9 text-stone-800">{displayedCard.text}</p>
 
-              <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <button
                   type="button"
                   onClick={handleUnfold}
                   disabled={currentArticleJob?.status === 'generating'}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
+                  className={`rounded-full border px-5 py-2.5 text-sm font-semibold tracking-[0.01em] transition-all duration-200 ease-out disabled:opacity-60 active:scale-[0.985] ${
                     currentArticleJob?.status === 'ready'
-                      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+                      ? 'border-[#a58a57] bg-[linear-gradient(180deg,#efe2bf_0%,#e5d3a8_100%)] text-stone-900 shadow-[0_10px_22px_rgba(94,72,37,0.14)] hover:brightness-[0.99]'
                       : currentArticleJob?.status === 'generating'
-                        ? 'border-stone-300 bg-[#f3ebd7] text-stone-600'
-                        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+                        ? 'border-stone-300 bg-[linear-gradient(180deg,#f5ecda_0%,#ecdfc1_100%)] text-stone-600 shadow-[0_8px_18px_rgba(94,72,37,0.08)]'
+                        : 'border-[#7b6540] bg-[linear-gradient(180deg,#5f4d31_0%,#4b3b24_100%)] text-[#fbf6ea] shadow-[0_14px_28px_rgba(60,44,21,0.22)] hover:translate-y-[-1px] hover:shadow-[0_18px_34px_rgba(60,44,21,0.26)]'
                   }`}
                 >
                   {currentArticleJob?.status === 'generating'
@@ -2270,7 +2270,7 @@ export default function VerseDetailPage({ params }: PageProps) {
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                  className="rounded-full border border-stone-300/90 bg-[linear-gradient(180deg,rgba(255,250,241,0.96)_0%,rgba(248,239,220,0.9)_100%)] px-5 py-2.5 text-sm font-medium text-stone-700 shadow-[0_8px_18px_rgba(94,72,37,0.08)] transition-all duration-200 ease-out hover:translate-y-[-1px] hover:bg-[linear-gradient(180deg,rgba(255,250,241,1)_0%,rgba(245,233,207,0.96)_100%)] hover:shadow-[0_12px_24px_rgba(94,72,37,0.12)] active:scale-[0.985]"
                 >
                   {t.share}
                 </button>
