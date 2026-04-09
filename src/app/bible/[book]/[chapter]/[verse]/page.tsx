@@ -2091,7 +2091,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         activeTab={activeTab}
         displayedCard={displayedCard}
         selectedLens={selectedLens}
-        selectedContext={selectedContext}
+        selectedContext={selectedContext as any}
         currentArticleStatus={currentArticleJob?.status ?? 'idle'}
         currentArticleError={currentArticleJob?.error ?? ''}
         copyStatus="idle"
