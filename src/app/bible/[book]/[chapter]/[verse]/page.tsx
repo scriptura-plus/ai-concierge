@@ -1971,33 +1971,36 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       return
     }
-if (verseText && verseTranslationKey) {
-  setTranslationLoading(true)
 
-  try {
-    await translateVerseText(targetLanguage, verseText, verseTranslationKey)
-  } catch (err) {
-    setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
-  } finally {
-    setTranslationLoading(false)
-  }
+    if (verseText && verseTranslationKey) {
+      setTranslationLoading(true)
+
+      try {
+        await translateVerseText(targetLanguage, verseText, verseTranslationKey)
+      } catch (err) {
+        setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+      } finally {
+        setTranslationLoading(false)
+      }
+    }
+
     if (activeTab === 'context' && selectedContext === 'narrow') {
-  setNarrowContextData(null)
-  setNarrowContextError('')
-  setNarrowContextLoading(false)
+      setNarrowContextData(null)
+      setNarrowContextError('')
+      setNarrowContextLoading(false)
 
-  setActiveNarrowDirectionId('')
-  setNarrowArticle(null)
-  setNarrowArticleError('')
-  setNarrowArticleLoading(false)
+      setActiveNarrowDirectionId('')
+      setNarrowArticle(null)
+      setNarrowArticleError('')
+      setNarrowArticleLoading(false)
 
-  setNarrowCopyStatus('idle')
-  setNarrowShareStatus('')
-  setNarrowArticleCopyStatus('idle')
-  setNarrowArticleShareStatus('')
-}
+      setNarrowCopyStatus('idle')
+      setNarrowShareStatus('')
+      setNarrowArticleCopyStatus('idle')
+      setNarrowArticleShareStatus('')
+    }
 
-setAppLanguage(targetLanguage)
+    setAppLanguage(targetLanguage)
   }
 
   async function handleNext() {
@@ -2022,7 +2025,7 @@ setAppLanguage(targetLanguage)
         }
       }
     }
-
+  }
 
   async function handlePrev() {
     if (currentCards.length === 0 || interactionsLocked) return
