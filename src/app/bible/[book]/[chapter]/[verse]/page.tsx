@@ -249,21 +249,21 @@ const UI_TEXT: Record<
     german: 'German',
     russian: 'Russian',
     translating: 'Translating...',
-    insights: 'Insights',
+    insights: 'Explorer',
     translations: 'Translations',
     context: 'Context',
     lens: 'Lens',
     verseLoading: 'Loading verse',
     verseLoadingText: 'Preparing the verse text for reading.',
     verseUnavailable: 'Unable to load verse.',
-    insightsLoading: 'Loading insights',
-    insightsLoadingText: 'Building the first set of insight cards in the background.',
-    loadingInsight: 'Loading insight',
-    loadingInsightText: 'Please wait while the insight cards are generated.',
+    insightsLoading: 'Loading Explorer',
+    insightsLoadingText: 'Preparing the first exploration cards in the background.',
+    loadingInsight: 'Loading explorer card',
+    loadingInsightText: 'Please wait while the exploration cards are generated.',
     unableToLoad: 'Unable to load',
     rawModelOutput: 'Raw model output',
-    noInsight: 'No insight',
-    noInsightText: 'No insight is available for this verse yet.',
+    noInsight: 'No card',
+    noInsightText: 'No explorer card is available for this verse yet.',
     previous: 'Previous',
     next: 'Next',
     copy: 'Copy',
@@ -354,21 +354,21 @@ const UI_TEXT: Record<
     german: 'Немецкий',
     russian: 'Русский',
     translating: 'Перевод...',
-    insights: 'Инсайты',
+    insights: 'Исследование',
     translations: 'Переводы',
     context: 'Контекст',
     lens: 'Линза',
     verseLoading: 'Загрузка стиха',
     verseLoadingText: 'Подготавливаем текст стиха для чтения.',
     verseUnavailable: 'Не удалось загрузить стих.',
-    insightsLoading: 'Загрузка инсайтов',
-    insightsLoadingText: 'Подбираем первые карточки с мыслями в фоне.',
-    loadingInsight: 'Загрузка инсайта',
-    loadingInsightText: 'Подождите, пока генерируются карточки инсайтов.',
+    insightsLoading: 'Загрузка исследования',
+    insightsLoadingText: 'Подбираем первые карточки исследования в фоне.',
+    loadingInsight: 'Загрузка карточки',
+    loadingInsightText: 'Подождите, пока генерируются карточки исследования.',
     unableToLoad: 'Не удалось загрузить',
     rawModelOutput: 'Сырой вывод модели',
-    noInsight: 'Нет инсайта',
-    noInsightText: 'Для этого стиха пока нет доступного инсайта.',
+    noInsight: 'Нет карточки',
+    noInsightText: 'Для этого стиха пока нет доступной карточки исследования.',
     previous: 'Назад',
     next: 'Далее',
     copy: 'Копировать',
@@ -462,21 +462,21 @@ const UI_TEXT: Record<
     german: 'Alemán',
     russian: 'Ruso',
     translating: 'Traduciendo...',
-    insights: 'Ideas',
+    insights: 'Exploración',
     translations: 'Traducciones',
     context: 'Contexto',
     lens: 'Lente',
     verseLoading: 'Cargando versículo',
     verseLoadingText: 'Preparando el texto del versículo para leerlo.',
     verseUnavailable: 'No se pudo cargar el versículo.',
-    insightsLoading: 'Cargando ideas',
-    insightsLoadingText: 'Generando en segundo plano las primeras tarjetas de ideas.',
-    loadingInsight: 'Cargando idea',
-    loadingInsightText: 'Espera mientras se generan las tarjetas de ideas.',
+    insightsLoading: 'Cargando exploración',
+    insightsLoadingText: 'Generando en segundo plano las primeras tarjetas de exploración.',
+    loadingInsight: 'Cargando tarjeta',
+    loadingInsightText: 'Espera mientras se generan las tarjetas de exploración.',
     unableToLoad: 'No se pudo cargar',
     rawModelOutput: 'Salida bruta del modelo',
-    noInsight: 'Sin idea',
-    noInsightText: 'Todavía no hay una idea disponible para este versículo.',
+    noInsight: 'Sin tarjeta',
+    noInsightText: 'Todavía no hay una tarjeta de exploración para este versículo.',
     previous: 'Anterior',
     next: 'Siguiente',
     copy: 'Copiar',
@@ -570,21 +570,21 @@ const UI_TEXT: Record<
     german: 'Allemand',
     russian: 'Russe',
     translating: 'Traduction...',
-    insights: 'Insights',
+    insights: 'Exploration',
     translations: 'Traductions',
     context: 'Contexte',
     lens: 'Lentille',
     verseLoading: 'Chargement du verset',
     verseLoadingText: 'Préparation du texte du verset pour la lecture.',
     verseUnavailable: 'Impossible de charger le verset.',
-    insightsLoading: 'Chargement des insights',
-    insightsLoadingText: 'Génération en arrière-plan des premières cartes d’insight.',
-    loadingInsight: 'Chargement de l’insight',
-    loadingInsightText: 'Veuillez patienter pendant la génération des cartes.',
+    insightsLoading: 'Chargement de l’exploration',
+    insightsLoadingText: 'Génération en arrière-plan des premières cartes d’exploration.',
+    loadingInsight: 'Chargement de la carte',
+    loadingInsightText: 'Veuillez patienter pendant la génération des cartes d’exploration.',
     unableToLoad: 'Impossible de charger',
     rawModelOutput: 'Sortie brute du modèle',
-    noInsight: 'Aucun insight',
-    noInsightText: 'Aucun insight n’est disponible pour ce verset.',
+    noInsight: 'Aucune carte',
+    noInsightText: 'Aucune carte d’exploration n’est disponible pour ce verset.',
     previous: 'Précédent',
     next: 'Suivant',
     copy: 'Copier',
@@ -676,21 +676,21 @@ const UI_TEXT: Record<
     german: 'Deutsch',
     russian: 'Russisch',
     translating: 'Übersetzung...',
-    insights: 'Insights',
+    insights: 'Erkundung',
     translations: 'Übersetzungen',
     context: 'Kontext',
     lens: 'Linse',
     verseLoading: 'Vers wird geladen',
     verseLoadingText: 'Der Verstext wird zum Lesen vorbereitet.',
     verseUnavailable: 'Vers konnte nicht geladen werden.',
-    insightsLoading: 'Insights werden geladen',
-    insightsLoadingText: 'Die ersten Insight-Karten werden im Hintergrund erstellt.',
-    loadingInsight: 'Insight wird geladen',
-    loadingInsightText: 'Bitte warten, während die Karten erzeugt werden.',
+    insightsLoading: 'Erkundung wird geladen',
+    insightsLoadingText: 'Die ersten Erkundungskarten werden im Hintergrund erstellt.',
+    loadingInsight: 'Karte wird geladen',
+    loadingInsightText: 'Bitte warten, während die Erkundungskarten erzeugt werden.',
     unableToLoad: 'Konnte nicht geladen werden',
     rawModelOutput: 'Rohausgabe des Modells',
-    noInsight: 'Kein Insight',
-    noInsightText: 'Für diesen Vers ist noch kein Insight verfügbar.',
+    noInsight: 'Keine Karte',
+    noInsightText: 'Für diesen Vers ist noch keine Erkundungskarte verfügbar.',
     previous: 'Zurück',
     next: 'Weiter',
     copy: 'Kopieren',
@@ -2269,24 +2269,6 @@ export default function VerseDetailPage({ params }: PageProps) {
 
                 <button
                   type="button"
-                  onClick={handleCopy}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                    copyStatus === 'copied'
-                      ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
-                      : copyStatus === 'failed'
-                        ? 'border-red-300 bg-red-50 text-red-700'
-                        : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
-                  }`}
-                >
-                  {copyStatus === 'copied'
-                    ? t.copied
-                    : copyStatus === 'failed'
-                      ? t.copyFailed
-                      : t.copy}
-                </button>
-
-                <button
-                  type="button"
                   onClick={handleShare}
                   className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                 >
@@ -2778,13 +2760,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
       <div ref={articleTopRef} className="mx-auto flex w-full max-w-md flex-col">
         <div className="mb-6 flex items-center gap-3 text-sm">
-          <Link
-            href={`/bible/${book}/${chapter}`}
-            className="text-neutral-500 transition hover:text-neutral-700"
-          >
-            {t.back}
-          </Link>
-
           <Link href="/" className="text-neutral-500 transition hover:text-neutral-700">
             {t.home}
           </Link>
