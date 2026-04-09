@@ -1971,7 +1971,16 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       return
     }
+if (verseText && verseTranslationKey) {
+  setTranslationLoading(true)
 
+  try {
+    await translateVerseText(targetLanguage, verseText, verseTranslationKey)
+  } catch (err) {
+    setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+  } finally {
+    setTranslationLoading(false)
+  }
     if (activeTab === 'context' && selectedContext === 'narrow') {
   setNarrowContextData(null)
   setNarrowContextError('')
