@@ -105,6 +105,7 @@ type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
 type InsightsStage = 'idle' | 'loading_saved' | 'filling' | 'ready' | 'failed'
 type TopTab = 'insights' | 'context' | 'lens'
 type LensKind = 'translation' | 'word' | 'tension' | 'phrase'
+type ContextKind = 'paragraph' | 'book' | 'bible'
 type SourceMode = 'insights' | 'word' | 'tension' | 'why_this_phrase'
 
 type ArticleJob = {
@@ -177,6 +178,15 @@ const UI_TEXT: Record<
     contextLead: string
     contextTakeaway: string
     contextPointLabel: string
+    contextTitle: string
+    chooseContextMode: string
+    readThisVerseThroughContext: string
+    paragraph: string
+    bookMode: string
+    bibleMode: string
+    paragraphHelper: string
+    bookHelper: string
+    bibleHelper: string
 
     lensTitle: string
     chooseFocusedLens: string
@@ -292,6 +302,15 @@ const UI_TEXT: Record<
     contextTakeaway:
       'Context should clarify why the verse sounds the way it does inside its real setting.',
     contextPointLabel: 'Context point',
+    contextTitle: 'Context',
+    chooseContextMode: 'Choose a context level',
+    readThisVerseThroughContext: 'See this verse inside a wider frame.',
+    paragraph: 'Paragraph',
+    bookMode: 'Book',
+    bibleMode: 'Bible',
+    paragraphHelper: 'Immediate flow around the verse',
+    bookHelper: 'How the verse works inside the book',
+    bibleHelper: 'How the verse connects to the wider Bible',
     lensTitle: 'Lens',
     chooseFocusedLens: 'Choose a focused lens',
     readThisVerseOneAngle: 'Read this verse through one angle.',
@@ -314,12 +333,9 @@ const UI_TEXT: Record<
       'The final version will show 3–5 compact comparison points instead of one dense block.',
     translationsPoint3:
       'A short takeaway will explain why those differences matter for reading the verse.',
-    contextPoint1:
-      'The final version will identify the main context type that matters most here.',
-    contextPoint2:
-      'It will present 3–5 compact context points, not a heavy encyclopedia panel.',
-    contextPoint3:
-      'A final takeaway will explain how context changes the force of the verse.',
+    contextPoint1: 'Choose the immediate paragraph around the verse.',
+    contextPoint2: 'Choose the whole-book movement and purpose.',
+    contextPoint3: 'Choose the wider Bible-level connections and echoes.',
     sharedAsImage: 'Shared as image',
     sharedAsText: 'Shared as text',
     shareUnavailableCopiedInstead: 'Share unavailable — copied instead',
@@ -399,6 +415,15 @@ const UI_TEXT: Record<
     contextTakeaway:
       'Контекст должен объяснять, почему стих звучит именно так в своей реальной среде.',
     contextPointLabel: 'Пункт контекста',
+    contextTitle: 'Контекст',
+    chooseContextMode: 'Выберите уровень контекста',
+    readThisVerseThroughContext: 'Посмотрите на стих в более широкой рамке.',
+    paragraph: 'Абзац',
+    bookMode: 'Книга',
+    bibleMode: 'Библия',
+    paragraphHelper: 'Ближайший поток мысли вокруг стиха',
+    bookHelper: 'Как стих работает внутри книги',
+    bibleHelper: 'Как стих соединяется со всей Библией',
     lensTitle: 'Линза',
     chooseFocusedLens: 'Выберите сфокусированную линзу',
     readThisVerseOneAngle: 'Посмотрите на этот стих под одним углом.',
@@ -417,18 +442,14 @@ const UI_TEXT: Record<
     lensLeadDefault:
       'Выберите сфокусированную линзу, чтобы посмотреть на этот стих под одним углом.',
     lensTakeawayDefault: '«Линза» — это семейство сфокусированного чтения, а не просто кнопка reroll.',
-    translationsPoint1:
-      'Короткий lead будет называть главное переводческое напряжение в стихе.',
+    translationsPoint1: 'Короткий lead будет называть главное переводческое напряжение в стихе.',
     translationsPoint2:
       'Финальная версия покажет 3–5 компактных различий вместо одного плотного блока.',
     translationsPoint3:
       'Короткий вывод объяснит, почему эти различия важны для чтения стиха.',
-    contextPoint1:
-      'Финальная версия определит, какой тип контекста здесь важнее всего.',
-    contextPoint2:
-      'Она покажет 3–5 компактных пунктов контекста, а не тяжёлую энциклопедическую панель.',
-    contextPoint3:
-      'Итоговый вывод объяснит, как контекст меняет силу звучания стиха.',
+    contextPoint1: 'Выберите ближайший абзац вокруг стиха.',
+    contextPoint2: 'Выберите движение и цель всей книги.',
+    contextPoint3: 'Выберите связи и отзвуки по всей Библии.',
     sharedAsImage: 'Отправлено как изображение',
     sharedAsText: 'Отправлено как текст',
     shareUnavailableCopiedInstead: 'Поделиться нельзя — текст скопирован',
@@ -440,8 +461,7 @@ const UI_TEXT: Record<
       'Смотрим на стих через его точки напряжения, контрасты и неожиданные повороты…',
     tensionLensUnavailable: 'Не удалось загрузить линзу «Напряжение».',
     loadingPhraseLens: 'Загрузка линзы «Почему именно эта фраза»',
-    loadingPhraseLensText:
-      'Смотрим на стих через силу его точной формулировки…',
+    loadingPhraseLensText: 'Смотрим на стих через силу его точной формулировки…',
     phraseLensUnavailable: 'Не удалось загрузить линзу «Почему именно эта фраза».',
     loadingTranslations: 'Загрузка режима «Переводы»',
     loadingTranslationsText:
@@ -509,6 +529,15 @@ const UI_TEXT: Record<
     contextTakeaway:
       'El contexto debe aclarar por qué el versículo suena así dentro de su escenario real.',
     contextPointLabel: 'Punto de contexto',
+    contextTitle: 'Contexto',
+    chooseContextMode: 'Elige un nivel de contexto',
+    readThisVerseThroughContext: 'Mira este versículo dentro de un marco más amplio.',
+    paragraph: 'Párrafo',
+    bookMode: 'Libro',
+    bibleMode: 'Biblia',
+    paragraphHelper: 'El flujo inmediato alrededor del versículo',
+    bookHelper: 'Cómo funciona dentro del libro',
+    bibleHelper: 'Cómo conecta con toda la Biblia',
     lensTitle: 'Lente',
     chooseFocusedLens: 'Elige una lente enfocada',
     readThisVerseOneAngle: 'Lee este versículo desde un solo ángulo.',
@@ -533,12 +562,9 @@ const UI_TEXT: Record<
       'La versión final mostrará 3–5 puntos de comparación compactos en vez de un bloque denso.',
     translationsPoint3:
       'Una conclusión breve explicará por qué esas diferencias importan para leer el versículo.',
-    contextPoint1:
-      'La versión final identificará qué tipo de contexto importa más aquí.',
-    contextPoint2:
-      'Presentará 3–5 puntos de contexto compactos, no un panel enciclopédico pesado.',
-    contextPoint3:
-      'Una conclusión final explicará cómo el contexto cambia la fuerza del versículo.',
+    contextPoint1: 'Elige el párrafo inmediato alrededor del versículo.',
+    contextPoint2: 'Elige el movimiento y propósito del libro.',
+    contextPoint3: 'Elige conexiones y ecos a nivel de toda la Biblia.',
     sharedAsImage: 'Compartido como imagen',
     sharedAsText: 'Compartido como texto',
     shareUnavailableCopiedInstead: 'No se puede compartir — copiado en su lugar',
@@ -619,6 +645,15 @@ const UI_TEXT: Record<
     contextTakeaway:
       'Le contexte doit expliquer pourquoi le verset sonne ainsi dans son cadre réel.',
     contextPointLabel: 'Point de contexte',
+    contextTitle: 'Contexte',
+    chooseContextMode: 'Choisissez un niveau de contexte',
+    readThisVerseThroughContext: 'Voyez ce verset dans un cadre plus large.',
+    paragraph: 'Paragraphe',
+    bookMode: 'Livre',
+    bibleMode: 'Bible',
+    paragraphHelper: 'Le mouvement immédiat autour du verset',
+    bookHelper: 'Comment il fonctionne dans le livre',
+    bibleHelper: 'Comment il se relie à toute la Bible',
     lensTitle: 'Lentille',
     chooseFocusedLens: 'Choisissez une lentille ciblée',
     readThisVerseOneAngle: 'Lisez ce verset sous un angle précis.',
@@ -641,12 +676,9 @@ const UI_TEXT: Record<
       'La version finale montrera 3–5 points compacts au lieu d’un bloc dense.',
     translationsPoint3:
       'Une courte conclusion expliquera pourquoi ces différences comptent.',
-    contextPoint1:
-      'La version finale identifiera le type de contexte le plus important ici.',
-    contextPoint2:
-      'Elle montrera 3–5 points de contexte compacts, pas un panneau encyclopédique lourd.',
-    contextPoint3:
-      'Une conclusion finale expliquera comment le contexte change la force du verset.',
+    contextPoint1: 'Choisissez le paragraphe immédiat autour du verset.',
+    contextPoint2: 'Choisissez le mouvement et le but du livre.',
+    contextPoint3: 'Choisissez les liens et échos dans toute la Bible.',
     sharedAsImage: 'Partagé comme image',
     sharedAsText: 'Partagé comme texte',
     shareUnavailableCopiedInstead: 'Partage indisponible — copié à la place',
@@ -727,6 +759,15 @@ const UI_TEXT: Record<
     contextTakeaway:
       'Der Kontext soll erklären, warum der Vers in seinem echten Rahmen so klingt.',
     contextPointLabel: 'Kontextpunkt',
+    contextTitle: 'Kontext',
+    chooseContextMode: 'Wähle eine Kontextebene',
+    readThisVerseThroughContext: 'Sieh den Vers in einem größeren Rahmen.',
+    paragraph: 'Abschnitt',
+    bookMode: 'Buch',
+    bibleMode: 'Bibel',
+    paragraphHelper: 'Der unmittelbare Fluss um den Vers',
+    bookHelper: 'Wie er im Buch funktioniert',
+    bibleHelper: 'Wie er mit der ganzen Bibel verbunden ist',
     lensTitle: 'Linse',
     chooseFocusedLens: 'Wähle eine fokussierte Linse',
     readThisVerseOneAngle: 'Lies diesen Vers aus einem bestimmten Blickwinkel.',
@@ -750,12 +791,9 @@ const UI_TEXT: Record<
       'Die endgültige Version zeigt 3–5 kompakte Vergleichspunkte statt eines dichten Blocks.',
     translationsPoint3:
       'Ein kurzes Fazit erklärt, warum diese Unterschiede für die Lesart wichtig sind.',
-    contextPoint1:
-      'Die endgültige Version identifiziert den wichtigsten Kontexttyp an dieser Stelle.',
-    contextPoint2:
-      'Sie zeigt 3–5 kompakte Kontextpunkte statt eines schweren enzyklopädischen Panels.',
-    contextPoint3:
-      'Ein abschließendes Fazit erklärt, wie der Kontext die Wirkung des Verses verändert.',
+    contextPoint1: 'Wähle den unmittelbaren Abschnitt um den Vers.',
+    contextPoint2: 'Wähle Bewegung und Ziel des Buches.',
+    contextPoint3: 'Wähle Verbindungen und Echos in der ganzen Bibel.',
     sharedAsImage: 'Als Bild geteilt',
     sharedAsText: 'Als Text geteilt',
     shareUnavailableCopiedInstead: 'Teilen nicht verfügbar — stattdessen kopiert',
@@ -847,6 +885,8 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [contextError, setContextError] = useState('')
   const [contextCopyStatus, setContextCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const [contextShareStatus, setContextShareStatus] = useState('')
+  const [contextSheetOpen, setContextSheetOpen] = useState(false)
+  const [selectedContext, setSelectedContext] = useState<ContextKind | null>(null)
 
   const [wordLensLoading, setWordLensLoading] = useState(false)
   const [wordLensError, setWordLensError] = useState('')
@@ -957,6 +997,8 @@ export default function VerseDetailPage({ params }: PageProps) {
       setContextError('')
       setContextCopyStatus('idle')
       setContextShareStatus('')
+      setContextSheetOpen(false)
+      setSelectedContext(null)
       setWordLensError('')
       setTensionLensError('')
       setPhraseLensError('')
@@ -1141,8 +1183,9 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const currentModeKey = useMemo(() => {
     if (activeTab === 'lens') return `lens:${selectedLens ?? 'none'}`
+    if (activeTab === 'context') return `context:${selectedContext ?? 'none'}`
     return activeTab
-  }, [activeTab, selectedLens])
+  }, [activeTab, selectedLens, selectedContext])
 
   const currentSourceMode = useMemo<SourceMode>(() => {
     if (activeTab === 'lens' && selectedLens === 'word') return 'word'
@@ -1412,6 +1455,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           reference: formattedReference,
           verseText,
           targetLanguage: language,
+          contextMode: selectedContext ?? 'paragraph',
         }),
       })
 
@@ -1440,12 +1484,12 @@ export default function VerseDetailPage({ params }: PageProps) {
   useEffect(() => {
     if (!formattedReference || !verseText || !modesReady) return
 
-    if (activeTab === 'context') void loadContext(false, appLanguage)
+    if (activeTab === 'context' && selectedContext) void loadContext(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'translation') void loadCompare(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'word') void loadWordLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'tension') void loadTensionLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'phrase') void loadPhraseLens(false, appLanguage)
-  }, [activeTab, selectedLens, appLanguage, formattedReference, verseText, modesReady])
+  }, [activeTab, selectedContext, selectedLens, appLanguage, formattedReference, verseText, modesReady])
 
   async function handleSetLanguage(targetLanguage: AppLanguage) {
     if (interactionsLocked) return
@@ -1923,6 +1967,18 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (lens === 'phrase') await loadPhraseLens(false, appLanguage)
   }
 
+  async function handleSelectContext(mode: ContextKind) {
+    if (!modesReady) return
+
+    setSelectedContext(mode)
+    setContextSheetOpen(false)
+    setActiveTab('context')
+    setActiveArticleKey('')
+    setArticleShareStatus('')
+    setArticleCopyStatus('idle')
+    await loadContext(true, appLanguage)
+  }
+
   function renderTabButton(label: string, isActive: boolean, onClick: () => void, disabled = false) {
     return (
       <button
@@ -2258,6 +2314,28 @@ export default function VerseDetailPage({ params }: PageProps) {
                 </div>
               )}
 
+              {activeTab === 'context' && selectedContext && (
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-stone-300/80 bg-[#fffaf1]/80 px-3 py-1.5 text-sm font-medium text-stone-600 shadow-[0_4px_12px_rgba(94,72,37,0.06)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
+                    <span>
+                      {selectedContext === 'paragraph'
+                        ? t.paragraph
+                        : selectedContext === 'book'
+                          ? t.bookMode
+                          : t.bibleMode}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setContextSheetOpen(true)}
+                    className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+                  >
+                    {t.change}
+                  </button>
+                </div>
+              )}
+
               <h2 className="title-fade mb-5 text-center text-[2rem] font-semibold leading-tight tracking-tight text-stone-900">
                 {displayedCard.title}
               </h2>
@@ -2482,15 +2560,23 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
+  function renderContextModeIntro() {
+    return renderStructuredPanel(
+      t.contextTitle,
+      t.contextLead,
+      t.contextPointLabel,
+      [t.contextPoint1, t.contextPoint2, t.contextPoint3],
+      t.contextTakeaway
+    )
+  }
+
   function renderContextView() {
     if (!modesReady) {
-      return renderStructuredPanel(
-        t.context,
-        t.contextLead,
-        t.contextPointLabel,
-        [t.contextPoint1, t.contextPoint2, t.contextPoint3],
-        t.contextTakeaway
-      )
+      return renderContextModeIntro()
+    }
+
+    if (!selectedContext) {
+      return renderContextModeIntro()
     }
 
     if (contextLoading) {
@@ -2510,9 +2596,26 @@ export default function VerseDetailPage({ params }: PageProps) {
       return (
         <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
           <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.context}
-            </p>
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-stone-300/80 bg-[#fffaf1]/80 px-3 py-1.5 text-sm font-medium text-stone-600 shadow-[0_4px_12px_rgba(94,72,37,0.06)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
+                <span>
+                  {selectedContext === 'paragraph'
+                    ? t.paragraph
+                    : selectedContext === 'book'
+                      ? t.bookMode
+                      : t.bibleMode}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setContextSheetOpen(true)}
+                className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+              >
+                {t.change}
+              </button>
+            </div>
+
             <p className="text-[1.08rem] leading-9 text-stone-800">{contextError}</p>
 
             <button
@@ -2528,18 +2631,32 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     if (!contextData) {
-      return renderStructuredPanel(
-        t.context,
-        t.contextLead,
-        t.contextPointLabel,
-        [t.contextPoint1, t.contextPoint2, t.contextPoint3],
-        t.contextTakeaway
-      )
+      return renderContextModeIntro()
     }
 
     return (
       <div className="tab-panel-enter card-pop mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-300/80 bg-[#fffaf1]/80 px-3 py-1.5 text-sm font-medium text-stone-600 shadow-[0_4px_12px_rgba(94,72,37,0.06)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
+              <span>
+                {selectedContext === 'paragraph'
+                  ? t.paragraph
+                  : selectedContext === 'book'
+                    ? t.bookMode
+                    : t.bibleMode}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setContextSheetOpen(true)}
+              className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+            >
+              {t.change}
+            </button>
+          </div>
+
           <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
             {t.context}
           </p>
@@ -2775,17 +2892,18 @@ export default function VerseDetailPage({ params }: PageProps) {
     return renderLensModeIntro()
   }
 
-  function renderLensOption(
-    lens: LensKind,
+  function renderModeOption(
+    kind: string,
     title: string,
     helper: string,
-    accentClass: string
+    accentClass: string,
+    onClick: () => void
   ) {
     return (
       <button
         type="button"
-        onClick={() => void handleSelectLens(lens)}
-        className="lens-option group relative w-full overflow-hidden rounded-[26px] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,239,220,0.96)_100%)] px-5 py-5 text-left shadow-[0_10px_24px_rgba(94,72,37,0.08)] transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-[0_16px_30px_rgba(94,72,37,0.12)] active:scale-[0.988]"
+        onClick={onClick}
+        className="group relative w-full overflow-hidden rounded-[26px] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,239,220,0.96)_100%)] px-5 py-5 text-left shadow-[0_10px_24px_rgba(94,72,37,0.08)] transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-[0_16px_30px_rgba(94,72,37,0.12)] active:scale-[0.988]"
       >
         <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.45),transparent_45%)]" />
@@ -2796,7 +2914,19 @@ export default function VerseDetailPage({ params }: PageProps) {
             className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/50 ${accentClass} shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]`}
           >
             <span className="text-sm font-semibold text-stone-800">
-              {lens === 'translation' ? 'T' : lens === 'word' ? 'W' : lens === 'tension' ? 'N' : 'P'}
+              {kind === 'translation'
+                ? 'T'
+                : kind === 'word'
+                  ? 'W'
+                  : kind === 'tension'
+                    ? 'N'
+                    : kind === 'phrase'
+                      ? 'P'
+                      : kind === 'paragraph'
+                        ? '¶'
+                        : kind === 'book'
+                          ? 'B'
+                          : 'Ω'}
             </span>
           </div>
 
@@ -2872,6 +3002,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             () => {
               setActiveTab('insights')
               setLensSheetOpen(false)
+              setContextSheetOpen(false)
             },
             false
           )}
@@ -2880,7 +3011,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             activeTab === 'context',
             () => {
               if (!modesReady) return
-              setActiveTab('context')
+              setContextSheetOpen(true)
               setLensSheetOpen(false)
               setActiveArticleKey('')
             },
@@ -2892,6 +3023,7 @@ export default function VerseDetailPage({ params }: PageProps) {
             () => {
               if (!modesReady) return
               setLensSheetOpen(true)
+              setContextSheetOpen(false)
               setActiveArticleKey('')
             },
             !modesReady
@@ -3032,32 +3164,95 @@ export default function VerseDetailPage({ params }: PageProps) {
                 </div>
 
                 <div className="mt-5 space-y-3.5">
-                  {renderLensOption(
+                  {renderModeOption(
                     'translation',
                     t.translation,
                     t.translationHelper,
-                    'bg-[linear-gradient(180deg,#efe5cc_0%,#e3d4ad_100%)]'
+                    'bg-[linear-gradient(180deg,#efe5cc_0%,#e3d4ad_100%)]',
+                    () => void handleSelectLens('translation')
                   )}
 
-                  {renderLensOption(
+                  {renderModeOption(
                     'word',
                     t.word,
                     t.wordHelper,
-                    'bg-[linear-gradient(180deg,#ece3d6_0%,#dfd0bb_100%)]'
+                    'bg-[linear-gradient(180deg,#ece3d6_0%,#dfd0bb_100%)]',
+                    () => void handleSelectLens('word')
                   )}
 
-                  {renderLensOption(
+                  {renderModeOption(
                     'tension',
                     t.tension,
                     t.tensionHelper,
-                    'bg-[linear-gradient(180deg,#eadfcd_0%,#dcc9ad_100%)]'
+                    'bg-[linear-gradient(180deg,#eadfcd_0%,#dcc9ad_100%)]',
+                    () => void handleSelectLens('tension')
                   )}
 
-                  {renderLensOption(
+                  {renderModeOption(
                     'phrase',
                     t.phrase,
                     t.phraseHelper,
-                    'bg-[linear-gradient(180deg,#ece6da_0%,#ddd2bf_100%)]'
+                    'bg-[linear-gradient(180deg,#ece6da_0%,#ddd2bf_100%)]',
+                    () => void handleSelectLens('phrase')
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {contextSheetOpen && modesReady && (
+        <div className="sheet-overlay fixed inset-0 z-50 bg-[rgba(20,16,10,0.30)] backdrop-blur-[10px]">
+          <div className="flex h-full items-end px-4 pb-4 pt-16">
+            <div className="sheet-panel mx-auto w-full max-w-md overflow-hidden rounded-[34px] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(251,246,234,0.98)_0%,rgba(244,234,214,0.98)_100%)] shadow-[0_30px_80px_rgba(0,0,0,0.20)]">
+              <div className="px-5 pt-3">
+                <div className="mx-auto h-1.5 w-12 rounded-full bg-stone-300/90" />
+              </div>
+
+              <div className="px-5 pb-5 pt-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[1.55rem] font-semibold tracking-tight text-stone-900">
+                      {t.contextTitle}
+                    </p>
+                    <p className="mt-1 text-sm text-stone-600">{t.chooseContextMode}</p>
+                    <p className="text-sm text-stone-500">{t.readThisVerseThroughContext}</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setContextSheetOpen(false)}
+                    aria-label={t.close}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-300/90 bg-[#fffaf1]/90 text-base font-medium text-stone-700 shadow-[0_6px_14px_rgba(94,72,37,0.08)] transition hover:bg-white active:scale-[0.97]"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="mt-5 space-y-3.5">
+                  {renderModeOption(
+                    'paragraph',
+                    t.paragraph,
+                    t.paragraphHelper,
+                    'bg-[linear-gradient(180deg,#efe5cc_0%,#e3d4ad_100%)]',
+                    () => void handleSelectContext('paragraph')
+                  )}
+
+                  {renderModeOption(
+                    'book',
+                    t.bookMode,
+                    t.bookHelper,
+                    'bg-[linear-gradient(180deg,#ece3d6_0%,#dfd0bb_100%)]',
+                    () => void handleSelectContext('book')
+                  )}
+
+                  {renderModeOption(
+                    'bible',
+                    t.bibleMode,
+                    t.bibleHelper,
+                    'bg-[linear-gradient(180deg,#eadfcd_0%,#dcc9ad_100%)]',
+                    () => void handleSelectContext('bible')
                   )}
                 </div>
               </div>
