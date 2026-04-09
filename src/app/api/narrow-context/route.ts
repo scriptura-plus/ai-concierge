@@ -68,6 +68,61 @@ All explanatory text must be in English.
 `.trim()
 }
 
+function translationLanguageName(targetLanguage: SupportedLanguage) {
+  if (targetLanguage === 'ru') return 'Russian'
+  if (targetLanguage === 'es') return 'Spanish'
+  if (targetLanguage === 'fr') return 'French'
+  if (targetLanguage === 'de') return 'German'
+  return 'English'
+}
+
+function buildParagraphTranslationPrompt(params: {
+  paragraphText: string
+  targetLanguage: SupportedLanguage
+}) {
+  return `
+Translate the following Bible paragraph into ${translationLanguageName(params.targetLanguage)}.
+
+STRICT RULES:
+- Return ONLY the translated paragraph text.
+- No JSON.
+- No markdown.
+- No commentary.
+- No quotation marks around the result.
+- Preserve the original meaning closely.
+- Make the paragraph read naturally in ${translationLanguageName(params.targetLanguage)}.
+- Keep it as one readable paragraph block.
+
+PARAGRAPH:
+${params.paragraphText}
+`.trim()
+}
+
+async function translateParagraphText(
+  paragraphText: string,
+  targetLanguage: SupportedLanguage
+): Promise<string> {
+  if (targetLanguage === 'en') {
+    return paragraphText
+  }
+
+  const result = await runModel({
+    prompt: buildParagraphTranslationPrompt({
+      paragraphText,
+      targetLanguage,
+    }),
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 1200,
+  })
+
+  if (!result.ok || !result.rawText?.trim()) {
+    return paragraphText
+  }
+
+  const translated = result.rawText.replace(/^["'`]+|["'`]+$/g, '').trim()
+  return translated || paragraphText
+}
+
 function buildPrompt(params: {
   reference: string
   verseText: string
@@ -503,10 +558,7 @@ function validatePayload(
   }
 }
 
-function buildFallbackDirections(
-  verseText: string,
-  paragraphText: string
-): NarrowContextDirection[] {
+function buildFallbackDirections(): NarrowContextDirection[] {
   return [
     {
       id: 'dir_1',
@@ -615,11 +667,17 @@ export async function POST(req: Request) {
     }
 
     const reference = `${safeBook} ${safeChapter}:${safeVerse}`
+
+    const localizedParagraphText = await translateParagraphText(
+      paragraphResult.paragraph.text,
+      safeLanguage
+    )
+
     const prompt = buildPrompt({
       reference,
       verseText,
       paragraphReference: paragraphResult.paragraph.reference,
-      paragraphText: paragraphResult.paragraph.text,
+      paragraphText: localizedParagraphText,
       targetLanguage: safeLanguage,
     })
 
@@ -649,7 +707,7 @@ export async function POST(req: Request) {
         validated = validatePayload(
           parsed,
           paragraphResult.paragraph.reference,
-          paragraphResult.paragraph.text
+          localizedParagraphText
         )
       }
     }
@@ -658,10 +716,10 @@ export async function POST(req: Request) {
       validated = {
         paragraph: {
           reference: paragraphResult.paragraph.reference,
-          full_text: paragraphResult.paragraph.text,
+          full_text: localizedParagraphText,
           highlights: [],
         },
-        directions: buildFallbackDirections(verseText, paragraphResult.paragraph.text),
+        directions: buildFallbackDirections(),
       }
     }
 
