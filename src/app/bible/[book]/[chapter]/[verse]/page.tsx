@@ -112,7 +112,7 @@ type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
 type InsightsStage = 'idle' | 'loading_saved' | 'filling' | 'ready' | 'failed'
 type TopTab = 'insights' | 'context' | 'lens'
 type LensKind = 'translation' | 'word' | 'tension' | 'phrase'
-type ContextKind = 'paragraph' | 'book' | 'bible'
+type ContextKind = 'narrow' | 'wide'
 type SourceMode = 'insights' | 'word' | 'tension' | 'why_this_phrase'
 
 type ArticleJob = {
@@ -188,12 +188,10 @@ const UI_TEXT: Record<
     contextTitle: string
     chooseContextMode: string
     readThisVerseThroughContext: string
-    paragraph: string
-    bookMode: string
-    bibleMode: string
-    paragraphHelper: string
-    bookHelper: string
-    bibleHelper: string
+    narrowContext: string
+    wideContext: string
+    narrowHelper: string
+    wideHelper: string
 
     lensTitle: string
     chooseFocusedLens: string
@@ -305,19 +303,17 @@ const UI_TEXT: Record<
       'Translations should feel like a reading tool, not a raw list of versions.',
     translationsDiffLabel: 'Difference',
     contextLead:
-      'This mode will surface only the context that materially changes the reading of the verse.',
+      'Context helps the verse open through the most meaningful surrounding frame.',
     contextTakeaway:
-      'Context should clarify why the verse sounds the way it does inside its real setting.',
+      'The best context is not the biggest one, but the one that most honestly sharpens the verse.',
     contextPointLabel: 'Context point',
     contextTitle: 'Context',
-    chooseContextMode: 'Choose a context level',
-    readThisVerseThroughContext: 'See this verse inside a wider frame.',
-    paragraph: 'Paragraph',
-    bookMode: 'Book',
-    bibleMode: 'Bible',
-    paragraphHelper: 'Immediate flow around the verse',
-    bookHelper: 'How the verse works inside the book',
-    bibleHelper: 'How the verse connects to the wider Bible',
+    chooseContextMode: 'Choose a context mode',
+    readThisVerseThroughContext: 'Read this verse through the closest or wider frame.',
+    narrowContext: 'Narrow Context',
+    wideContext: 'Wide Context',
+    narrowHelper: 'Closest paragraph, hidden meaning-lines, and directions to explore',
+    wideHelper: 'Chapter, book, and — when meaningful — the wider Bible line',
     lensTitle: 'Lens',
     chooseFocusedLens: 'Choose a focused lens',
     readThisVerseOneAngle: 'Read this verse through one angle.',
@@ -340,9 +336,11 @@ const UI_TEXT: Record<
       'The final version will show 3–5 compact comparison points instead of one dense block.',
     translationsPoint3:
       'A short takeaway will explain why those differences matter for reading the verse.',
-    contextPoint1: 'Choose the immediate paragraph around the verse.',
-    contextPoint2: 'Choose the whole-book movement and purpose.',
-    contextPoint3: 'Choose the wider Bible-level connections and echoes.',
+    contextPoint1: 'Narrow Context focuses on the closest paragraph and its hidden pressure points.',
+    contextPoint2:
+      'Wide Context looks for the most meaningful larger frame: chapter, book, or wider Bible line.',
+    contextPoint3:
+      'The system should choose the most useful scale honestly, without forcing grand claims.',
     sharedAsImage: 'Shared as image',
     sharedAsText: 'Shared as text',
     shareUnavailableCopiedInstead: 'Share unavailable — copied instead',
@@ -362,7 +360,7 @@ const UI_TEXT: Record<
     translationsUnavailable: 'Unable to load Translations mode.',
     loadingContext: 'Loading Context mode',
     loadingContextText:
-      'Tracing the immediate forces, flow, and setting that sharpen the verse…',
+      'Tracing the wider frame that most honestly sharpens the verse…',
     contextUnavailable: 'Unable to load Context mode.',
     backToTop: 'Top',
     copiedAnalysis: 'Copied',
@@ -418,19 +416,17 @@ const UI_TEXT: Record<
       '«Переводы» должны ощущаться как инструмент чтения, а не как сырой список версий.',
     translationsDiffLabel: 'Различие',
     contextLead:
-      'Этот режим будет показывать только тот контекст, который реально меняет чтение стиха.',
+      'Контекст раскрывает стих через наиболее плодотворную окружающую рамку.',
     contextTakeaway:
-      'Контекст должен объяснять, почему стих звучит именно так в своей реальной среде.',
+      'Лучший контекст — не самый большой, а тот, который честнее всего заостряет стих.',
     contextPointLabel: 'Пункт контекста',
     contextTitle: 'Контекст',
-    chooseContextMode: 'Выберите уровень контекста',
-    readThisVerseThroughContext: 'Посмотрите на стих в более широкой рамке.',
-    paragraph: 'Абзац',
-    bookMode: 'Книга',
-    bibleMode: 'Библия',
-    paragraphHelper: 'Ближайший поток мысли вокруг стиха',
-    bookHelper: 'Как стих работает внутри книги',
-    bibleHelper: 'Как стих соединяется со всей Библией',
+    chooseContextMode: 'Выберите режим контекста',
+    readThisVerseThroughContext: 'Посмотрите на стих через ближайшую или более широкую рамку.',
+    narrowContext: 'Узкий контекст',
+    wideContext: 'Широкий контекст',
+    narrowHelper: 'Ближайший абзац, скрытые линии смысла и направления для исследования',
+    wideHelper: 'Глава, книга и — если уместно — более широкая линия всей Библии',
     lensTitle: 'Линза',
     chooseFocusedLens: 'Выберите сфокусированную линзу',
     readThisVerseOneAngle: 'Посмотрите на этот стих под одним углом.',
@@ -448,15 +444,20 @@ const UI_TEXT: Record<
     takeaway: 'Вывод',
     lensLeadDefault:
       'Выберите сфокусированную линзу, чтобы посмотреть на этот стих под одним углом.',
-    lensTakeawayDefault: '«Линза» — это семейство сфокусированного чтения, а не просто кнопка reroll.',
-    translationsPoint1: 'Короткий lead будет называть главное переводческое напряжение в стихе.',
+    lensTakeawayDefault:
+      '«Линза» — это семейство сфокусированного чтения, а не просто кнопка reroll.',
+    translationsPoint1:
+      'Короткий lead будет называть главное переводческое напряжение в стихе.',
     translationsPoint2:
       'Финальная версия покажет 3–5 компактных различий вместо одного плотного блока.',
     translationsPoint3:
       'Короткий вывод объяснит, почему эти различия важны для чтения стиха.',
-    contextPoint1: 'Выберите ближайший абзац вокруг стиха.',
-    contextPoint2: 'Выберите движение и цель всей книги.',
-    contextPoint3: 'Выберите связи и отзвуки по всей Библии.',
+    contextPoint1:
+      'Узкий контекст фокусируется на ближайшем абзаце и его скрытых точках давления.',
+    contextPoint2:
+      'Широкий контекст ищет наиболее полезную большую рамку: глава, книга или широкая библейская линия.',
+    contextPoint3:
+      'Система должна честно выбирать самый полезный масштаб и не натягивать грандиозные выводы.',
     sharedAsImage: 'Отправлено как изображение',
     sharedAsText: 'Отправлено как текст',
     shareUnavailableCopiedInstead: 'Поделиться нельзя — текст скопирован',
@@ -476,7 +477,7 @@ const UI_TEXT: Record<
     translationsUnavailable: 'Не удалось загрузить режим «Переводы».',
     loadingContext: 'Загрузка режима «Контекст»',
     loadingContextText:
-      'Отслеживаем ближайшие силы, ход мысли и обстановку, которые заостряют чтение стиха…',
+      'Ищем более широкую рамку, которая честнее всего заостряет смысл стиха…',
     contextUnavailable: 'Не удалось загрузить режим «Контекст».',
     backToTop: 'Наверх',
     copiedAnalysis: 'Скопировано',
@@ -532,19 +533,17 @@ const UI_TEXT: Record<
       'Traducciones debe sentirse como una herramienta de lectura, no como una lista bruta de versiones.',
     translationsDiffLabel: 'Diferencia',
     contextLead:
-      'Este modo mostrará solo el contexto que realmente cambia la lectura del versículo.',
+      'El contexto abre el versículo a través del marco circundante más útil.',
     contextTakeaway:
-      'El contexto debe aclarar por qué el versículo suena así dentro de su escenario real.',
+      'El mejor contexto no es el más grande, sino el que afina el versículo con más honestidad.',
     contextPointLabel: 'Punto de contexto',
     contextTitle: 'Contexto',
-    chooseContextMode: 'Elige un nivel de contexto',
-    readThisVerseThroughContext: 'Mira este versículo dentro de un marco más amplio.',
-    paragraph: 'Párrafo',
-    bookMode: 'Libro',
-    bibleMode: 'Biblia',
-    paragraphHelper: 'El flujo inmediato alrededor del versículo',
-    bookHelper: 'Cómo funciona dentro del libro',
-    bibleHelper: 'Cómo conecta con toda la Biblia',
+    chooseContextMode: 'Elige un modo de contexto',
+    readThisVerseThroughContext: 'Lee este versículo desde el marco más cercano o más amplio.',
+    narrowContext: 'Contexto cercano',
+    wideContext: 'Contexto amplio',
+    narrowHelper: 'El párrafo más cercano, líneas ocultas de sentido y rutas para explorar',
+    wideHelper: 'Capítulo, libro y — cuando tenga sentido — la línea más amplia de la Biblia',
     lensTitle: 'Lente',
     chooseFocusedLens: 'Elige una lente enfocada',
     readThisVerseOneAngle: 'Lee este versículo desde un solo ángulo.',
@@ -569,9 +568,12 @@ const UI_TEXT: Record<
       'La versión final mostrará 3–5 puntos de comparación compactos en vez de un bloque denso.',
     translationsPoint3:
       'Una conclusión breve explicará por qué esas diferencias importan para leer el versículo.',
-    contextPoint1: 'Elige el párrafo inmediato alrededor del versículo.',
-    contextPoint2: 'Elige el movimiento y propósito del libro.',
-    contextPoint3: 'Elige conexiones y ecos a nivel de toda la Biblia.',
+    contextPoint1:
+      'El contexto cercano se enfoca en el párrafo inmediato y sus puntos de presión ocultos.',
+    contextPoint2:
+      'El contexto amplio busca el marco mayor más útil: capítulo, libro o línea bíblica más amplia.',
+    contextPoint3:
+      'El sistema debe elegir con honestidad la escala más útil y no forzar conclusiones grandiosas.',
     sharedAsImage: 'Compartido como imagen',
     sharedAsText: 'Compartido como texto',
     shareUnavailableCopiedInstead: 'No se puede compartir — copiado en su lugar',
@@ -592,7 +594,7 @@ const UI_TEXT: Record<
     translationsUnavailable: 'No se pudo cargar el modo Traducciones.',
     loadingContext: 'Cargando modo Contexto',
     loadingContextText:
-      'Siguiendo las fuerzas inmediatas, el flujo y el marco que afinan la lectura del versículo…',
+      'Buscando el marco más amplio que afine este versículo con honestidad…',
     contextUnavailable: 'No se pudo cargar el modo Contexto.',
     backToTop: 'Arriba',
     copiedAnalysis: 'Copiado',
@@ -648,19 +650,18 @@ const UI_TEXT: Record<
       'Traductions doit ressembler à un outil de lecture, pas à une simple liste brute.',
     translationsDiffLabel: 'Différence',
     contextLead:
-      'Ce mode ne montrera que le contexte qui change réellement la lecture du verset.',
+      'Le contexte ouvre le verset à travers le cadre environnant le plus utile.',
     contextTakeaway:
-      'Le contexte doit expliquer pourquoi le verset sonne ainsi dans son cadre réel.',
+      'Le meilleur contexte n’est pas le plus grand, mais celui qui affine le verset avec le plus d’honnêteté.',
     contextPointLabel: 'Point de contexte',
     contextTitle: 'Contexte',
-    chooseContextMode: 'Choisissez un niveau de contexte',
-    readThisVerseThroughContext: 'Voyez ce verset dans un cadre plus large.',
-    paragraph: 'Paragraphe',
-    bookMode: 'Livre',
-    bibleMode: 'Bible',
-    paragraphHelper: 'Le mouvement immédiat autour du verset',
-    bookHelper: 'Comment il fonctionne dans le livre',
-    bibleHelper: 'Comment il se relie à toute la Bible',
+    chooseContextMode: 'Choisissez un mode de contexte',
+    readThisVerseThroughContext: 'Lisez ce verset dans son cadre proche ou plus large.',
+    narrowContext: 'Contexte proche',
+    wideContext: 'Contexte large',
+    narrowHelper: 'Le paragraphe le plus proche, les lignes de sens cachées et des pistes à explorer',
+    wideHelper:
+      'Chapitre, livre et — lorsque cela éclaire vraiment — la ligne plus large de la Bible',
     lensTitle: 'Lentille',
     chooseFocusedLens: 'Choisissez une lentille ciblée',
     readThisVerseOneAngle: 'Lisez ce verset sous un angle précis.',
@@ -683,9 +684,12 @@ const UI_TEXT: Record<
       'La version finale montrera 3–5 points compacts au lieu d’un bloc dense.',
     translationsPoint3:
       'Une courte conclusion expliquera pourquoi ces différences comptent.',
-    contextPoint1: 'Choisissez le paragraphe immédiat autour du verset.',
-    contextPoint2: 'Choisissez le mouvement et le but du livre.',
-    contextPoint3: 'Choisissez les liens et échos dans toute la Bible.',
+    contextPoint1:
+      'Le contexte proche se concentre sur le paragraphe immédiat et ses points de pression cachés.',
+    contextPoint2:
+      'Le contexte large cherche le cadre le plus utile : chapitre, livre ou ligne biblique plus vaste.',
+    contextPoint3:
+      'Le système doit choisir honnêtement l’échelle la plus féconde sans forcer de grandes conclusions.',
     sharedAsImage: 'Partagé comme image',
     sharedAsText: 'Partagé comme texte',
     shareUnavailableCopiedInstead: 'Partage indisponible — copié à la place',
@@ -706,7 +710,7 @@ const UI_TEXT: Record<
     translationsUnavailable: 'Impossible de charger le mode Traductions.',
     loadingContext: 'Chargement du mode Contexte',
     loadingContextText:
-      'Repérage des forces immédiates, du mouvement et du cadre qui affinent la lecture du verset…',
+      'Recherche du cadre le plus large qui affûte honnêtement ce verset…',
     contextUnavailable: 'Impossible de charger le mode Contexte.',
     backToTop: 'Haut',
     copiedAnalysis: 'Copié',
@@ -762,19 +766,18 @@ const UI_TEXT: Record<
       'Übersetzungen sollte sich wie ein Lesewerkzeug anfühlen, nicht wie eine rohe Liste.',
     translationsDiffLabel: 'Unterschied',
     contextLead:
-      'Dieser Modus zeigt nur den Kontext, der die Lesart des Verses wirklich verändert.',
+      'Der Kontext öffnet den Vers durch den nützlichsten größeren Rahmen.',
     contextTakeaway:
-      'Der Kontext soll erklären, warum der Vers in seinem echten Rahmen so klingt.',
+      'Der beste Kontext ist nicht der größte, sondern der, der den Vers am ehrlichsten schärft.',
     contextPointLabel: 'Kontextpunkt',
     contextTitle: 'Kontext',
-    chooseContextMode: 'Wähle eine Kontextebene',
-    readThisVerseThroughContext: 'Sieh den Vers in einem größeren Rahmen.',
-    paragraph: 'Abschnitt',
-    bookMode: 'Buch',
-    bibleMode: 'Bibel',
-    paragraphHelper: 'Der unmittelbare Fluss um den Vers',
-    bookHelper: 'Wie er im Buch funktioniert',
-    bibleHelper: 'Wie er mit der ganzen Bibel verbunden ist',
+    chooseContextMode: 'Wähle einen Kontextmodus',
+    readThisVerseThroughContext: 'Lies diesen Vers im nahen oder weiteren Rahmen.',
+    narrowContext: 'Naher Kontext',
+    wideContext: 'Weiter Kontext',
+    narrowHelper: 'Der nächste Absatz, verborgene Sinnlinien und Wege zum Weitergraben',
+    wideHelper:
+      'Kapitel, Buch und — wenn es wirklich trägt — die weitere biblische Linie',
     lensTitle: 'Linse',
     chooseFocusedLens: 'Wähle eine fokussierte Linse',
     readThisVerseOneAngle: 'Lies diesen Vers aus einem bestimmten Blickwinkel.',
@@ -798,9 +801,12 @@ const UI_TEXT: Record<
       'Die endgültige Version zeigt 3–5 kompakte Vergleichspunkte statt eines dichten Blocks.',
     translationsPoint3:
       'Ein kurzes Fazit erklärt, warum diese Unterschiede für die Lesart wichtig sind.',
-    contextPoint1: 'Wähle den unmittelbaren Abschnitt um den Vers.',
-    contextPoint2: 'Wähle Bewegung und Ziel des Buches.',
-    contextPoint3: 'Wähle Verbindungen und Echos in der ganzen Bibel.',
+    contextPoint1:
+      'Der nahe Kontext konzentriert sich auf den unmittelbaren Absatz und seine verborgenen Druckpunkte.',
+    contextPoint2:
+      'Der weite Kontext sucht den fruchtbarsten größeren Rahmen: Kapitel, Buch oder weitere biblische Linie.',
+    contextPoint3:
+      'Das System soll die nützlichste Ebene ehrlich wählen und keine großen Aussagen erzwingen.',
     sharedAsImage: 'Als Bild geteilt',
     sharedAsText: 'Als Text geteilt',
     shareUnavailableCopiedInstead: 'Teilen nicht verfügbar — stattdessen kopiert',
@@ -821,7 +827,7 @@ const UI_TEXT: Record<
     translationsUnavailable: 'Übersetzungsmodus konnte nicht geladen werden.',
     loadingContext: 'Kontextmodus wird geladen',
     loadingContextText:
-      'Unmittelbare Kräfte, Bewegungen und Rahmen werden verfolgt, die die Lesart des Verses schärfen…',
+      'Der größere Rahmen wird gesucht, der den Vers am ehrlichsten schärft…',
     contextUnavailable: 'Kontextmodus konnte nicht geladen werden.',
     backToTop: 'Oben',
     copiedAnalysis: 'Kopiert',
@@ -898,7 +904,10 @@ function renderStructuredPanel(
   )
 }
 
-function lensBadgeLabel(selectedLens: LensKind | null, t: (typeof UI_TEXT)['en']) {
+function lensBadgeLabel(
+  selectedLens: LensKind | null,
+  t: (typeof UI_TEXT)['en']
+) {
   if (selectedLens === 'translation') return `${t.lensLabel}: ${t.translation}`
   if (selectedLens === 'word') return `${t.lensLabel}: ${t.word}`
   if (selectedLens === 'tension') return `${t.lensLabel}: ${t.tension}`
@@ -1492,7 +1501,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function loadContext(force = false, language: AppLanguage = appLanguage) {
-    if (!formattedReference || !verseText || !modesReady) return
+    if (!formattedReference || !verseText || !modesReady || !selectedContext) return
     if (!force && contextByLanguage[language]) return
 
     const requestId = ++contextRequestIdRef.current
@@ -1500,6 +1509,8 @@ export default function VerseDetailPage({ params }: PageProps) {
     setContextLoading(true)
     setContextError('')
     setActiveArticleKey('')
+
+    const mappedMode = selectedContext === 'narrow' ? 'paragraph' : 'book'
 
     try {
       const res = await fetch('/api/context', {
@@ -1509,7 +1520,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           reference: formattedReference,
           verseText,
           targetLanguage: language,
-          contextMode: selectedContext ?? 'paragraph',
+          contextMode: mappedMode,
         }),
       })
 
@@ -2004,6 +2015,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (!modesReady) return
 
     setSelectedContext(mode)
+    setContextByLanguage(emptyContextMap())
     setContextSheetOpen(false)
     setActiveTab('context')
     setActiveArticleKey('')
@@ -2363,9 +2375,8 @@ export default function VerseDetailPage({ params }: PageProps) {
             point1={t.contextPoint1}
             point2={t.contextPoint2}
             point3={t.contextPoint3}
-            paragraphLabel={t.paragraph}
-            bookLabel={t.bookMode}
-            bibleLabel={t.bibleMode}
+            narrowLabel={t.narrowContext}
+            wideLabel={t.wideContext}
             changeLabel={t.change}
             tryAgainLabel={t.tryAgain}
             backToTopLabel={t.backToTop}
@@ -2516,12 +2527,10 @@ export default function VerseDetailPage({ params }: PageProps) {
         subtitle={t.chooseContextMode}
         description={t.readThisVerseThroughContext}
         closeLabel={t.close}
-        paragraphLabel={t.paragraph}
-        bookLabel={t.bookMode}
-        bibleLabel={t.bibleMode}
-        paragraphHelper={t.paragraphHelper}
-        bookHelper={t.bookHelper}
-        bibleHelper={t.bibleHelper}
+        narrowLabel={t.narrowContext}
+        wideLabel={t.wideContext}
+        narrowHelper={t.narrowHelper}
+        wideHelper={t.wideHelper}
         onClose={() => setContextSheetOpen(false)}
         onSelect={(mode) => {
           void handleSelectContext(mode)
