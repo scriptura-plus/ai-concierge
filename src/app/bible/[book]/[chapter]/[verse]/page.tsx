@@ -3,6 +3,9 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
+import VerseBlock from './components/VerseBlock'
+import LensSheet from './components/LensSheet'
+import ContextSheet from './components/ContextSheet'
 
 type PageProps = {
   params: Promise<{
@@ -2037,88 +2040,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
-  function renderVerseBlock() {
-    if (verseLoading) {
-      return (
-        <div className="verse-shell rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#faf3e4_0%,#f0e1bd_58%,#e7d3ab_100%)] px-6 py-7 shadow-inner">
-            <p className="mb-4 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.verseLoading}
-            </p>
-            <div className="space-y-3">
-              <div className="skeleton-line h-4 w-11/12 rounded-full bg-stone-200/80" />
-              <div className="skeleton-line h-4 w-10/12 rounded-full bg-stone-200/80" />
-              <div className="skeleton-line h-4 w-9/12 rounded-full bg-stone-200/80" />
-            </div>
-            <p className="mt-5 text-sm text-stone-500">{t.verseLoadingText}</p>
-          </div>
-        </div>
-      )
-    }
-
-    if (verseError) {
-      return (
-        <div className="verse-shell rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-          <div className="rounded-[28px] border border-red-200/70 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f5ead4_55%,#eedab9_100%)] px-6 py-7 shadow-inner">
-            <p className="mb-3 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.verseUnavailable}
-            </p>
-            <p className="text-[1rem] leading-8 text-stone-800">{verseError}</p>
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="verse-shell verse-enter rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-          <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-            {formattedReference}
-          </p>
-          <p className="text-[1.08rem] leading-9 text-stone-800 italic">{displayedVerseText}</p>
-        </div>
-      </div>
-    )
-  }
-
-  function renderInsightsSkeleton() {
-    return (
-      <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/60 bg-[linear-gradient(180deg,#f7edd8_0%,#efe1bd_100%)] p-6 shadow-[0_12px_28px_rgba(94,72,37,0.10)]">
-        <div className="rounded-[28px] border border-stone-300/50 bg-[#fbf6ea]/85 px-6 py-7">
-          <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-            {t.insightsLoading}
-          </p>
-
-          <div className="space-y-4">
-            <div className="rounded-[24px] border border-stone-300/50 bg-[#fffaf1] px-5 py-5">
-              <div className="skeleton-line h-5 w-8/12 rounded-full bg-stone-200/85" />
-              <div className="mt-4 space-y-3">
-                <div className="skeleton-line h-4 w-full rounded-full bg-stone-200/75" />
-                <div className="skeleton-line h-4 w-11/12 rounded-full bg-stone-200/75" />
-                <div className="skeleton-line h-4 w-10/12 rounded-full bg-stone-200/75" />
-                <div className="skeleton-line h-4 w-9/12 rounded-full bg-stone-200/75" />
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-stone-300/35 bg-[#fffaf1]/70 px-5 py-5">
-              <div className="skeleton-line h-5 w-7/12 rounded-full bg-stone-200/70" />
-              <div className="mt-4 space-y-3">
-                <div className="skeleton-line h-4 w-full rounded-full bg-stone-200/65" />
-                <div className="skeleton-line h-4 w-10/12 rounded-full bg-stone-200/65" />
-                <div className="skeleton-line h-4 w-8/12 rounded-full bg-stone-200/65" />
-              </div>
-            </div>
-          </div>
-
-          <p className="mt-5 text-sm text-stone-500">{t.insightsLoadingText}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-stone-400">
-            {t.preparingModes}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   function renderArticleView() {
     if (!(activeArticleKey && activeArticleJob?.status === 'ready' && activeArticleJob.article)) {
       return null
@@ -2230,7 +2151,41 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     if (insightsBlockingLoad) {
-      return renderInsightsSkeleton()
+      return (
+        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/60 bg-[linear-gradient(180deg,#f7edd8_0%,#efe1bd_100%)] p-6 shadow-[0_12px_28px_rgba(94,72,37,0.10)]">
+          <div className="rounded-[28px] border border-stone-300/50 bg-[#fbf6ea]/85 px-6 py-7">
+            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {t.insightsLoading}
+            </p>
+
+            <div className="space-y-4">
+              <div className="rounded-[24px] border border-stone-300/50 bg-[#fffaf1] px-5 py-5">
+                <div className="skeleton-line h-5 w-8/12 rounded-full bg-stone-200/85" />
+                <div className="mt-4 space-y-3">
+                  <div className="skeleton-line h-4 w-full rounded-full bg-stone-200/75" />
+                  <div className="skeleton-line h-4 w-11/12 rounded-full bg-stone-200/75" />
+                  <div className="skeleton-line h-4 w-10/12 rounded-full bg-stone-200/75" />
+                  <div className="skeleton-line h-4 w-9/12 rounded-full bg-stone-200/75" />
+                </div>
+              </div>
+
+              <div className="rounded-[24px] border border-stone-300/35 bg-[#fffaf1]/70 px-5 py-5">
+                <div className="skeleton-line h-5 w-7/12 rounded-full bg-stone-200/70" />
+                <div className="mt-4 space-y-3">
+                  <div className="skeleton-line h-4 w-full rounded-full bg-stone-200/65" />
+                  <div className="skeleton-line h-4 w-10/12 rounded-full bg-stone-200/65" />
+                  <div className="skeleton-line h-4 w-8/12 rounded-full bg-stone-200/65" />
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-5 text-sm text-stone-500">{t.insightsLoadingText}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-stone-400">
+              {t.preparingModes}
+            </p>
+          </div>
+        </div>
+      )
     }
 
     if (insightsError && insights.length === 0) {
@@ -2892,58 +2847,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     return renderLensModeIntro()
   }
 
-  function renderModeOption(
-    kind: string,
-    title: string,
-    helper: string,
-    accentClass: string,
-    onClick: () => void
-  ) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="group relative w-full overflow-hidden rounded-[26px] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,239,220,0.96)_100%)] px-5 py-5 text-left shadow-[0_10px_24px_rgba(94,72,37,0.08)] transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-[0_16px_30px_rgba(94,72,37,0.12)] active:scale-[0.988]"
-      >
-        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.45),transparent_45%)]" />
-        </div>
-
-        <div className="relative flex items-start gap-4">
-          <div
-            className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/50 ${accentClass} shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]`}
-          >
-            <span className="text-sm font-semibold text-stone-800">
-              {kind === 'translation'
-                ? 'T'
-                : kind === 'word'
-                  ? 'W'
-                  : kind === 'tension'
-                    ? 'N'
-                    : kind === 'phrase'
-                      ? 'P'
-                      : kind === 'paragraph'
-                        ? '¶'
-                        : kind === 'book'
-                          ? 'B'
-                          : 'Ω'}
-            </span>
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[1.02rem] font-semibold tracking-tight text-stone-900">{title}</p>
-              <span className="translate-x-0 text-stone-400 transition-transform duration-200 group-hover:translate-x-[2px]">
-                →
-              </span>
-            </div>
-            <p className="mt-1.5 text-sm leading-6 text-stone-600">{helper}</p>
-          </div>
-        </div>
-      </button>
-    )
-  }
-
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
       <div ref={articleTopRef} className="mx-auto flex w-full max-w-md flex-col">
@@ -3030,7 +2933,15 @@ export default function VerseDetailPage({ params }: PageProps) {
           )}
         </div>
 
-        {renderVerseBlock()}
+        <VerseBlock
+          isLoading={verseLoading}
+          error={verseError}
+          reference={formattedReference}
+          verseText={displayedVerseText}
+          loadingLabel={t.verseLoading}
+          loadingText={t.verseLoadingText}
+          unavailableLabel={t.verseUnavailable}
+        />
 
         {!verseLoading && !verseError && activeTab === 'insights' && renderCardStackView()}
         {!verseLoading && !verseError && activeTab === 'context' && renderContextView()}
@@ -3135,131 +3046,43 @@ export default function VerseDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {lensSheetOpen && modesReady && (
-        <div className="sheet-overlay fixed inset-0 z-50 bg-[rgba(20,16,10,0.30)] backdrop-blur-[10px]">
-          <div className="flex h-full items-end px-4 pb-4 pt-16">
-            <div className="sheet-panel mx-auto w-full max-w-md overflow-hidden rounded-[34px] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(251,246,234,0.98)_0%,rgba(244,234,214,0.98)_100%)] shadow-[0_30px_80px_rgba(0,0,0,0.20)]">
-              <div className="px-5 pt-3">
-                <div className="mx-auto h-1.5 w-12 rounded-full bg-stone-300/90" />
-              </div>
+      <LensSheet
+        isOpen={lensSheetOpen && modesReady}
+        title={t.lensTitle}
+        subtitle={t.chooseFocusedLens}
+        description={t.readThisVerseOneAngle}
+        closeLabel={t.close}
+        translationLabel={t.translation}
+        wordLabel={t.word}
+        tensionLabel={t.tension}
+        phraseLabel={t.phrase}
+        translationHelper={t.translationHelper}
+        wordHelper={t.wordHelper}
+        tensionHelper={t.tensionHelper}
+        phraseHelper={t.phraseHelper}
+        onClose={() => setLensSheetOpen(false)}
+        onSelect={(lens) => {
+          void handleSelectLens(lens)
+        }}
+      />
 
-              <div className="px-5 pb-5 pt-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[1.55rem] font-semibold tracking-tight text-stone-900">
-                      {t.lensTitle}
-                    </p>
-                    <p className="mt-1 text-sm text-stone-600">{t.chooseFocusedLens}</p>
-                    <p className="text-sm text-stone-500">{t.readThisVerseOneAngle}</p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setLensSheetOpen(false)}
-                    aria-label={t.close}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-300/90 bg-[#fffaf1]/90 text-base font-medium text-stone-700 shadow-[0_6px_14px_rgba(94,72,37,0.08)] transition hover:bg-white active:scale-[0.97]"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="mt-5 space-y-3.5">
-                  {renderModeOption(
-                    'translation',
-                    t.translation,
-                    t.translationHelper,
-                    'bg-[linear-gradient(180deg,#efe5cc_0%,#e3d4ad_100%)]',
-                    () => void handleSelectLens('translation')
-                  )}
-
-                  {renderModeOption(
-                    'word',
-                    t.word,
-                    t.wordHelper,
-                    'bg-[linear-gradient(180deg,#ece3d6_0%,#dfd0bb_100%)]',
-                    () => void handleSelectLens('word')
-                  )}
-
-                  {renderModeOption(
-                    'tension',
-                    t.tension,
-                    t.tensionHelper,
-                    'bg-[linear-gradient(180deg,#eadfcd_0%,#dcc9ad_100%)]',
-                    () => void handleSelectLens('tension')
-                  )}
-
-                  {renderModeOption(
-                    'phrase',
-                    t.phrase,
-                    t.phraseHelper,
-                    'bg-[linear-gradient(180deg,#ece6da_0%,#ddd2bf_100%)]',
-                    () => void handleSelectLens('phrase')
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {contextSheetOpen && modesReady && (
-        <div className="sheet-overlay fixed inset-0 z-50 bg-[rgba(20,16,10,0.30)] backdrop-blur-[10px]">
-          <div className="flex h-full items-end px-4 pb-4 pt-16">
-            <div className="sheet-panel mx-auto w-full max-w-md overflow-hidden rounded-[34px] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(251,246,234,0.98)_0%,rgba(244,234,214,0.98)_100%)] shadow-[0_30px_80px_rgba(0,0,0,0.20)]">
-              <div className="px-5 pt-3">
-                <div className="mx-auto h-1.5 w-12 rounded-full bg-stone-300/90" />
-              </div>
-
-              <div className="px-5 pb-5 pt-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[1.55rem] font-semibold tracking-tight text-stone-900">
-                      {t.contextTitle}
-                    </p>
-                    <p className="mt-1 text-sm text-stone-600">{t.chooseContextMode}</p>
-                    <p className="text-sm text-stone-500">{t.readThisVerseThroughContext}</p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setContextSheetOpen(false)}
-                    aria-label={t.close}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-300/90 bg-[#fffaf1]/90 text-base font-medium text-stone-700 shadow-[0_6px_14px_rgba(94,72,37,0.08)] transition hover:bg-white active:scale-[0.97]"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="mt-5 space-y-3.5">
-                  {renderModeOption(
-                    'paragraph',
-                    t.paragraph,
-                    t.paragraphHelper,
-                    'bg-[linear-gradient(180deg,#efe5cc_0%,#e3d4ad_100%)]',
-                    () => void handleSelectContext('paragraph')
-                  )}
-
-                  {renderModeOption(
-                    'book',
-                    t.bookMode,
-                    t.bookHelper,
-                    'bg-[linear-gradient(180deg,#ece3d6_0%,#dfd0bb_100%)]',
-                    () => void handleSelectContext('book')
-                  )}
-
-                  {renderModeOption(
-                    'bible',
-                    t.bibleMode,
-                    t.bibleHelper,
-                    'bg-[linear-gradient(180deg,#eadfcd_0%,#dcc9ad_100%)]',
-                    () => void handleSelectContext('bible')
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ContextSheet
+        isOpen={contextSheetOpen && modesReady}
+        title={t.contextTitle}
+        subtitle={t.chooseContextMode}
+        description={t.readThisVerseThroughContext}
+        closeLabel={t.close}
+        paragraphLabel={t.paragraph}
+        bookLabel={t.bookMode}
+        bibleLabel={t.bibleMode}
+        paragraphHelper={t.paragraphHelper}
+        bookHelper={t.bookHelper}
+        bibleHelper={t.bibleHelper}
+        onClose={() => setContextSheetOpen(false)}
+        onSelect={(mode) => {
+          void handleSelectContext(mode)
+        }}
+      />
 
       <style jsx global>{`
         @keyframes scriptura-fade-slide-up {
