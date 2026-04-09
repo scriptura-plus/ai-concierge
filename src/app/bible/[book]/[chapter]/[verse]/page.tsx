@@ -2119,7 +2119,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         }}
         onOpenLensSheet={() => setLensSheetOpen(true)}
         onOpenContextSheet={() => setContextSheetOpen(true)}
-        t={t}
+        t={t as any}
       />
     )
   }
