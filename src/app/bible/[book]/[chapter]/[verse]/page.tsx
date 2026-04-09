@@ -1973,12 +1973,22 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     if (activeTab === 'context' && selectedContext === 'narrow') {
-      setNarrowContextData(null)
-      setNarrowArticle(null)
-      setActiveNarrowDirectionId('')
-    }
+  setNarrowContextData(null)
+  setNarrowContextError('')
+  setNarrowContextLoading(false)
 
-    setAppLanguage(targetLanguage)
+  setActiveNarrowDirectionId('')
+  setNarrowArticle(null)
+  setNarrowArticleError('')
+  setNarrowArticleLoading(false)
+
+  setNarrowCopyStatus('idle')
+  setNarrowShareStatus('')
+  setNarrowArticleCopyStatus('idle')
+  setNarrowArticleShareStatus('')
+}
+
+setAppLanguage(targetLanguage)
   }
 
   async function handleNext() {
