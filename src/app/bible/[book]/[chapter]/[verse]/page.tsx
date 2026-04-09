@@ -9,6 +9,7 @@ import ContextSheet from './components/ContextSheet'
 import CompareView from './components/CompareView'
 import ContextView from './components/ContextView'
 import CardStackView from './components/CardStackView'
+import ModeStateCard from './components/ModeStateCard'
 
 type PageProps = {
   params: Promise<{
@@ -895,6 +896,13 @@ function renderStructuredPanel(
       </div>
     </div>
   )
+}
+
+function lensBadgeLabel(selectedLens: LensKind | null, t: (typeof UI_TEXT)['en']) {
+  if (selectedLens === 'translation') return `${t.lensLabel}: ${t.translation}`
+  if (selectedLens === 'word') return `${t.lensLabel}: ${t.word}`
+  if (selectedLens === 'tension') return `${t.lensLabel}: ${t.tension}`
+  return `${t.lensLabel}: ${t.phrase}`
 }
 
 export default function VerseDetailPage({ params }: PageProps) {
@@ -2043,6 +2051,67 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
+  function renderSharedCardStack() {
+    return (
+      <CardStackView
+        activeArticle={activeArticleJob?.status === 'ready' ? activeArticleJob.article ?? null : null}
+        activeArticleReference={activeArticleJob?.reference ?? ''}
+        activeArticleShareStatus={articleShareStatus}
+        articleCopyStatus={articleCopyStatus}
+        onBackFromArticle={() => {
+          setActiveArticleKey('')
+          setArticleShareStatus('')
+          setArticleCopyStatus('idle')
+          articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }}
+        onCopyArticle={() => {
+          void handleCopyArticle()
+        }}
+        onShareArticle={() => {
+          void handleShareArticle()
+        }}
+        insightsBlockingLoad={insightsBlockingLoad}
+        insightsError={insightsError}
+        rawOutput={rawOutput}
+        currentCards={currentCards}
+        currentIndex={currentIndex}
+        insightsBackgroundFill={insightsBackgroundFill}
+        activeTab={activeTab}
+        displayedCard={displayedCard}
+        selectedLens={selectedLens}
+        selectedContext={selectedContext}
+        currentArticleStatus={currentArticleJob?.status ?? 'idle'}
+        currentArticleError={currentArticleJob?.error ?? ''}
+        copyStatus="idle"
+        shareStatus={shareStatus}
+        translationError={translationError}
+        onRetryInsights={() => {
+          void loadInsightsTwoPhase()
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => {
+          void handleTouchEnd()
+        }}
+        onUnfold={() => {
+          void handleUnfold()
+        }}
+        onShare={() => {
+          void handleShare()
+        }}
+        onPrev={() => {
+          void handlePrev()
+        }}
+        onNext={() => {
+          void handleNext()
+        }}
+        onOpenLensSheet={() => setLensSheetOpen(true)}
+        onOpenContextSheet={() => setContextSheetOpen(true)}
+        t={t}
+      />
+    )
+  }
+
   function renderLensView() {
     if (!modesReady) {
       return renderLensModeIntro()
@@ -2091,326 +2160,88 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (selectedLens === 'word') {
       if (wordLensLoading) {
         return (
-          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {t.loadingWordLens}
-              </p>
-              <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingWordLensText}</p>
-            </div>
-          </div>
+          <ModeStateCard
+            title={t.loadingWordLens}
+            loadingLabel={t.loadingWordLens}
+            loadingText={t.loadingWordLensText}
+          />
         )
       }
 
       if (wordLensError) {
         return (
-          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-stone-500">
-                  {t.lensLabel}: {t.word}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setLensSheetOpen(true)}
-                  className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-                >
-                  {t.change}
-                </button>
-              </div>
-
-              <p className="text-[1.08rem] leading-9 text-stone-800">{wordLensError}</p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  void loadWordLens(true, appLanguage)
-                }}
-                className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-              >
-                {t.tryAgain}
-              </button>
-            </div>
-          </div>
+          <ModeStateCard
+            badgeLabel={lensBadgeLabel('word', t)}
+            changeLabel={t.change}
+            onChange={() => setLensSheetOpen(true)}
+            error={wordLensError}
+            retryLabel={t.tryAgain}
+            onRetry={() => {
+              void loadWordLens(true, appLanguage)
+            }}
+          />
         )
       }
 
-      return (
-        <CardStackView
-          activeArticle={activeArticleJob?.status === 'ready' ? activeArticleJob.article ?? null : null}
-          activeArticleReference={activeArticleJob?.reference ?? ''}
-          activeArticleShareStatus={articleShareStatus}
-          articleCopyStatus={articleCopyStatus}
-          onBackFromArticle={() => {
-            setActiveArticleKey('')
-            setArticleShareStatus('')
-            setArticleCopyStatus('idle')
-            articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}
-          onCopyArticle={() => {
-            void handleCopyArticle()
-          }}
-          onShareArticle={() => {
-            void handleShareArticle()
-          }}
-          insightsBlockingLoad={insightsBlockingLoad}
-          insightsError={insightsError}
-          rawOutput={rawOutput}
-          currentCards={currentCards}
-          currentIndex={currentIndex}
-          insightsBackgroundFill={insightsBackgroundFill}
-          activeTab={activeTab}
-          displayedCard={displayedCard}
-          selectedLens={selectedLens}
-          selectedContext={selectedContext}
-          currentArticleStatus={currentArticleJob?.status ?? 'idle'}
-          currentArticleError={currentArticleJob?.error ?? ''}
-          copyStatus="idle"
-          shareStatus={shareStatus}
-          translationError={translationError}
-          onRetryInsights={() => {
-            void loadInsightsTwoPhase()
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={() => {
-            void handleTouchEnd()
-          }}
-          onUnfold={() => {
-            void handleUnfold()
-          }}
-          onShare={() => {
-            void handleShare()
-          }}
-          onPrev={() => {
-            void handlePrev()
-          }}
-          onNext={() => {
-            void handleNext()
-          }}
-          onOpenLensSheet={() => setLensSheetOpen(true)}
-          onOpenContextSheet={() => setContextSheetOpen(true)}
-          t={t}
-        />
-      )
+      return renderSharedCardStack()
     }
 
     if (selectedLens === 'tension') {
       if (tensionLensLoading) {
         return (
-          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {t.loadingTensionLens}
-              </p>
-              <p className="text-[1.08rem] leading-9 text-stone-800">
-                {t.loadingTensionLensText}
-              </p>
-            </div>
-          </div>
+          <ModeStateCard
+            title={t.loadingTensionLens}
+            loadingLabel={t.loadingTensionLens}
+            loadingText={t.loadingTensionLensText}
+          />
         )
       }
 
       if (tensionLensError) {
         return (
-          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-stone-500">
-                  {t.lensLabel}: {t.tension}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setLensSheetOpen(true)}
-                  className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-                >
-                  {t.change}
-                </button>
-              </div>
-
-              <p className="text-[1.08rem] leading-9 text-stone-800">{tensionLensError}</p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  void loadTensionLens(true, appLanguage)
-                }}
-                className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-              >
-                {t.tryAgain}
-              </button>
-            </div>
-          </div>
+          <ModeStateCard
+            badgeLabel={lensBadgeLabel('tension', t)}
+            changeLabel={t.change}
+            onChange={() => setLensSheetOpen(true)}
+            error={tensionLensError}
+            retryLabel={t.tryAgain}
+            onRetry={() => {
+              void loadTensionLens(true, appLanguage)
+            }}
+          />
         )
       }
 
-      return (
-        <CardStackView
-          activeArticle={activeArticleJob?.status === 'ready' ? activeArticleJob.article ?? null : null}
-          activeArticleReference={activeArticleJob?.reference ?? ''}
-          activeArticleShareStatus={articleShareStatus}
-          articleCopyStatus={articleCopyStatus}
-          onBackFromArticle={() => {
-            setActiveArticleKey('')
-            setArticleShareStatus('')
-            setArticleCopyStatus('idle')
-            articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}
-          onCopyArticle={() => {
-            void handleCopyArticle()
-          }}
-          onShareArticle={() => {
-            void handleShareArticle()
-          }}
-          insightsBlockingLoad={insightsBlockingLoad}
-          insightsError={insightsError}
-          rawOutput={rawOutput}
-          currentCards={currentCards}
-          currentIndex={currentIndex}
-          insightsBackgroundFill={insightsBackgroundFill}
-          activeTab={activeTab}
-          displayedCard={displayedCard}
-          selectedLens={selectedLens}
-          selectedContext={selectedContext}
-          currentArticleStatus={currentArticleJob?.status ?? 'idle'}
-          currentArticleError={currentArticleJob?.error ?? ''}
-          copyStatus="idle"
-          shareStatus={shareStatus}
-          translationError={translationError}
-          onRetryInsights={() => {
-            void loadInsightsTwoPhase()
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={() => {
-            void handleTouchEnd()
-          }}
-          onUnfold={() => {
-            void handleUnfold()
-          }}
-          onShare={() => {
-            void handleShare()
-          }}
-          onPrev={() => {
-            void handlePrev()
-          }}
-          onNext={() => {
-            void handleNext()
-          }}
-          onOpenLensSheet={() => setLensSheetOpen(true)}
-          onOpenContextSheet={() => setContextSheetOpen(true)}
-          t={t}
-        />
-      )
+      return renderSharedCardStack()
     }
 
     if (selectedLens === 'phrase') {
       if (phraseLensLoading) {
         return (
-          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                {t.loadingPhraseLens}
-              </p>
-              <p className="text-[1.08rem] leading-9 text-stone-800">
-                {t.loadingPhraseLensText}
-              </p>
-            </div>
-          </div>
+          <ModeStateCard
+            title={t.loadingPhraseLens}
+            loadingLabel={t.loadingPhraseLens}
+            loadingText={t.loadingPhraseLensText}
+          />
         )
       }
 
       if (phraseLensError) {
         return (
-          <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-stone-500">
-                  {t.lensLabel}: {t.phrase}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setLensSheetOpen(true)}
-                  className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-                >
-                  {t.change}
-                </button>
-              </div>
-
-              <p className="text-[1.08rem] leading-9 text-stone-800">{phraseLensError}</p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  void loadPhraseLens(true, appLanguage)
-                }}
-                className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-              >
-                {t.tryAgain}
-              </button>
-            </div>
-          </div>
+          <ModeStateCard
+            badgeLabel={lensBadgeLabel('phrase', t)}
+            changeLabel={t.change}
+            onChange={() => setLensSheetOpen(true)}
+            error={phraseLensError}
+            retryLabel={t.tryAgain}
+            onRetry={() => {
+              void loadPhraseLens(true, appLanguage)
+            }}
+          />
         )
       }
 
-      return (
-        <CardStackView
-          activeArticle={activeArticleJob?.status === 'ready' ? activeArticleJob.article ?? null : null}
-          activeArticleReference={activeArticleJob?.reference ?? ''}
-          activeArticleShareStatus={articleShareStatus}
-          articleCopyStatus={articleCopyStatus}
-          onBackFromArticle={() => {
-            setActiveArticleKey('')
-            setArticleShareStatus('')
-            setArticleCopyStatus('idle')
-            articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}
-          onCopyArticle={() => {
-            void handleCopyArticle()
-          }}
-          onShareArticle={() => {
-            void handleShareArticle()
-          }}
-          insightsBlockingLoad={insightsBlockingLoad}
-          insightsError={insightsError}
-          rawOutput={rawOutput}
-          currentCards={currentCards}
-          currentIndex={currentIndex}
-          insightsBackgroundFill={insightsBackgroundFill}
-          activeTab={activeTab}
-          displayedCard={displayedCard}
-          selectedLens={selectedLens}
-          selectedContext={selectedContext}
-          currentArticleStatus={currentArticleJob?.status ?? 'idle'}
-          currentArticleError={currentArticleJob?.error ?? ''}
-          copyStatus="idle"
-          shareStatus={shareStatus}
-          translationError={translationError}
-          onRetryInsights={() => {
-            void loadInsightsTwoPhase()
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={() => {
-            void handleTouchEnd()
-          }}
-          onUnfold={() => {
-            void handleUnfold()
-          }}
-          onShare={() => {
-            void handleShare()
-          }}
-          onPrev={() => {
-            void handlePrev()
-          }}
-          onNext={() => {
-            void handleNext()
-          }}
-          onOpenLensSheet={() => setLensSheetOpen(true)}
-          onOpenContextSheet={() => setContextSheetOpen(true)}
-          t={t}
-        />
-      )
+      return renderSharedCardStack()
     }
 
     return renderLensModeIntro()
@@ -2512,64 +2343,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           unavailableLabel={t.verseUnavailable}
         />
 
-        {!verseLoading && !verseError && activeTab === 'insights' && (
-          <CardStackView
-            activeArticle={activeArticleJob?.status === 'ready' ? activeArticleJob.article ?? null : null}
-            activeArticleReference={activeArticleJob?.reference ?? ''}
-            activeArticleShareStatus={articleShareStatus}
-            articleCopyStatus={articleCopyStatus}
-            onBackFromArticle={() => {
-              setActiveArticleKey('')
-              setArticleShareStatus('')
-              setArticleCopyStatus('idle')
-              articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }}
-            onCopyArticle={() => {
-              void handleCopyArticle()
-            }}
-            onShareArticle={() => {
-              void handleShareArticle()
-            }}
-            insightsBlockingLoad={insightsBlockingLoad}
-            insightsError={insightsError}
-            rawOutput={rawOutput}
-            currentCards={currentCards}
-            currentIndex={currentIndex}
-            insightsBackgroundFill={insightsBackgroundFill}
-            activeTab={activeTab}
-            displayedCard={displayedCard}
-            selectedLens={selectedLens}
-            selectedContext={selectedContext}
-            currentArticleStatus={currentArticleJob?.status ?? 'idle'}
-            currentArticleError={currentArticleJob?.error ?? ''}
-            copyStatus="idle"
-            shareStatus={shareStatus}
-            translationError={translationError}
-            onRetryInsights={() => {
-              void loadInsightsTwoPhase()
-            }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={() => {
-              void handleTouchEnd()
-            }}
-            onUnfold={() => {
-              void handleUnfold()
-            }}
-            onShare={() => {
-              void handleShare()
-            }}
-            onPrev={() => {
-              void handlePrev()
-            }}
-            onNext={() => {
-              void handleNext()
-            }}
-            onOpenLensSheet={() => setLensSheetOpen(true)}
-            onOpenContextSheet={() => setContextSheetOpen(true)}
-            t={t}
-          />
-        )}
+        {!verseLoading && !verseError && activeTab === 'insights' && renderSharedCardStack()}
 
         {!verseLoading && !verseError && activeTab === 'context' && (
           <ContextView
