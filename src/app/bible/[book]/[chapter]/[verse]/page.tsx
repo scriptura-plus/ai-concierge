@@ -103,8 +103,8 @@ type ContextApiResponse = {
 type AppLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
 type InsightsStage = 'idle' | 'loading_saved' | 'filling' | 'ready' | 'failed'
-type TopTab = 'insights' | 'compare' | 'context' | 'lens'
-type LensKind = 'word' | 'tension' | 'phrase'
+type TopTab = 'insights' | 'context' | 'lens'
+type LensKind = 'translation' | 'word' | 'tension' | 'phrase'
 type SourceMode = 'insights' | 'word' | 'tension' | 'why_this_phrase'
 
 type ArticleJob = {
@@ -184,10 +184,12 @@ const UI_TEXT: Record<
     close: string
     change: string
 
+    translation: string
     word: string
     tension: string
     phrase: string
 
+    translationHelper: string
     wordHelper: string
     tensionHelper: string
     phraseHelper: string
@@ -295,9 +297,11 @@ const UI_TEXT: Record<
     readThisVerseOneAngle: 'Read this verse through one angle.',
     close: 'Close',
     change: 'Change',
+    translation: 'Translation',
     word: 'Word',
     tension: 'Tension',
     phrase: 'Why This Phrase',
+    translationHelper: 'How translation shifts emphasis',
     wordHelper: 'Hidden weight of words',
     tensionHelper: 'What’s surprising here',
     phraseHelper: 'Why it is said this way',
@@ -400,9 +404,11 @@ const UI_TEXT: Record<
     readThisVerseOneAngle: 'Посмотрите на этот стих под одним углом.',
     close: 'Закрыть',
     change: 'Изменить',
+    translation: 'Перевод',
     word: 'Слово',
     tension: 'Напряжение',
     phrase: 'Почему именно эта фраза',
+    translationHelper: 'Как перевод меняет акцент',
     wordHelper: 'Скрытый вес слов',
     tensionHelper: 'Что здесь неожиданно',
     phraseHelper: 'Почему это сказано именно так',
@@ -508,9 +514,11 @@ const UI_TEXT: Record<
     readThisVerseOneAngle: 'Lee este versículo desde un solo ángulo.',
     close: 'Cerrar',
     change: 'Cambiar',
+    translation: 'Traducción',
     word: 'Palabra',
     tension: 'Tensión',
     phrase: 'Por qué esta frase',
+    translationHelper: 'Cómo la traducción mueve el énfasis',
     wordHelper: 'Peso oculto de las palabras',
     tensionHelper: 'Qué sorprende aquí',
     phraseHelper: 'Por qué se dice así',
@@ -616,9 +624,11 @@ const UI_TEXT: Record<
     readThisVerseOneAngle: 'Lisez ce verset sous un angle précis.',
     close: 'Fermer',
     change: 'Changer',
+    translation: 'Traduction',
     word: 'Mot',
     tension: 'Tension',
     phrase: 'Pourquoi cette phrase',
+    translationHelper: 'Comment la traduction déplace l’accent',
     wordHelper: 'Poids caché des mots',
     tensionHelper: 'Ce qui surprend ici',
     phraseHelper: 'Pourquoi c’est dit ainsi',
@@ -722,9 +732,11 @@ const UI_TEXT: Record<
     readThisVerseOneAngle: 'Lies diesen Vers aus einem bestimmten Blickwinkel.',
     close: 'Schließen',
     change: 'Ändern',
+    translation: 'Übersetzung',
     word: 'Wort',
     tension: 'Spannung',
     phrase: 'Warum diese Formulierung',
+    translationHelper: 'Wie Übersetzung den Akzent verschiebt',
     wordHelper: 'Verstecktes Gewicht der Wörter',
     tensionHelper: 'Was hier überrascht',
     phraseHelper: 'Warum es so gesagt wird',
@@ -1428,8 +1440,8 @@ export default function VerseDetailPage({ params }: PageProps) {
   useEffect(() => {
     if (!formattedReference || !verseText || !modesReady) return
 
-    if (activeTab === 'compare') void loadCompare(false, appLanguage)
     if (activeTab === 'context') void loadContext(false, appLanguage)
+    if (activeTab === 'lens' && selectedLens === 'translation') void loadCompare(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'word') void loadWordLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'tension') void loadTensionLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'phrase') void loadPhraseLens(false, appLanguage)
@@ -1905,6 +1917,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     setArticleCopyStatus('idle')
     setCurrentIndex(0)
 
+    if (lens === 'translation') await loadCompare(false, appLanguage)
     if (lens === 'word') await loadWordLens(false, appLanguage)
     if (lens === 'tension') await loadTensionLens(false, appLanguage)
     if (lens === 'phrase') await loadPhraseLens(false, appLanguage)
@@ -2225,11 +2238,13 @@ export default function VerseDetailPage({ params }: PageProps) {
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="text-sm font-medium text-stone-500">
                     {t.lensLabel}:{' '}
-                    {selectedLens === 'word'
-                      ? t.word
-                      : selectedLens === 'tension'
-                        ? t.tension
-                        : t.phrase}
+                    {selectedLens === 'translation'
+                      ? t.translation
+                      : selectedLens === 'word'
+                        ? t.word
+                        : selectedLens === 'tension'
+                          ? t.tension
+                          : t.phrase}
                   </div>
                   <button
                     type="button"
@@ -2588,15 +2603,23 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
+  function renderLensModeIntro() {
+    return renderStructuredPanel(
+      t.lens,
+      t.lensLeadDefault,
+      t.lensPointLabel,
+      [t.translation, t.word, t.tension, t.phrase],
+      t.lensTakeawayDefault
+    )
+  }
+
   function renderLensView() {
     if (!modesReady) {
-      return renderStructuredPanel(
-        t.lens,
-        t.lensLeadDefault,
-        t.lensPointLabel,
-        [t.word, t.tension, t.phrase],
-        t.lensTakeawayDefault
-      )
+      return renderLensModeIntro()
+    }
+
+    if (selectedLens === 'translation') {
+      return renderCompareView()
     }
 
     if (selectedLens === 'word') {
@@ -2747,13 +2770,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       return renderCardStackView()
     }
 
-    return renderStructuredPanel(
-      t.lens,
-      t.lensLeadDefault,
-      t.lensPointLabel,
-      [t.word, t.tension, t.phrase],
-      t.lensTakeawayDefault
-    )
+    return renderLensModeIntro()
   }
 
   return (
@@ -2818,17 +2835,6 @@ export default function VerseDetailPage({ params }: PageProps) {
             false
           )}
           {renderTabButton(
-            t.translations,
-            activeTab === 'compare',
-            () => {
-              if (!modesReady) return
-              setActiveTab('compare')
-              setLensSheetOpen(false)
-              setActiveArticleKey('')
-            },
-            !modesReady
-          )}
-          {renderTabButton(
             t.context,
             activeTab === 'context',
             () => {
@@ -2854,7 +2860,6 @@ export default function VerseDetailPage({ params }: PageProps) {
         {renderVerseBlock()}
 
         {!verseLoading && !verseError && activeTab === 'insights' && renderCardStackView()}
-        {!verseLoading && !verseError && activeTab === 'compare' && renderCompareView()}
         {!verseLoading && !verseError && activeTab === 'context' && renderContextView()}
         {!verseLoading && !verseError && activeTab === 'lens' && renderLensView()}
       </div>
@@ -2977,6 +2982,15 @@ export default function VerseDetailPage({ params }: PageProps) {
             </div>
 
             <div className="mt-5 space-y-3">
+              <button
+                type="button"
+                onClick={() => void handleSelectLens('translation')}
+                className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
+              >
+                <p className="text-base font-semibold text-stone-900">{t.translation}</p>
+                <p className="mt-1 text-sm text-stone-500">{t.translationHelper}</p>
+              </button>
+
               <button
                 type="button"
                 onClick={() => void handleSelectLens('word')}
