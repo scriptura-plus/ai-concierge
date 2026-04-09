@@ -2022,7 +2022,7 @@ setAppLanguage(targetLanguage)
         }
       }
     }
-  }
+
 
   async function handlePrev() {
     if (currentCards.length === 0 || interactionsLocked) return
