@@ -10,6 +10,8 @@ import CompareView from './components/CompareView'
 import ContextView from './components/ContextView'
 import CardStackView from './components/CardStackView'
 import ModeStateCard from './components/ModeStateCard'
+import NarrowContextView from './components/NarrowContextView'
+import NarrowContextArticleView from './components/NarrowContextArticleView'
 
 type PageProps = {
   params: Promise<{
@@ -126,6 +128,53 @@ type ArticleJob = {
   createdAt: number
 }
 
+type HighlightKind = 'keyword' | 'phrase' | 'contrast' | 'pivot'
+
+type NarrowContextHighlight = {
+  text: string
+  kind: HighlightKind
+}
+
+type NarrowContextDirection = {
+  id: string
+  title: string
+  summary: string
+  why_it_matters: string
+  dig_deeper: string
+}
+
+type NarrowContextPayload = {
+  paragraph: {
+    reference: string
+    full_text: string
+    highlights: NarrowContextHighlight[]
+  }
+  directions: NarrowContextDirection[]
+}
+
+type NarrowContextApiResponse = {
+  reference?: string
+  verseText?: string
+  targetLanguage?: AppLanguage
+  paragraph?: NarrowContextPayload['paragraph']
+  directions?: NarrowContextDirection[]
+  error?: string
+  raw?: string
+}
+
+type NarrowContextArticle = {
+  title: string
+  lead: string
+  body: string[]
+  highlight_line?: string
+}
+
+type NarrowContextDeepDiveResponse = {
+  article?: NarrowContextArticle
+  error?: string
+  raw?: string
+}
+
 const ARTICLE_STORAGE_KEY = 'scriptura_unfold_articles_v2'
 
 const UI_TEXT: Record<
@@ -192,6 +241,27 @@ const UI_TEXT: Record<
     wideContext: string
     narrowHelper: string
     wideHelper: string
+
+    narrowIntroLead: string
+    narrowIntroTakeaway: string
+    narrowPoint1: string
+    narrowPoint2: string
+    narrowPoint3: string
+    narrowPoint4: string
+    narrowPoint5: string
+    narrowLoading: string
+    narrowLoadingText: string
+    narrowUnavailable: string
+    paragraphLabel: string
+    highlightsLabel: string
+    directionsLabel: string
+    whyItMattersLabel: string
+    digDeeperLabel: string
+    backToMeanings: string
+    narrowArticleLabel: string
+    narrowArticleLoading: string
+    narrowArticleLoadingText: string
+    narrowArticleUnavailable: string
 
     lensTitle: string
     chooseFocusedLens: string
@@ -314,6 +384,35 @@ const UI_TEXT: Record<
     wideContext: 'Wide Context',
     narrowHelper: 'Closest paragraph, hidden meaning-lines, and directions to explore',
     wideHelper: 'Chapter, book, and — when meaningful — the wider Bible line',
+    narrowIntroLead:
+      'Narrow Context reads the verse inside the smallest meaningful paragraph around it and looks for the deepest pressure lines inside that local block.',
+    narrowIntroTakeaway:
+      'The goal is not more information, but a cleaner reading unit with real doors into deeper thought.',
+    narrowPoint1:
+      'The full paragraph is shown first as the primary reading object, not as background noise.',
+    narrowPoint2:
+      'The most meaningful words and phrases are softly highlighted inside the paragraph itself.',
+    narrowPoint3:
+      'The system then identifies up to five promising directions that rise from the paragraph.',
+    narrowPoint4:
+      'Each direction explains why it matters and where deeper reading can go next.',
+    narrowPoint5:
+      'A tap opens a short article that deepens one chosen direction without drifting into a different angle.',
+    narrowLoading: 'Loading Narrow Context',
+    narrowLoadingText:
+      'Finding the smallest meaningful paragraph and tracing its hidden pressure points…',
+    narrowUnavailable: 'Unable to load Narrow Context.',
+    paragraphLabel: 'Paragraph',
+    highlightsLabel: 'Meaning levers',
+    directionsLabel: 'Directions',
+    whyItMattersLabel: 'Why this matters',
+    digDeeperLabel: 'Dig deeper',
+    backToMeanings: 'Back to meanings',
+    narrowArticleLabel: 'Deep dive',
+    narrowArticleLoading: 'Loading deep dive',
+    narrowArticleLoadingText:
+      'Deepening the selected direction into a short article…',
+    narrowArticleUnavailable: 'Unable to load deep dive.',
     lensTitle: 'Lens',
     chooseFocusedLens: 'Choose a focused lens',
     readThisVerseOneAngle: 'Read this verse through one angle.',
@@ -336,7 +435,8 @@ const UI_TEXT: Record<
       'The final version will show 3–5 compact comparison points instead of one dense block.',
     translationsPoint3:
       'A short takeaway will explain why those differences matter for reading the verse.',
-    contextPoint1: 'Narrow Context focuses on the closest paragraph and its hidden pressure points.',
+    contextPoint1:
+      'Narrow Context focuses on the closest paragraph and its hidden pressure points.',
     contextPoint2:
       'Wide Context looks for the most meaningful larger frame: chapter, book, or wider Bible line.',
     contextPoint3:
@@ -427,6 +527,35 @@ const UI_TEXT: Record<
     wideContext: 'Широкий контекст',
     narrowHelper: 'Ближайший абзац, скрытые линии смысла и направления для исследования',
     wideHelper: 'Глава, книга и — если уместно — более широкая линия всей Библии',
+    narrowIntroLead:
+      'Узкий контекст читает стих внутри наименьшего смыслового абзаца вокруг него и ищет глубинные линии значения внутри этого локального блока.',
+    narrowIntroTakeaway:
+      'Цель здесь не просто дать больше информации, а показать более точный блок чтения и настоящие двери для углубления.',
+    narrowPoint1:
+      'Сначала показывается полный абзац как главный объект чтения, а не как второстепенный фон.',
+    narrowPoint2:
+      'Затем внутри самого абзаца мягко выделяются самые смыслонагруженные слова и фразы.',
+    narrowPoint3:
+      'После этого система находит до пяти перспективных направлений, которые реально вырастают из абзаца.',
+    narrowPoint4:
+      'Каждое направление объясняет, почему оно важно и куда по нему можно копать дальше.',
+    narrowPoint5:
+      'Нажатие открывает короткую статью, которая углубляет выбранное направление и не расплывается в другую тему.',
+    narrowLoading: 'Загрузка узкого контекста',
+    narrowLoadingText:
+      'Ищем наименьший смысловой абзац и его скрытые линии давления…',
+    narrowUnavailable: 'Не удалось загрузить узкий контекст.',
+    paragraphLabel: 'Абзац',
+    highlightsLabel: 'Смысловые рычаги',
+    directionsLabel: 'Направления',
+    whyItMattersLabel: 'Почему это важно',
+    digDeeperLabel: 'Куда копать',
+    backToMeanings: 'Назад к смыслам',
+    narrowArticleLabel: 'Углубление',
+    narrowArticleLoading: 'Загрузка углубления',
+    narrowArticleLoadingText:
+      'Превращаем выбранное направление в короткую статью…',
+    narrowArticleUnavailable: 'Не удалось загрузить углубление.',
     lensTitle: 'Линза',
     chooseFocusedLens: 'Выберите сфокусированную линзу',
     readThisVerseOneAngle: 'Посмотрите на этот стих под одним углом.',
@@ -544,6 +673,33 @@ const UI_TEXT: Record<
     wideContext: 'Contexto amplio',
     narrowHelper: 'El párrafo más cercano, líneas ocultas de sentido y rutas para explorar',
     wideHelper: 'Capítulo, libro y — cuando tenga sentido — la línea más amplia de la Biblia',
+    narrowIntroLead:
+      'El contexto cercano lee el versículo dentro del párrafo significativo más pequeño que lo rodea y busca sus líneas de presión internas.',
+    narrowIntroTakeaway:
+      'El objetivo no es dar más información, sino un bloque de lectura más preciso y puertas reales hacia una lectura más profunda.',
+    narrowPoint1: 'Primero se muestra el párrafo completo como objeto principal de lectura.',
+    narrowPoint2:
+      'Luego se resaltan suavemente dentro del mismo párrafo las palabras y frases con mayor peso.',
+    narrowPoint3:
+      'Después el sistema identifica hasta cinco direcciones prometedoras que nacen del párrafo.',
+    narrowPoint4:
+      'Cada dirección explica por qué importa y hacia dónde puede profundizarse.',
+    narrowPoint5:
+      'Al tocarla, se abre un artículo breve que profundiza la dirección elegida sin desviarse.',
+    narrowLoading: 'Cargando contexto cercano',
+    narrowLoadingText:
+      'Buscando el párrafo significativo más pequeño y sus líneas de presión ocultas…',
+    narrowUnavailable: 'No se pudo cargar el contexto cercano.',
+    paragraphLabel: 'Párrafo',
+    highlightsLabel: 'Palancas de sentido',
+    directionsLabel: 'Direcciones',
+    whyItMattersLabel: 'Por qué importa',
+    digDeeperLabel: 'Profundizar',
+    backToMeanings: 'Volver a sentidos',
+    narrowArticleLabel: 'Profundización',
+    narrowArticleLoading: 'Cargando profundización',
+    narrowArticleLoadingText: 'Desarrollando la dirección elegida en un artículo breve…',
+    narrowArticleUnavailable: 'No se pudo cargar la profundización.',
     lensTitle: 'Lente',
     chooseFocusedLens: 'Elige una lente enfocada',
     readThisVerseOneAngle: 'Lee este versículo desde un solo ángulo.',
@@ -662,6 +818,35 @@ const UI_TEXT: Record<
     narrowHelper: 'Le paragraphe le plus proche, les lignes de sens cachées et des pistes à explorer',
     wideHelper:
       'Chapitre, livre et — lorsque cela éclaire vraiment — la ligne plus large de la Bible',
+    narrowIntroLead:
+      'Le contexte proche lit le verset dans le plus petit paragraphe significatif qui l’entoure et cherche ses lignes de pression internes.',
+    narrowIntroTakeaway:
+      'Le but n’est pas d’ajouter de l’information, mais d’offrir une unité de lecture plus juste et de vraies portes vers la profondeur.',
+    narrowPoint1:
+      'Le paragraphe complet est d’abord montré comme objet principal de lecture.',
+    narrowPoint2:
+      'Les mots et expressions les plus porteurs sont ensuite mis en valeur à l’intérieur du paragraphe.',
+    narrowPoint3:
+      'Puis le système identifie jusqu’à cinq directions prometteuses qui naissent du paragraphe.',
+    narrowPoint4:
+      'Chaque direction explique pourquoi elle compte et comment aller plus loin.',
+    narrowPoint5:
+      'Un toucher ouvre un court article qui approfondit cet angle sans partir ailleurs.',
+    narrowLoading: 'Chargement du contexte proche',
+    narrowLoadingText:
+      'Recherche du plus petit paragraphe significatif et de ses lignes de pression cachées…',
+    narrowUnavailable: 'Impossible de charger le contexte proche.',
+    paragraphLabel: 'Paragraphe',
+    highlightsLabel: 'Leviers de sens',
+    directionsLabel: 'Directions',
+    whyItMattersLabel: 'Pourquoi cela compte',
+    digDeeperLabel: 'Creuser plus loin',
+    backToMeanings: 'Retour aux sens',
+    narrowArticleLabel: 'Approfondissement',
+    narrowArticleLoading: 'Chargement de l’approfondissement',
+    narrowArticleLoadingText:
+      'Développement de la direction choisie en un court article…',
+    narrowArticleUnavailable: 'Impossible de charger l’approfondissement.',
     lensTitle: 'Lentille',
     chooseFocusedLens: 'Choisissez une lentille ciblée',
     readThisVerseOneAngle: 'Lisez ce verset sous un angle précis.',
@@ -778,6 +963,35 @@ const UI_TEXT: Record<
     narrowHelper: 'Der nächste Absatz, verborgene Sinnlinien und Wege zum Weitergraben',
     wideHelper:
       'Kapitel, Buch und — wenn es wirklich trägt — die weitere biblische Linie',
+    narrowIntroLead:
+      'Der nahe Kontext liest den Vers im kleinsten sinnvollen Absatz um ihn herum und sucht seine inneren Drucklinien.',
+    narrowIntroTakeaway:
+      'Das Ziel ist nicht mehr Information, sondern eine genauere Leseeinheit und echte Wege zur Vertiefung.',
+    narrowPoint1:
+      'Zuerst wird der ganze Absatz als eigentliches Leseobjekt gezeigt.',
+    narrowPoint2:
+      'Dann werden die bedeutungstragenden Wörter und Wendungen im Absatz selbst sanft markiert.',
+    narrowPoint3:
+      'Danach identifiziert das System bis zu fünf vielversprechende Richtungen, die aus dem Absatz wachsen.',
+    narrowPoint4:
+      'Jede Richtung erklärt, warum sie zählt und wohin man weitergraben kann.',
+    narrowPoint5:
+      'Ein Tippen öffnet einen kurzen Text, der genau diese Richtung vertieft, ohne abzuweichen.',
+    narrowLoading: 'Naher Kontext wird geladen',
+    narrowLoadingText:
+      'Der kleinste sinnvolle Absatz und seine verborgenen Drucklinien werden gesucht…',
+    narrowUnavailable: 'Naher Kontext konnte nicht geladen werden.',
+    paragraphLabel: 'Absatz',
+    highlightsLabel: 'Sinnhebel',
+    directionsLabel: 'Richtungen',
+    whyItMattersLabel: 'Warum das zählt',
+    digDeeperLabel: 'Weiter graben',
+    backToMeanings: 'Zurück zu Bedeutungen',
+    narrowArticleLabel: 'Vertiefung',
+    narrowArticleLoading: 'Vertiefung wird geladen',
+    narrowArticleLoadingText:
+      'Die gewählte Richtung wird zu einem kurzen Text ausgearbeitet…',
+    narrowArticleUnavailable: 'Vertiefung konnte nicht geladen werden.',
     lensTitle: 'Linse',
     chooseFocusedLens: 'Wähle eine fokussierte Linse',
     readThisVerseOneAngle: 'Lies diesen Vers aus einem bestimmten Blickwinkel.',
@@ -953,6 +1167,19 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [contextSheetOpen, setContextSheetOpen] = useState(false)
   const [selectedContext, setSelectedContext] = useState<ContextKind | null>(null)
 
+  const [narrowContextData, setNarrowContextData] = useState<NarrowContextPayload | null>(null)
+  const [narrowContextLoading, setNarrowContextLoading] = useState(false)
+  const [narrowContextError, setNarrowContextError] = useState('')
+  const [narrowCopyStatus, setNarrowCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [narrowShareStatus, setNarrowShareStatus] = useState('')
+  const [activeNarrowDirectionId, setActiveNarrowDirectionId] = useState('')
+  const [narrowArticle, setNarrowArticle] = useState<NarrowContextArticle | null>(null)
+  const [narrowArticleLoading, setNarrowArticleLoading] = useState(false)
+  const [narrowArticleError, setNarrowArticleError] = useState('')
+  const [narrowArticleCopyStatus, setNarrowArticleCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [narrowArticleShareStatus, setNarrowArticleShareStatus] = useState('')
+
   const [wordLensLoading, setWordLensLoading] = useState(false)
   const [wordLensError, setWordLensError] = useState('')
   const [tensionLensLoading, setTensionLensLoading] = useState(false)
@@ -984,6 +1211,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const compareRequestIdRef = useRef(0)
   const contextRequestIdRef = useRef(0)
+  const narrowRequestIdRef = useRef(0)
+  const narrowArticleRequestIdRef = useRef(0)
   const wordLensRequestIdRef = useRef(0)
   const tensionLensRequestIdRef = useRef(0)
   const phraseLensRequestIdRef = useRef(0)
@@ -1063,6 +1292,17 @@ export default function VerseDetailPage({ params }: PageProps) {
       setContextShareStatus('')
       setContextSheetOpen(false)
       setSelectedContext(null)
+      setNarrowContextData(null)
+      setNarrowContextLoading(false)
+      setNarrowContextError('')
+      setNarrowCopyStatus('idle')
+      setNarrowShareStatus('')
+      setActiveNarrowDirectionId('')
+      setNarrowArticle(null)
+      setNarrowArticleLoading(false)
+      setNarrowArticleError('')
+      setNarrowArticleCopyStatus('idle')
+      setNarrowArticleShareStatus('')
       setWordLensError('')
       setTensionLensError('')
       setPhraseLensError('')
@@ -1081,6 +1321,8 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       compareRequestIdRef.current += 1
       contextRequestIdRef.current += 1
+      narrowRequestIdRef.current += 1
+      narrowArticleRequestIdRef.current += 1
       wordLensRequestIdRef.current += 1
       tensionLensRequestIdRef.current += 1
       phraseLensRequestIdRef.current += 1
@@ -1259,6 +1501,11 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const compareData = useMemo(() => compareByLanguage[appLanguage], [compareByLanguage, appLanguage])
   const contextData = useMemo(() => contextByLanguage[appLanguage], [contextByLanguage, appLanguage])
+
+  const activeNarrowDirection = useMemo(() => {
+    if (!narrowContextData || !activeNarrowDirectionId) return null
+    return narrowContextData.directions.find((item) => item.id === activeNarrowDirectionId) ?? null
+  }, [narrowContextData, activeNarrowDirectionId])
 
   async function translateCard(
     targetLanguage: 'ru' | 'es' | 'fr' | 'de',
@@ -1546,10 +1793,131 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function loadNarrowContext(force = false, language: AppLanguage = appLanguage) {
+    if (!book || !chapter || !verse || !verseText || !modesReady) return
+    if (!force && narrowContextData) return
+
+    const requestId = ++narrowRequestIdRef.current
+
+    setNarrowContextLoading(true)
+    setNarrowContextError('')
+    setNarrowArticle(null)
+    setNarrowArticleError('')
+    setNarrowArticleLoading(false)
+    setActiveNarrowDirectionId('')
+    setNarrowArticleCopyStatus('idle')
+    setNarrowArticleShareStatus('')
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/narrow-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book,
+          chapter,
+          verse,
+          targetLanguage: language,
+        }),
+      })
+
+      const data: NarrowContextApiResponse = await res.json()
+
+      if (requestId !== narrowRequestIdRef.current) return
+
+      if (!res.ok || !data.paragraph || !Array.isArray(data.directions) || data.directions.length === 0) {
+        setNarrowContextError(data.error || UI_TEXT[language].narrowUnavailable)
+        setNarrowContextData(null)
+        return
+      }
+
+      setNarrowContextData({
+        paragraph: {
+          reference: String(data.paragraph.reference ?? ''),
+          full_text: String(data.paragraph.full_text ?? ''),
+          highlights: Array.isArray(data.paragraph.highlights) ? data.paragraph.highlights : [],
+        },
+        directions: data.directions,
+      })
+    } catch {
+      if (requestId !== narrowRequestIdRef.current) return
+      setNarrowContextError(UI_TEXT[language].narrowUnavailable)
+      setNarrowContextData(null)
+    } finally {
+      if (requestId === narrowRequestIdRef.current) {
+        setNarrowContextLoading(false)
+      }
+    }
+  }
+
+  async function loadNarrowArticle(
+    direction: NarrowContextDirection,
+    force = false,
+    language: AppLanguage = appLanguage
+  ) {
+    if (!book || !chapter || !verse || !narrowContextData) return
+    if (!force && narrowArticle && activeNarrowDirectionId === direction.id) return
+
+    const requestId = ++narrowArticleRequestIdRef.current
+
+    setNarrowArticleLoading(true)
+    setNarrowArticleError('')
+    setNarrowArticle(null)
+    setActiveNarrowDirectionId(direction.id)
+    setNarrowArticleCopyStatus('idle')
+    setNarrowArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/narrow-context/deep-dive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book,
+          chapter,
+          verse,
+          paragraphReference: narrowContextData.paragraph.reference,
+          paragraphText: narrowContextData.paragraph.full_text,
+          direction,
+          targetLanguage: language,
+        }),
+      })
+
+      const data: NarrowContextDeepDiveResponse = await res.json()
+
+      if (requestId !== narrowArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setNarrowArticleError(data.error || UI_TEXT[language].narrowArticleUnavailable)
+        return
+      }
+
+      setNarrowArticle({
+        title: String(data.article.title ?? ''),
+        lead: String(data.article.lead ?? ''),
+        body: Array.isArray(data.article.body) ? data.article.body : [],
+        highlight_line: String(data.article.highlight_line ?? ''),
+      })
+    } catch {
+      if (requestId !== narrowArticleRequestIdRef.current) return
+      setNarrowArticleError(UI_TEXT[language].narrowArticleUnavailable)
+    } finally {
+      if (requestId === narrowArticleRequestIdRef.current) {
+        setNarrowArticleLoading(false)
+      }
+    }
+  }
+
   useEffect(() => {
     if (!formattedReference || !verseText || !modesReady) return
 
-    if (activeTab === 'context' && selectedContext) void loadContext(false, appLanguage)
+    if (activeTab === 'context' && selectedContext === 'narrow') {
+      void loadNarrowContext(false, appLanguage)
+    }
+
+    if (activeTab === 'context' && selectedContext === 'wide') {
+      void loadContext(false, appLanguage)
+    }
+
     if (activeTab === 'lens' && selectedLens === 'translation') void loadCompare(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'word') void loadWordLens(false, appLanguage)
     if (activeTab === 'lens' && selectedLens === 'tension') void loadTensionLens(false, appLanguage)
@@ -1567,6 +1935,10 @@ export default function VerseDetailPage({ params }: PageProps) {
     setCompareShareStatus('')
     setContextCopyStatus('idle')
     setContextShareStatus('')
+    setNarrowCopyStatus('idle')
+    setNarrowShareStatus('')
+    setNarrowArticleCopyStatus('idle')
+    setNarrowArticleShareStatus('')
 
     if (targetLanguage === 'en') {
       setAppLanguage('en')
@@ -1598,6 +1970,12 @@ export default function VerseDetailPage({ params }: PageProps) {
       }
 
       return
+    }
+
+    if (activeTab === 'context' && selectedContext === 'narrow') {
+      setNarrowContextData(null)
+      setNarrowArticle(null)
+      setActiveNarrowDirectionId('')
     }
 
     setAppLanguage(targetLanguage)
@@ -1727,6 +2105,33 @@ export default function VerseDetailPage({ params }: PageProps) {
       .filter(Boolean)
       .join('\n')
   }, [contextData, formattedReference, t.takeaway])
+
+  const narrowShareText = useMemo(() => {
+    if (!narrowContextData) return ''
+    return [
+      narrowContextData.paragraph.reference,
+      '',
+      narrowContextData.paragraph.full_text,
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [narrowContextData])
+
+  const narrowArticleShareText = useMemo(() => {
+    if (!narrowArticle || !narrowContextData) return ''
+    return [
+      narrowContextData.paragraph.reference,
+      '',
+      narrowArticle.title,
+      '',
+      narrowArticle.lead,
+      '',
+      ...narrowArticle.body,
+      ...(narrowArticle.highlight_line ? ['', narrowArticle.highlight_line] : []),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [narrowArticle, narrowContextData])
 
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
@@ -1912,6 +2317,72 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function handleCopyNarrow() {
+    if (!narrowShareText) return
+
+    try {
+      await navigator.clipboard.writeText(narrowShareText)
+      setNarrowCopyStatus('copied')
+      setNarrowShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setNarrowCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setNarrowCopyStatus('failed')
+    }
+  }
+
+  async function handleShareNarrow() {
+    if (!narrowShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: narrowShareText })
+        setNarrowShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(narrowShareText)
+        setNarrowShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setNarrowShareStatus('')
+    }
+  }
+
+  async function handleCopyNarrowArticle() {
+    if (!narrowArticleShareText) return
+
+    try {
+      await navigator.clipboard.writeText(narrowArticleShareText)
+      setNarrowArticleCopyStatus('copied')
+      setNarrowArticleShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setNarrowArticleCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setNarrowArticleCopyStatus('failed')
+    }
+  }
+
+  async function handleShareNarrowArticle() {
+    if (!narrowArticleShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: narrowArticleShareText })
+        setNarrowArticleShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(narrowArticleShareText)
+        setNarrowArticleShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setNarrowArticleShareStatus('')
+    }
+  }
+
   function handleCompareBackToTop() {
     if (articleTopRef.current) {
       articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -2015,12 +2486,23 @@ export default function VerseDetailPage({ params }: PageProps) {
     if (!modesReady) return
 
     setSelectedContext(mode)
-    setContextByLanguage(emptyContextMap())
     setContextSheetOpen(false)
     setActiveTab('context')
     setActiveArticleKey('')
     setArticleShareStatus('')
     setArticleCopyStatus('idle')
+
+    if (mode === 'narrow') {
+      setNarrowContextData(null)
+      setNarrowContextError('')
+      setNarrowArticle(null)
+      setNarrowArticleError('')
+      setActiveNarrowDirectionId('')
+      await loadNarrowContext(true, appLanguage)
+      return
+    }
+
+    setContextByLanguage(emptyContextMap())
     await loadContext(true, appLanguage)
   }
 
@@ -2259,6 +2741,153 @@ export default function VerseDetailPage({ params }: PageProps) {
     return renderLensModeIntro()
   }
 
+  function renderContextView() {
+    if (!modesReady) {
+      return renderContextModeIntro()
+    }
+
+    if (!selectedContext) {
+      return renderContextModeIntro()
+    }
+
+    if (selectedContext === 'narrow') {
+      if (activeNarrowDirectionId) {
+        return (
+          <NarrowContextArticleView
+            article={narrowArticle}
+            isLoading={narrowArticleLoading}
+            error={narrowArticleError}
+            articleLabel={t.narrowArticleLabel}
+            loadingLabel={t.narrowArticleLoading}
+            loadingText={t.narrowArticleLoadingText}
+            unavailableLabel={t.narrowArticleUnavailable}
+            backLabel={t.backToMeanings}
+            shareLabel={t.share}
+            copiedLabel={t.copied}
+            copyLabel={t.copy}
+            copyFailedLabel={t.copyFailed}
+            shareStatus={narrowArticleShareStatus}
+            copyStatus={narrowArticleCopyStatus}
+            tryAgainLabel={t.tryAgain}
+            onBack={() => {
+              setActiveNarrowDirectionId('')
+              setNarrowArticle(null)
+              setNarrowArticleError('')
+              setNarrowArticleLoading(false)
+              setNarrowArticleCopyStatus('idle')
+              setNarrowArticleShareStatus('')
+              articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            onCopy={() => {
+              void handleCopyNarrowArticle()
+            }}
+            onShare={() => {
+              void handleShareNarrowArticle()
+            }}
+            onRetry={() => {
+              if (activeNarrowDirection) {
+                void loadNarrowArticle(activeNarrowDirection, true, appLanguage)
+              }
+            }}
+          />
+        )
+      }
+
+      return (
+        <NarrowContextView
+          isReady={modesReady}
+          isLoading={narrowContextLoading}
+          error={narrowContextError}
+          data={narrowContextData}
+          title={t.narrowContext}
+          introLead={t.narrowIntroLead}
+          introTakeaway={t.narrowIntroTakeaway}
+          pointLabel={t.contextPointLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.narrowLoading}
+          loadingText={t.narrowLoadingText}
+          unavailableLabel={t.narrowUnavailable}
+          point1={t.narrowPoint1}
+          point2={t.narrowPoint2}
+          point3={t.narrowPoint3}
+          point4={t.narrowPoint4}
+          point5={t.narrowPoint5}
+          paragraphLabel={t.paragraphLabel}
+          highlightsLabel={t.highlightsLabel}
+          directionsLabel={t.directionsLabel}
+          whyItMattersLabel={t.whyItMattersLabel}
+          digDeeperLabel={t.digDeeperLabel}
+          tryAgainLabel={t.tryAgain}
+          shareLabel={t.share}
+          changeLabel={t.change}
+          copiedLabel={t.copied}
+          copyLabel={t.copy}
+          copyFailedLabel={t.copyFailed}
+          shareStatus={narrowShareStatus}
+          copyStatus={narrowCopyStatus}
+          onRetry={() => {
+            void loadNarrowContext(true, appLanguage)
+          }}
+          onDirectionSelect={(directionId) => {
+            const direction = narrowContextData?.directions.find((item) => item.id === directionId)
+            if (!direction) return
+            void loadNarrowArticle(direction, true, appLanguage)
+          }}
+          onChangeMode={() => setContextSheetOpen(true)}
+          onCopy={() => {
+            void handleCopyNarrow()
+          }}
+          onShare={() => {
+            void handleShareNarrow()
+          }}
+        />
+      )
+    }
+
+    return (
+      <ContextView
+        isReady={modesReady}
+        isLoading={contextLoading}
+        error={contextError}
+        data={contextData}
+        selectedMode={selectedContext}
+        title={t.context}
+        leadFallback={t.contextLead}
+        takeawayFallback={t.contextTakeaway}
+        pointLabel={t.contextPointLabel}
+        takeawayLabel={t.takeaway}
+        loadingLabel={t.loadingContext}
+        loadingText={t.loadingContextText}
+        unavailableLabel={t.context}
+        point1={t.contextPoint1}
+        point2={t.contextPoint2}
+        point3={t.contextPoint3}
+        narrowLabel={t.narrowContext}
+        wideLabel={t.wideContext}
+        changeLabel={t.change}
+        tryAgainLabel={t.tryAgain}
+        backToTopLabel={t.backToTop}
+        copyLabel={t.copyAnalysis}
+        copiedLabel={t.copiedAnalysis}
+        copyFailedLabel={t.copyFailed}
+        shareLabel={t.shareAnalysis}
+        copyStatus={contextCopyStatus}
+        shareStatus={contextShareStatus}
+        onRetry={() => {
+          void loadContext(true, appLanguage)
+        }}
+        onBackToTop={handleContextBackToTop}
+        onCopy={() => {
+          void handleCopyContext()
+        }}
+        onShare={() => {
+          void handleShareContext()
+        }}
+        onChangeMode={() => setContextSheetOpen(true)}
+      />
+    )
+  }
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
       <div ref={articleTopRef} className="mx-auto flex w-full max-w-md flex-col">
@@ -2356,50 +2985,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         />
 
         {!verseLoading && !verseError && activeTab === 'insights' && renderSharedCardStack()}
-
-        {!verseLoading && !verseError && activeTab === 'context' && (
-          <ContextView
-            isReady={modesReady}
-            isLoading={contextLoading}
-            error={contextError}
-            data={contextData}
-            selectedMode={selectedContext}
-            title={t.context}
-            leadFallback={t.contextLead}
-            takeawayFallback={t.contextTakeaway}
-            pointLabel={t.contextPointLabel}
-            takeawayLabel={t.takeaway}
-            loadingLabel={t.loadingContext}
-            loadingText={t.loadingContextText}
-            unavailableLabel={t.context}
-            point1={t.contextPoint1}
-            point2={t.contextPoint2}
-            point3={t.contextPoint3}
-            narrowLabel={t.narrowContext}
-            wideLabel={t.wideContext}
-            changeLabel={t.change}
-            tryAgainLabel={t.tryAgain}
-            backToTopLabel={t.backToTop}
-            copyLabel={t.copyAnalysis}
-            copiedLabel={t.copiedAnalysis}
-            copyFailedLabel={t.copyFailed}
-            shareLabel={t.shareAnalysis}
-            copyStatus={contextCopyStatus}
-            shareStatus={contextShareStatus}
-            onRetry={() => {
-              void loadContext(true, appLanguage)
-            }}
-            onBackToTop={handleContextBackToTop}
-            onCopy={() => {
-              void handleCopyContext()
-            }}
-            onShare={() => {
-              void handleShareContext()
-            }}
-            onChangeMode={() => setContextSheetOpen(true)}
-          />
-        )}
-
+        {!verseLoading && !verseError && activeTab === 'context' && renderContextView()}
         {!verseLoading && !verseError && activeTab === 'lens' && renderLensView()}
       </div>
 
