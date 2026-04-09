@@ -41,7 +41,7 @@ export default function VerseBlock({
             <p className="text-center text-[1.08rem] leading-9 text-stone-700">{error}</p>
           </div>
         ) : (
-          <p className="text-fade text-[1.28rem] font-semibold leading-[2.15rem] text-stone-900">
+          <p className="text-fade text-[1.2rem] leading-[2.05rem] text-stone-800 italic">
             {verseText}
           </p>
         )}
