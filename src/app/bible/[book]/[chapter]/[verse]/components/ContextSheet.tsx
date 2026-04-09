@@ -1,4 +1,4 @@
-type ContextKind = 'paragraph' | 'book' | 'bible'
+type ContextKind = 'narrow' | 'wide'
 
 type ContextSheetProps = {
   isOpen: boolean
@@ -6,54 +6,12 @@ type ContextSheetProps = {
   subtitle: string
   description: string
   closeLabel: string
-  paragraphLabel: string
-  bookLabel: string
-  bibleLabel: string
-  paragraphHelper: string
-  bookHelper: string
-  bibleHelper: string
+  narrowLabel: string
+  wideLabel: string
+  narrowHelper: string
+  wideHelper: string
   onClose: () => void
   onSelect: (mode: ContextKind) => void
-}
-
-function renderModeOption(
-  kind: string,
-  title: string,
-  helper: string,
-  accentClass: string,
-  onClick: () => void
-) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group relative w-full overflow-hidden rounded-[26px] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(255,250,241,0.98)_0%,rgba(248,239,220,0.96)_100%)] px-5 py-5 text-left shadow-[0_10px_24px_rgba(94,72,37,0.08)] transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-[0_16px_30px_rgba(94,72,37,0.12)] active:scale-[0.988]"
-    >
-      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.45),transparent_45%)]" />
-      </div>
-
-      <div className="relative flex items-start gap-4">
-        <div
-          className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/50 ${accentClass} shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]`}
-        >
-          <span className="text-sm font-semibold text-stone-800">
-            {kind === 'paragraph' ? '¶' : kind === 'book' ? 'B' : 'Ω'}
-          </span>
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[1.02rem] font-semibold tracking-tight text-stone-900">{title}</p>
-            <span className="translate-x-0 text-stone-400 transition-transform duration-200 group-hover:translate-x-[2px]">
-              →
-            </span>
-          </div>
-          <p className="mt-1.5 text-sm leading-6 text-stone-600">{helper}</p>
-        </div>
-      </div>
-    </button>
-  )
 }
 
 export default function ContextSheet({
@@ -62,71 +20,52 @@ export default function ContextSheet({
   subtitle,
   description,
   closeLabel,
-  paragraphLabel,
-  bookLabel,
-  bibleLabel,
-  paragraphHelper,
-  bookHelper,
-  bibleHelper,
+  narrowLabel,
+  wideLabel,
+  narrowHelper,
+  wideHelper,
   onClose,
   onSelect,
 }: ContextSheetProps) {
   if (!isOpen) return null
 
   return (
-    <div className="sheet-overlay fixed inset-0 z-50 bg-[rgba(20,16,10,0.30)] backdrop-blur-[10px]">
-      <div className="flex h-full items-end px-4 pb-4 pt-16">
-        <div className="sheet-panel mx-auto w-full max-w-md overflow-hidden rounded-[34px] border border-stone-300/80 bg-[linear-gradient(180deg,rgba(251,246,234,0.98)_0%,rgba(244,234,214,0.98)_100%)] shadow-[0_30px_80px_rgba(0,0,0,0.20)]">
-          <div className="px-5 pt-3">
-            <div className="mx-auto h-1.5 w-12 rounded-full bg-stone-300/90" />
+    <div className="sheet-overlay fixed inset-0 z-50 flex items-end bg-black/25 px-4 pb-4 pt-16">
+      <div className="sheet-panel mx-auto w-full max-w-md rounded-[28px] border border-stone-300 bg-[#fbf6ea] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-lg font-semibold text-stone-900">{title}</p>
+            <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
+            <p className="text-sm text-stone-500">{description}</p>
           </div>
 
-          <div className="px-5 pb-5 pt-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[1.55rem] font-semibold tracking-tight text-stone-900">
-                  {title}
-                </p>
-                <p className="mt-1 text-sm text-stone-600">{subtitle}</p>
-                <p className="text-sm text-stone-500">{description}</p>
-              </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1.5 text-sm font-medium text-stone-700"
+          >
+            {closeLabel}
+          </button>
+        </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label={closeLabel}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-stone-300/90 bg-[#fffaf1]/90 text-base font-medium text-stone-700 shadow-[0_6px_14px_rgba(94,72,37,0.08)] transition hover:bg-white active:scale-[0.97]"
-              >
-                ✕
-              </button>
-            </div>
+        <div className="mt-5 space-y-3">
+          <button
+            type="button"
+            onClick={() => onSelect('narrow')}
+            className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
+          >
+            <p className="text-base font-semibold text-stone-900">{narrowLabel}</p>
+            <p className="mt-1 text-sm text-stone-500">{narrowHelper}</p>
+          </button>
 
-            <div className="mt-5 space-y-3.5">
-              {renderModeOption(
-                'paragraph',
-                paragraphLabel,
-                paragraphHelper,
-                'bg-[linear-gradient(180deg,#efe5cc_0%,#e3d4ad_100%)]',
-                () => onSelect('paragraph')
-              )}
-
-              {renderModeOption(
-                'book',
-                bookLabel,
-                bookHelper,
-                'bg-[linear-gradient(180deg,#ece3d6_0%,#dfd0bb_100%)]',
-                () => onSelect('book')
-              )}
-
-              {renderModeOption(
-                'bible',
-                bibleLabel,
-                bibleHelper,
-                'bg-[linear-gradient(180deg,#eadfcd_0%,#dcc9ad_100%)]',
-                () => onSelect('bible')
-              )}
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => onSelect('wide')}
+            className="w-full rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-left transition hover:bg-[#f8efdc]"
+          >
+            <p className="text-base font-semibold text-stone-900">{wideLabel}</p>
+            <p className="mt-1 text-sm text-stone-500">{wideHelper}</p>
+          </button>
         </div>
       </div>
     </div>
