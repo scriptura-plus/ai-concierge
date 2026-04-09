@@ -106,7 +106,7 @@ function pickLocalizedValue(
 function buildAvoidRepeatsBlock(savedRows: CuratedInsightRow[]) {
   if (!savedRows.length) {
     return `
-NO SAVED INSIGHTS YET:
+NO SAVED EXPLORER CARDS YET:
 You are generating the full set from scratch.
 `.trim();
   }
@@ -137,7 +137,7 @@ TEXT: ${baseText}`;
     .join("\n\n");
 
   return `
-ALREADY SAVED INSIGHTS:
+ALREADY SAVED EXPLORER CARDS:
 The following cards are already saved for this verse.
 
 ${lines}
@@ -164,20 +164,20 @@ FOCUS MODE:
 Pay special attention to this word or phrase:
 "${params.focusWord.trim()}"
 
-If possible, let many of the insights revolve around that focal point from different angles.
+If helpful, let several cards orbit around this focal point from clearly different angles.
 `
     : `
 FOCUS MODE:
 No specific word or phrase was provided.
-Generate insights based on the verse as a whole.
+Generate explorer cards based on the verse as a whole.
 `;
 
   const avoidRepeatsBlock = buildAvoidRepeatsBlock(params.savedRows);
 
   return `
-You are an elite generator of biblical insight cards.
+You are an elite generator of Bible verse explorer cards.
 
-Your task is to produce ${params.count} distinct, non-obvious, high-value insight cards based on this Bible verse.
+Your task is to produce ${params.count} distinct, non-obvious, high-value explorer cards based on this Bible verse.
 
 REFERENCE:
 ${params.reference}
@@ -191,10 +191,16 @@ CORE PRINCIPLE:
 This is not commentary.
 This is not summary.
 This is not preaching.
-This is discovery.
+This is not a polished final insight.
+This is the opening stage of exploration.
+
+WHAT AN EXPLORER CARD IS:
+An explorer card surfaces one promising angle of reading.
+It helps the reader notice one perspective, tension, wording feature, contrast, or implication worth unfolding further.
+It should feel like an entry point into deeper reading, not the final destination.
 
 CRITICAL ACCURACY RULES:
-- Base your insights on the verse text provided above
+- Base every card on the verse text provided above
 - Do not attribute words or phrases to the verse if they do not appear in the verse text
 - Do not blend in wording from nearby verses unless clearly marked as wider context
 - If a point depends on broader context, make that explicit
@@ -204,7 +210,7 @@ AUDIENCE:
 Thoughtful, scripture-literate adult readers who value depth, precision, and fresh angles.
 
 PRIMARY GOAL:
-Generate insights that feel rare, sharp, and worth saving.
+Generate cards that help the reader explore where to look next in the verse.
 
 QUALITY STANDARD:
 - Avoid obvious observations
@@ -212,10 +218,13 @@ QUALITY STANDARD:
 - Avoid clichés
 - Avoid repeating the same idea in different words
 - Each card must reveal a different angle, tension, contrast, pattern, or implication
-- Do not produce insights that could fit almost any verse
+- Do not produce cards that could fit almost any verse
+- Do not sound like a finished sermon point
+- Do not close the thought too neatly
+- Leave strong forward motion toward Unfold
 
 DIVERSITY RULE:
-Across the full set, vary the type of insight. Draw from different angles such as:
+Across the full set, vary the type of angle. Draw from different directions such as:
 - a surprising wording detail
 - an inner tension in the verse
 - a hidden contrast
@@ -225,7 +234,7 @@ Across the full set, vary the type of insight. Draw from different angles such a
 - a paradox
 - a practical implication that is not immediately obvious
 - a focus on one striking word or phrase
-- an insight based on what the verse does NOT say but the reader might expect
+- an angle based on what the verse does NOT say but the reader might expect
 
 ${focusBlock}
 
@@ -236,9 +245,21 @@ STYLE:
 - Modern
 - Intelligent
 - Concise but vivid
-- Memorable without sounding dramatic
+- Exploratory rather than final
 - No religious clichés
 - No vague abstraction
+- No dramatic overstatement
+
+TITLE RULE:
+The title should name the angle clearly and attractively.
+It should feel like a doorway into a line of reading, not like a slogan or a clickbait headline.
+
+TEXT RULE:
+The text should be 3-4 sentences.
+Sentence 1: name or frame the angle.
+Sentence 2: show what in the verse supports that angle.
+Sentence 3: explain why this angle matters for reading the verse.
+Sentence 4 if needed: leave a sense of further depth still to unfold.
 
 OUTPUT RULES:
 - Return ONLY valid JSON
@@ -247,14 +268,14 @@ OUTPUT RULES:
 - No commentary outside JSON
 - Output must be a JSON array
 - Each item must have:
-  - "title": short, sharp, intriguing
-  - "text": 4-5 sentences, tightly written, readable, and self-contained
+  - "title": short, clear, angle-oriented
+  - "text": 3-4 sentences, readable, exploratory, and self-contained enough to stand alone while still inviting further unfolding
 
 Example:
 [
   {
-    "title": "The Detail That Slows the Verse Down",
-    "text": "Sentence one. Sentence two. Sentence three. Sentence four."
+    "title": "Knowledge as Relationship",
+    "text": "This verse may be defining knowledge in relational rather than merely informational terms. The wording does not point first to quantity of facts, but to a kind of recognition bound up with knowing God and Christ. That changes the center of the verse from data to living connection. It also opens a deeper question about what kind of knowing the verse is really talking about."
   }
 ]
 `.trim();
