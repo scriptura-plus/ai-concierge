@@ -62,13 +62,6 @@ type NarrowContextViewProps = {
   onShare: () => void
 }
 
-function highlightKindLabel(kind: HighlightKind) {
-  if (kind === 'pivot') return 'PIVOT'
-  if (kind === 'contrast') return 'CONTRAST'
-  if (kind === 'phrase') return 'PHRASE'
-  return 'KEYWORD'
-}
-
 function renderIntroPanel(
   title: string,
   lead: string,
@@ -130,23 +123,14 @@ export default function NarrowContextView({
   point4,
   point5,
   paragraphLabel,
-  highlightsLabel,
   directionsLabel,
   whyItMattersLabel,
   digDeeperLabel,
   tryAgainLabel,
-  shareLabel,
   changeLabel,
-  copiedLabel,
-  copyLabel,
-  copyFailedLabel,
-  shareStatus,
-  copyStatus,
   onRetry,
   onDirectionSelect,
   onChangeMode,
-  onCopy,
-  onShare,
 }: NarrowContextViewProps) {
   if (!isReady) {
     return renderIntroPanel(
@@ -228,52 +212,6 @@ export default function NarrowContextView({
             text={data.paragraph.full_text}
             highlights={data.paragraph.highlights}
           />
-
-          {data.paragraph.highlights.length > 0 && (
-            <div className="mt-6">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                {highlightsLabel}
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-                {data.paragraph.highlights.map((item, index) => (
-                  <div
-                    key={`${item.kind}-${item.text}-${index}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-stone-300/70 bg-[#fffaf1]/85 px-3 py-1.5 text-sm text-stone-700"
-                  >
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-500">
-                      {highlightKindLabel(item.kind)}
-                    </span>
-                    <span>{item.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={onCopy}
-              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {copyStatus === 'copied'
-                ? copiedLabel
-                : copyStatus === 'failed'
-                  ? copyFailedLabel
-                  : copyLabel}
-            </button>
-
-            <button
-              type="button"
-              onClick={onShare}
-              className="rounded-[22px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {shareLabel}
-            </button>
-          </div>
-
-          {shareStatus && <p className="mt-3 text-center text-sm text-stone-500">{shareStatus}</p>}
         </div>
       </div>
 
