@@ -6,6 +6,8 @@ import { toPng } from 'html-to-image'
 import VerseBlock from './components/VerseBlock'
 import LensSheet from './components/LensSheet'
 import ContextSheet from './components/ContextSheet'
+import CompareView from './components/CompareView'
+import ContextView from './components/ContextView'
 
 type PageProps = {
   params: Promise<{
@@ -850,6 +852,48 @@ function formatBookLabel(bookSlug: string) {
       return part.charAt(0).toUpperCase() + part.slice(1)
     })
     .join(' ')
+}
+
+function renderStructuredPanel(
+  title: string,
+  lead: string,
+  labelPrefix: string,
+  points: string[],
+  takeawayLabel: string,
+  takeaway: string
+) {
+  return (
+    <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
+      <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
+        <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+          {title}
+        </p>
+
+        <p className="text-[1rem] leading-8 text-stone-800">{lead}</p>
+
+        <div className="mt-5 space-y-3">
+          {points.map((point, index) => (
+            <div
+              key={`${title}-${index}`}
+              className="rounded-[18px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                {labelPrefix} {index + 1}
+              </p>
+              <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{point}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+            {takeawayLabel}
+          </p>
+          <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{takeaway}</p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function VerseDetailPage({ params }: PageProps) {
@@ -1810,23 +1854,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
-  async function handleCopy() {
-    if (!shareText || interactionsLocked) return
-
-    try {
-      await navigator.clipboard.writeText(shareText)
-      setCopyStatus('copied')
-      setShareStatus('')
-
-      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
-      copyTimerRef.current = window.setTimeout(() => {
-        setCopyStatus('idle')
-      }, 1600)
-    } catch {
-      setCopyStatus('failed')
-    }
-  }
-
   async function handleShare() {
     if (!displayedCard || !formattedReference || interactionsLocked) return
     setShareStatus('')
@@ -1852,7 +1879,6 @@ export default function VerseDetailPage({ params }: PageProps) {
         ) {
           await navigator.share({ files: [file] })
           setShareStatus(t.sharedAsImage)
-          setCopyStatus('idle')
           return
         }
       }
@@ -1860,11 +1886,9 @@ export default function VerseDetailPage({ params }: PageProps) {
       if (navigator.share) {
         await navigator.share({ text: shareText })
         setShareStatus(t.sharedAsText)
-        setCopyStatus('idle')
       } else {
         await navigator.clipboard.writeText(shareText)
         setShareStatus(t.shareUnavailableCopiedInstead)
-        setCopyStatus('idle')
       }
     } catch {
       setShareStatus('')
@@ -1996,47 +2020,6 @@ export default function VerseDetailPage({ params }: PageProps) {
       >
         {label}
       </button>
-    )
-  }
-
-  function renderStructuredPanel(
-    title: string,
-    lead: string,
-    labelPrefix: string,
-    points: string[],
-    takeaway: string
-  ) {
-    return (
-      <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-          <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-            {title}
-          </p>
-
-          <p className="text-[1rem] leading-8 text-stone-800">{lead}</p>
-
-          <div className="mt-5 space-y-3">
-            {points.map((point, index) => (
-              <div
-                key={`${title}-${index}`}
-                className="rounded-[18px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  {labelPrefix} {index + 1}
-                </p>
-                <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{point}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-              {t.takeaway}
-            </p>
-            <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{takeaway}</p>
-          </div>
-        </div>
-      </div>
     )
   }
 
@@ -2375,305 +2358,14 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
-  function renderCompareView() {
-    if (!modesReady) {
-      return renderStructuredPanel(
-        t.translations,
-        t.translationsLead,
-        t.translationsDiffLabel,
-        [t.translationsPoint1, t.translationsPoint2, t.translationsPoint3],
-        t.translationsTakeaway
-      )
-    }
-
-    if (compareLoading) {
-      return (
-        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.loadingTranslations}
-            </p>
-            <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingTranslationsText}</p>
-          </div>
-        </div>
-      )
-    }
-
-    if (compareError) {
-      return (
-        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.translations}
-            </p>
-            <p className="text-[1.08rem] leading-9 text-stone-800">{compareError}</p>
-
-            <button
-              type="button"
-              onClick={() => loadCompare(true, appLanguage)}
-              className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-            >
-              {t.tryAgain}
-            </button>
-          </div>
-        </div>
-      )
-    }
-
-    if (!compareData) {
-      return renderStructuredPanel(
-        t.translations,
-        t.translationsLead,
-        t.translationsDiffLabel,
-        [t.translationsPoint1, t.translationsPoint2, t.translationsPoint3],
-        t.translationsTakeaway
-      )
-    }
-
-    return (
-      <div className="tab-panel-enter card-pop mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-          <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-            {t.translations}
-          </p>
-
-          <p className="text-[1rem] leading-8 text-stone-800">{compareData.lead}</p>
-
-          <div className="mt-5 space-y-4">
-            {compareData.points.map((point, index) => (
-              <div
-                key={`${point.title}-${index}`}
-                className="rounded-[20px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  {point.title}
-                </p>
-
-                <div className="mt-3 space-y-3">
-                  <div className="rounded-[16px] border border-stone-300/60 bg-[#fffaf1] px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
-                      {point.labelA}
-                    </p>
-                    <p className="mt-1 text-[1rem] leading-7 text-stone-900">“{point.quoteA}”</p>
-                  </div>
-
-                  <div className="rounded-[16px] border border-stone-300/60 bg-[#fffaf1] px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-500">
-                      {point.labelB}
-                    </p>
-                    <p className="mt-1 text-[1rem] leading-7 text-stone-900">“{point.quoteB}”</p>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-[0.97rem] leading-7 text-stone-800">{point.text}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-              {t.takeaway}
-            </p>
-            <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{compareData.takeaway}</p>
-          </div>
-
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={handleCompareBackToTop}
-              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {t.backToTop}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleCopyCompare}
-              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {compareCopyStatus === 'copied'
-                ? t.copiedAnalysis
-                : compareCopyStatus === 'failed'
-                  ? t.copyFailed
-                  : t.copyAnalysis}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleShareCompare}
-              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {t.shareAnalysis}
-            </button>
-          </div>
-
-          {compareShareStatus && (
-            <p className="mt-3 text-center text-sm text-stone-500">{compareShareStatus}</p>
-          )}
-        </div>
-      </div>
-    )
-  }
-
   function renderContextModeIntro() {
     return renderStructuredPanel(
       t.contextTitle,
       t.contextLead,
       t.contextPointLabel,
       [t.contextPoint1, t.contextPoint2, t.contextPoint3],
+      t.takeaway,
       t.contextTakeaway
-    )
-  }
-
-  function renderContextView() {
-    if (!modesReady) {
-      return renderContextModeIntro()
-    }
-
-    if (!selectedContext) {
-      return renderContextModeIntro()
-    }
-
-    if (contextLoading) {
-      return (
-        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-            <p className="mb-5 text-center text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-              {t.loadingContext}
-            </p>
-            <p className="text-[1.08rem] leading-9 text-stone-800">{t.loadingContextText}</p>
-          </div>
-        </div>
-      )
-    }
-
-    if (contextError) {
-      return (
-        <div className="tab-panel-enter mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-stone-300/80 bg-[#fffaf1]/80 px-3 py-1.5 text-sm font-medium text-stone-600 shadow-[0_4px_12px_rgba(94,72,37,0.06)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
-                <span>
-                  {selectedContext === 'paragraph'
-                    ? t.paragraph
-                    : selectedContext === 'book'
-                      ? t.bookMode
-                      : t.bibleMode}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setContextSheetOpen(true)}
-                className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-              >
-                {t.change}
-              </button>
-            </div>
-
-            <p className="text-[1.08rem] leading-9 text-stone-800">{contextError}</p>
-
-            <button
-              type="button"
-              onClick={() => loadContext(true, appLanguage)}
-              className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-            >
-              {t.tryAgain}
-            </button>
-          </div>
-        </div>
-      )
-    }
-
-    if (!contextData) {
-      return renderContextModeIntro()
-    }
-
-    return (
-      <div className="tab-panel-enter card-pop mt-5 rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-        <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-stone-300/80 bg-[#fffaf1]/80 px-3 py-1.5 text-sm font-medium text-stone-600 shadow-[0_4px_12px_rgba(94,72,37,0.06)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
-              <span>
-                {selectedContext === 'paragraph'
-                  ? t.paragraph
-                  : selectedContext === 'book'
-                    ? t.bookMode
-                    : t.bibleMode}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setContextSheetOpen(true)}
-              className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-            >
-              {t.change}
-            </button>
-          </div>
-
-          <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-            {t.context}
-          </p>
-
-          <p className="text-[1rem] leading-8 text-stone-800">{contextData.lead}</p>
-
-          <div className="mt-5 space-y-4">
-            {contextData.points.map((point, index) => (
-              <div
-                key={`${point.title}-${index}`}
-                className="rounded-[20px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  {point.title}
-                </p>
-                <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{point.text}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-              {t.takeaway}
-            </p>
-            <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">{contextData.takeaway}</p>
-          </div>
-
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={handleContextBackToTop}
-              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {t.backToTop}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleCopyContext}
-              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {contextCopyStatus === 'copied'
-                ? t.copiedAnalysis
-                : contextCopyStatus === 'failed'
-                  ? t.copyFailed
-                  : t.copyAnalysis}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleShareContext}
-              className="rounded-[20px] border border-stone-300 bg-[#fffaf1] px-3 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              {t.shareAnalysis}
-            </button>
-          </div>
-
-          {contextShareStatus && (
-            <p className="mt-3 text-center text-sm text-stone-500">{contextShareStatus}</p>
-          )}
-        </div>
-      </div>
     )
   }
 
@@ -2683,6 +2375,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       t.lensLeadDefault,
       t.lensPointLabel,
       [t.translation, t.word, t.tension, t.phrase],
+      t.takeaway,
       t.lensTakeawayDefault
     )
   }
@@ -2693,7 +2386,43 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     if (selectedLens === 'translation') {
-      return renderCompareView()
+      return (
+        <CompareView
+          isReady={modesReady}
+          isLoading={compareLoading}
+          error={compareError}
+          data={compareData}
+          title={t.translations}
+          leadFallback={t.translationsLead}
+          takeawayFallback={t.translationsTakeaway}
+          diffLabel={t.translationsDiffLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.loadingTranslations}
+          loadingText={t.loadingTranslationsText}
+          unavailableLabel={t.translations}
+          point1={t.translationsPoint1}
+          point2={t.translationsPoint2}
+          point3={t.translationsPoint3}
+          tryAgainLabel={t.tryAgain}
+          backToTopLabel={t.backToTop}
+          copyLabel={t.copyAnalysis}
+          copiedLabel={t.copiedAnalysis}
+          copyFailedLabel={t.copyFailed}
+          shareLabel={t.shareAnalysis}
+          copyStatus={compareCopyStatus}
+          shareStatus={compareShareStatus}
+          onRetry={() => {
+            void loadCompare(true, appLanguage)
+          }}
+          onBackToTop={handleCompareBackToTop}
+          onCopy={() => {
+            void handleCopyCompare()
+          }}
+          onShare={() => {
+            void handleShareCompare()
+          }}
+        />
+      )
     }
 
     if (selectedLens === 'word') {
@@ -2731,7 +2460,9 @@ export default function VerseDetailPage({ params }: PageProps) {
 
               <button
                 type="button"
-                onClick={() => loadWordLens(true, appLanguage)}
+                onClick={() => {
+                  void loadWordLens(true, appLanguage)
+                }}
                 className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
               >
                 {t.tryAgain}
@@ -2781,7 +2512,9 @@ export default function VerseDetailPage({ params }: PageProps) {
 
               <button
                 type="button"
-                onClick={() => loadTensionLens(true, appLanguage)}
+                onClick={() => {
+                  void loadTensionLens(true, appLanguage)
+                }}
                 className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
               >
                 {t.tryAgain}
@@ -2831,7 +2564,9 @@ export default function VerseDetailPage({ params }: PageProps) {
 
               <button
                 type="button"
-                onClick={() => loadPhraseLens(true, appLanguage)}
+                onClick={() => {
+                  void loadPhraseLens(true, appLanguage)
+                }}
                 className="mt-5 rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
               >
                 {t.tryAgain}
@@ -2944,7 +2679,51 @@ export default function VerseDetailPage({ params }: PageProps) {
         />
 
         {!verseLoading && !verseError && activeTab === 'insights' && renderCardStackView()}
-        {!verseLoading && !verseError && activeTab === 'context' && renderContextView()}
+
+        {!verseLoading && !verseError && activeTab === 'context' && (
+          <ContextView
+            isReady={modesReady}
+            isLoading={contextLoading}
+            error={contextError}
+            data={contextData}
+            selectedMode={selectedContext}
+            title={t.context}
+            leadFallback={t.contextLead}
+            takeawayFallback={t.contextTakeaway}
+            pointLabel={t.contextPointLabel}
+            takeawayLabel={t.takeaway}
+            loadingLabel={t.loadingContext}
+            loadingText={t.loadingContextText}
+            unavailableLabel={t.context}
+            point1={t.contextPoint1}
+            point2={t.contextPoint2}
+            point3={t.contextPoint3}
+            paragraphLabel={t.paragraph}
+            bookLabel={t.bookMode}
+            bibleLabel={t.bibleMode}
+            changeLabel={t.change}
+            tryAgainLabel={t.tryAgain}
+            backToTopLabel={t.backToTop}
+            copyLabel={t.copyAnalysis}
+            copiedLabel={t.copiedAnalysis}
+            copyFailedLabel={t.copyFailed}
+            shareLabel={t.shareAnalysis}
+            copyStatus={contextCopyStatus}
+            shareStatus={contextShareStatus}
+            onRetry={() => {
+              void loadContext(true, appLanguage)
+            }}
+            onBackToTop={handleContextBackToTop}
+            onCopy={() => {
+              void handleCopyContext()
+            }}
+            onShare={() => {
+              void handleShareContext()
+            }}
+            onChangeMode={() => setContextSheetOpen(true)}
+          />
+        )}
+
         {!verseLoading && !verseError && activeTab === 'lens' && renderLensView()}
       </div>
 
