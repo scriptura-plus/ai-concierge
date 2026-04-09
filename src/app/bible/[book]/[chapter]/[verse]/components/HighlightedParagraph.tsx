@@ -40,7 +40,7 @@ function findNonOverlappingRanges(
 
   for (const item of sortedHighlights) {
     const pattern = new RegExp(escapeRegExp(item.text), 'gi')
-    const matches = [...fullText.matchAll(pattern)]
+    const matches = Array.from(fullText.matchAll(pattern))
 
     for (const match of matches) {
       const start = match.index
