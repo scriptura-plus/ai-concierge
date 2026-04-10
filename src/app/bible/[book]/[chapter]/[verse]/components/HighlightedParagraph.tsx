@@ -43,23 +43,26 @@ function normalizeWordForAnchor(value: string) {
 function buildWordIndex(source: string) {
   const words: Array<{ raw: string; normalized: string; start: number; end: number }> = []
   const regex = /[^\s]+/g
-  const matches = source.matchAll(regex)
+  let match: RegExpExecArray | null = regex.exec(source)
 
-  for (const match of matches) {
+  while (match) {
     const raw = match[0]
     const start = match.index
 
-    if (typeof start !== 'number') continue
+    if (typeof start === 'number') {
+      const normalized = normalizeWordForAnchor(raw)
 
-    const normalized = normalizeWordForAnchor(raw)
-    if (!normalized) continue
+      if (normalized) {
+        words.push({
+          raw,
+          normalized,
+          start,
+          end: start + raw.length,
+        })
+      }
+    }
 
-    words.push({
-      raw,
-      normalized,
-      start,
-      end: start + raw.length,
-    })
+    match = regex.exec(source)
   }
 
   return words
@@ -96,25 +99,30 @@ function findSequenceIndex(
   if (fromLeft) {
     for (let i = 0; i <= fullWords.length - anchor.length; i += 1) {
       let ok = true
+
       for (let j = 0; j < anchor.length; j += 1) {
         if (fullWords[i + j].normalized !== anchor[j]) {
           ok = false
           break
         }
       }
+
       if (ok) return i
     }
+
     return -1
   }
 
   for (let i = fullWords.length - anchor.length; i >= 0; i -= 1) {
     let ok = true
+
     for (let j = 0; j < anchor.length; j += 1) {
       if (fullWords[i + j].normalized !== anchor[j]) {
         ok = false
         break
       }
     }
+
     if (ok) return i
   }
 
@@ -152,6 +160,28 @@ function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: numbe
   return !(aEnd <= bStart || aStart >= bEnd)
 }
 
+function findAllRegexMatches(source: string, regex: RegExp) {
+  const matches: Array<{ start: number; text: string }> = []
+  let match: RegExpExecArray | null = regex.exec(source)
+
+  while (match) {
+    if (typeof match.index === 'number' && match[0]) {
+      matches.push({
+        start: match.index,
+        text: match[0],
+      })
+    }
+
+    if (match[0] === '') {
+      regex.lastIndex += 1
+    }
+
+    match = regex.exec(source)
+  }
+
+  return matches
+}
+
 function findNonOverlappingHighlightRanges(
   fullText: string,
   highlights: HighlightItem[],
@@ -169,15 +199,11 @@ function findNonOverlappingHighlightRanges(
 
   for (const item of sortedHighlights) {
     const pattern = new RegExp(escapeRegExp(item.text), 'gi')
-    const matches = Array.from(fullText.matchAll(pattern))
+    const matches = findAllRegexMatches(fullText, pattern)
 
     for (const match of matches) {
-      const start = match.index
-      const matchedText = match[0]
-
-      if (typeof start !== 'number' || !matchedText) continue
-
-      const end = start + matchedText.length
+      const start = match.start
+      const end = start + match.text.length
 
       if (targetRange && rangesOverlap(start, end, targetRange.start, targetRange.end)) {
         continue
