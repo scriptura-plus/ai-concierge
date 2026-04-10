@@ -55,6 +55,7 @@ type NarrowContextViewProps = {
   copyFailedLabel: string
   shareStatus: string
   copyStatus: 'idle' | 'copied' | 'failed'
+  targetVerseText?: string
   onRetry: () => void
   onDirectionSelect: (directionId: string) => void
   onChangeMode: () => void
@@ -128,6 +129,7 @@ export default function NarrowContextView({
   digDeeperLabel,
   tryAgainLabel,
   changeLabel,
+  targetVerseText,
   onRetry,
   onDirectionSelect,
   onChangeMode,
@@ -211,6 +213,7 @@ export default function NarrowContextView({
           <HighlightedParagraph
             text={data.paragraph.full_text}
             highlights={data.paragraph.highlights}
+            targetVerseText={targetVerseText}
           />
         </div>
       </div>
