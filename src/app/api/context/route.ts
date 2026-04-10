@@ -7,7 +7,7 @@ type SupportedLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 
 type ContextDirection = {
   id: string
-  level: 'paragraph' | 'chapter' | 'book' | 'bible_line'
+  level: 'chapter' | 'movement' | 'book' | 'bible_line'
   title: string
   summary: string
   why_it_matters: string
@@ -15,7 +15,7 @@ type ContextDirection = {
 }
 
 type ContextAssessment = {
-  best_level: 'paragraph' | 'chapter' | 'book' | 'bible_line' | 'none'
+  best_level: 'chapter' | 'movement' | 'book' | 'bible_line' | 'none'
   note: string
 }
 
@@ -87,13 +87,13 @@ function parsePayload(raw: string): ContextModelPayload | null {
 }
 
 function isValidLevel(value: unknown): value is ContextDirection['level'] {
-  return value === 'paragraph' || value === 'chapter' || value === 'book' || value === 'bible_line'
+  return value === 'chapter' || value === 'movement' || value === 'book' || value === 'bible_line'
 }
 
 function isValidBestLevel(value: unknown): value is ContextAssessment['best_level'] {
   return (
-    value === 'paragraph' ||
     value === 'chapter' ||
+    value === 'movement' ||
     value === 'book' ||
     value === 'bible_line' ||
     value === 'none'
@@ -103,28 +103,30 @@ function isValidBestLevel(value: unknown): value is ContextAssessment['best_leve
 function labels(language: SupportedLanguage) {
   if (language === 'ru') {
     return {
-      leadPrefix: 'Контекстные направления, которые реально помогают точнее понять этот стих.',
-      takeawayPrefix: 'Наиболее полезный уровень контекста:',
+      leadPrefix:
+        'Широкие контекстные направления, которые действительно помогают точнее понять этот стих.',
+      takeawayPrefix: 'Наиболее полезный уровень широкого контекста:',
       why: 'Почему это важно:',
       dig: 'Куда копать:',
       honestTitle: 'Честный вывод',
-      paragraph: 'абзац',
       chapter: 'глава',
+      movement: 'ход повествования / аргумента',
       book: 'книга',
-      bible_line: 'широкая библейская линия',
+      bible_line: 'более широкая библейская линия',
       none: 'не найден',
     }
   }
 
   if (language === 'es') {
     return {
-      leadPrefix: 'Direcciones contextuales que realmente ayudan a entender mejor este versículo.',
-      takeawayPrefix: 'Nivel de contexto más útil:',
+      leadPrefix:
+        'Direcciones de contexto amplio que realmente ayudan a entender mejor este versículo.',
+      takeawayPrefix: 'Nivel de contexto amplio más útil:',
       why: 'Por qué importa:',
       dig: 'Profundizar:',
       honestTitle: 'Conclusión honesta',
-      paragraph: 'párrafo',
       chapter: 'capítulo',
+      movement: 'movimiento narrativo / argumental',
       book: 'libro',
       bible_line: 'línea bíblica amplia',
       none: 'no encontrado',
@@ -133,13 +135,14 @@ function labels(language: SupportedLanguage) {
 
   if (language === 'fr') {
     return {
-      leadPrefix: 'Directions contextuelles qui aident réellement à mieux comprendre ce verset.',
-      takeawayPrefix: 'Niveau de contexte le plus utile :',
+      leadPrefix:
+        'Directions de contexte large qui aident réellement à mieux comprendre ce verset.',
+      takeawayPrefix: 'Niveau de contexte large le plus utile :',
       why: 'Pourquoi cela compte :',
       dig: 'Creuser plus loin :',
       honestTitle: 'Conclusion honnête',
-      paragraph: 'paragraphe',
       chapter: 'chapitre',
+      movement: 'mouvement narratif / argumentatif',
       book: 'livre',
       bible_line: 'ligne biblique large',
       none: 'non trouvé',
@@ -148,13 +151,14 @@ function labels(language: SupportedLanguage) {
 
   if (language === 'de') {
     return {
-      leadPrefix: 'Kontext-Richtungen, die wirklich helfen, diesen Vers genauer zu verstehen.',
-      takeawayPrefix: 'Hilfreichste Kontextebene:',
+      leadPrefix:
+        'Weite Kontext-Richtungen, die wirklich helfen, diesen Vers genauer zu verstehen.',
+      takeawayPrefix: 'Hilfreichste Ebene des weiten Kontexts:',
       why: 'Warum das wichtig ist:',
       dig: 'Weiter graben:',
       honestTitle: 'Ehrliches Fazit',
-      paragraph: 'Absatz',
       chapter: 'Kapitel',
+      movement: 'Erzähl- / Argumentbewegung',
       book: 'Buch',
       bible_line: 'weite Bibellinie',
       none: 'nicht gefunden',
@@ -162,13 +166,13 @@ function labels(language: SupportedLanguage) {
   }
 
   return {
-    leadPrefix: 'Contextual directions that genuinely help explain this verse more clearly.',
-    takeawayPrefix: 'Most helpful context level:',
+    leadPrefix: 'Wider-context directions that genuinely help explain this verse more clearly.',
+    takeawayPrefix: 'Most helpful wider-context level:',
     why: 'Why this matters:',
     dig: 'Dig deeper:',
     honestTitle: 'Honest conclusion',
-    paragraph: 'paragraph',
     chapter: 'chapter',
+    movement: 'movement',
     book: 'book',
     bible_line: 'wider Bible line',
     none: 'none',
@@ -177,8 +181,8 @@ function labels(language: SupportedLanguage) {
 
 function bestLevelLabel(level: ContextAssessment['best_level'], language: SupportedLanguage) {
   const l = labels(language)
-  if (level === 'paragraph') return l.paragraph
   if (level === 'chapter') return l.chapter
+  if (level === 'movement') return l.movement
   if (level === 'book') return l.book
   if (level === 'bible_line') return l.bible_line
   return l.none
@@ -256,10 +260,10 @@ function buildPrompt(params: {
   targetLanguage: SupportedLanguage
 }) {
   return `
-Ты работаешь как исследователь контекста для Scriptura+.
+Ты работаешь как исследователь ШИРОКОГО КОНТЕКСТА для Scriptura+.
 
 Твоя задача — определить:
-какой контекст, если вообще какой-то, действительно помогает точнее, глубже и честнее понять выбранный стих.
+какой более широкий уровень контекста действительно помогает лучше понять выбранный стих, если ближайший контекст уже недостаточен или если более крупная рамка реально даёт новое уточнение.
 
 Центр всегда один: сам выбранный стих.
 Не абзац ради абзаца.
@@ -267,38 +271,59 @@ function buildPrompt(params: {
 Не книга ради книги.
 Не общая тема Библии ради красивого звучания.
 
-Если контекст не усиливает понимание стиха, ты обязан это признать.
+Если широкий контекст не даёт реального усиления, ты обязан это признать.
 
 ГЛАВНЫЙ ВОПРОС:
-Какой контекст, и на каком уровне, действительно помогает понять этот стих лучше?
+Что становится видно в этом стихе, если читать его в более широком движении главы, более крупном ходе повествования или аргумента, в логике книги, а при настоящем основании — в более широкой библейской линии?
 
-КАСКАД КОНТЕКСТА:
-1. paragraph — ближайший осмысленный поток вокруг стиха
-2. chapter — движение главы, сцена, аргумент, контраст, нарастание, функция стиха
-3. book — роль стиха в книге
+ПРОВЕРЯЙ ШИРОКИЙ КОНТЕКСТ ПО УРОВНЯМ:
+1. chapter — движение главы, её сцена, аргумент, контраст, нарастание, функция стиха
+2. movement — ближайшее более крупное повествовательное или аргументативное движение до и после стиха
+3. book — роль стиха в книге, повторяющиеся линии, функция в замысле книги
 4. bible_line — только если есть естественная, сильная, текстово оправданная связь, реально проясняющая стих
 
 ПРАВИЛА:
-- Всегда предпочитай самый низкий уровень, который реально работает.
-- Не считай полезным то, что просто стоит рядом.
-- Близость ещё не равна объяснению.
-- Направление допустимо только если оно помогает понять именно выбранный стих.
+- Всегда предпочитай самый низкий широкий уровень, который реально работает.
+- Не считай полезным то, что просто связано тематически.
+- Не превращай широкий контекст в инсайты вокруг стиха.
+- Направление допустимо только если оно показывает, как глава, движение, книга или более широкая линия реально меняют чтение самого стиха.
 - Если убрать выбранный стих, и мысль останется почти той же, направление нужно отбросить.
-- Если ближайший уровень уже работает, выше не поднимайся ради полноты.
-- Допустимы не только сильные направления, но и скромные, если они честно дают небольшое уточнение.
-- Если даже скромное усиление было бы натяжкой, верни честный пустой результат.
-- Лучше 3 сильных направления, чем 5 просто нормальных.
-- Не возвращай направление только потому, что оно приемлемое; возвращай только если оно ясно отличается по типу contextual gain от уже выбранных.
+- Если широкий контекст не даёт нового усиления по сравнению с ближайшим, это нужно честно признать.
+- Лучше 2–3 сильных направления, чем 5 просто приемлемых.
+- Не возвращай направление только потому, что оно звучит умно; возвращай только если оно даёт новый тип contextual gain.
+
+ВНУТРЕННЕЕ СМЫСЛОВОЕ ЯДРО:
+Ниже перечислены допустимые крупные библейские линии, которые могут служить ВНУТРЕННИМ фильтром и ориентиром, но не должны автоматически вставляться в каждый стих:
+- право владычества Бога
+- оправдание его имени / репутации
+- линия небесного правления и Царства
+- ограниченность человеческих систем правления
+- постепенное раскрытие Божьего замысла
+- посредничество, святилище, царствование, завет
+- восстановление Божьего порядка
+- передача власти Отцу в финальной перспективе
+
+Эти линии допустимы только как ВНУТРЕННИЙ ФИЛЬТР.
+Они должны использоваться только если:
+- сам стих, глава, книга или движение реально открывают такую связь
+- связь помогает понять стих точнее
+- связь не выглядит как вставленная извне
+- текст наружу остаётся сдержанным, исследовательским и не звучит доктринально навязанным
+
+Запрещено:
+- механически выводить стих на тему Царства, оправдания имени Бога или любой другой крупной линии
+- делать большой богословский вывод только потому, что он в целом совместим с широкой рамкой
+- использовать внутреннее смысловое ядро как замену реального контекста
 
 ДВУХПОРОГОВАЯ СИСТЕМА:
-- Сильное направление: контекст заметно заостряет стих, меняет чтение или ясно объясняет его функцию, место или силу.
-- Скромное направление: контекст не даёт яркого прорыва, но честно уточняет стих, снимает недопонимание или делает его роль яснее.
+- Сильное направление: широкий контекст заметно меняет чтение стиха, показывает его функцию в главе/книге или даёт реальное новое понимание.
+- Скромное направление: широкий контекст не даёт прорыва, но честно уточняет стих или его место в большем потоке.
 - Не раздувай скромные наблюдения до сильных.
 
 АНТИВОДНЫЙ БЛОК:
 - Не раздувай.
-- Одно направление = одно ясное contextual gain.
-- Не смешивай сразу несколько разных осей в одном блоке.
+- Одно направление = один ясный contextual gain.
+- Не строй сложную архитектуру, если текст этого не требует.
 - Избегай литературного надувания.
 - Не используй выражения вроде:
   "скрытая ось",
@@ -306,16 +331,18 @@ function buildPrompt(params: {
   "это не просто..., а...",
   "как будто печать",
   "контрсила",
-  "сам акт становится частью смысла"
+  "общая архитектура"
   если это нельзя строго показать из текста.
 - Пиши суше, строже и короче.
 - Если убрать красивые слова, должно остаться реальное уточнение стиха.
+- Если два направления слишком близки по типу gain, оставь только одно.
 
 ОГРАНИЧИТЕЛЬ ДЛЯ bible_line:
-- Используй уровень bible_line только если он действительно проясняет этот стих, а не просто делает его более большим или богословски торжественным.
-- Не вставляй автоматически общую тему Библии, Царство, оправдание имени Бога, восстановление и другие большие рамки, если сам стих естественно этого не открывает.
-- Если сомневаешься, оставайся на уровне paragraph, chapter или book.
+- Используй уровень bible_line только если он действительно проясняет этот стих, а не просто делает его масштабнее.
+- Не вставляй автоматически общую тему Библии, Царство, оправдание имени Бога, восстановление и другие большие рамки, если сам текст естественно этого не открывает.
+- Если сомневаешься, оставайся на уровне chapter, movement или book.
 - При bible_line используй сдержанный язык, а не категоричность.
+- Лучше формулируй осторожно: "можно видеть", "в более широкой линии", "это может проясняться через", чем утверждай слишком жёстко.
 
 ФОРМАТ НАПРАВЛЕНИЙ:
 Для каждого направления дай:
@@ -333,7 +360,7 @@ function buildPrompt(params: {
 
 ФИНАЛЬНАЯ ПРОВЕРКА:
 Для каждого направления мысленно заверши фразу:
-"Это помогает понять стих лучше, потому что..."
+"Этот более широкий контекст помогает понять стих лучше, потому что..."
 Если не можешь завершить её ясно и конкретно, направление нужно отбросить.
 
 ${outputLanguageInstruction(params.targetLanguage)}
@@ -359,13 +386,13 @@ ${params.chapterText}
 
 {
   "context_assessment": {
-    "best_level": "paragraph | chapter | book | bible_line | none",
+    "best_level": "chapter | movement | book | bible_line | none",
     "note": "string"
   },
   "directions": [
     {
       "id": "ctx_1",
-      "level": "paragraph | chapter | book | bible_line",
+      "level": "chapter | movement | book | bible_line",
       "title": "string",
       "summary": "string",
       "why_it_matters": "string",
