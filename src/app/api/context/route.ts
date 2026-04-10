@@ -5,17 +5,22 @@ import { getParagraphText } from '@/lib/bible/getParagraphText'
 
 type SupportedLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 
+type ContextDirectionLevel = 'chapter' | 'situation' | 'book' | 'historical' | 'bible_line'
+type ContextBestLevel = ContextDirectionLevel | 'none'
+
 type ContextDirection = {
   id: string
-  level: 'chapter' | 'movement' | 'book' | 'bible_line'
+  level: ContextDirectionLevel
   title: string
-  summary: string
+  if_read_alone: string
+  wider_frame: string
+  what_changes: string
   why_it_matters: string
   dig_deeper: string
 }
 
 type ContextAssessment = {
-  best_level: 'chapter' | 'movement' | 'book' | 'bible_line' | 'none'
+  best_level: ContextBestLevel
   note: string
 }
 
@@ -86,15 +91,22 @@ function parsePayload(raw: string): ContextModelPayload | null {
   }
 }
 
-function isValidLevel(value: unknown): value is ContextDirection['level'] {
-  return value === 'chapter' || value === 'movement' || value === 'book' || value === 'bible_line'
-}
-
-function isValidBestLevel(value: unknown): value is ContextAssessment['best_level'] {
+function isValidLevel(value: unknown): value is ContextDirectionLevel {
   return (
     value === 'chapter' ||
-    value === 'movement' ||
+    value === 'situation' ||
     value === 'book' ||
+    value === 'historical' ||
+    value === 'bible_line'
+  )
+}
+
+function isValidBestLevel(value: unknown): value is ContextBestLevel {
+  return (
+    value === 'chapter' ||
+    value === 'situation' ||
+    value === 'book' ||
+    value === 'historical' ||
     value === 'bible_line' ||
     value === 'none'
   )
@@ -106,12 +118,16 @@ function labels(language: SupportedLanguage) {
       leadPrefix:
         'Широкие контекстные направления, которые действительно помогают точнее понять этот стих.',
       takeawayPrefix: 'Наиболее полезный уровень широкого контекста:',
+      honestTitle: 'Честный вывод',
+      alone: 'Если читать стих отдельно:',
+      frame: 'Широкая рамка:',
+      changes: 'Что меняется:',
       why: 'Почему это важно:',
       dig: 'Куда копать:',
-      honestTitle: 'Честный вывод',
       chapter: 'глава',
-      movement: 'ход повествования / аргумента',
+      situation: 'ситуация адресатов',
       book: 'книга',
+      historical: 'историческая обстановка',
       bible_line: 'более широкая библейская линия',
       none: 'не найден',
     }
@@ -122,12 +138,16 @@ function labels(language: SupportedLanguage) {
       leadPrefix:
         'Direcciones de contexto amplio que realmente ayudan a entender mejor este versículo.',
       takeawayPrefix: 'Nivel de contexto amplio más útil:',
+      honestTitle: 'Conclusión honesta',
+      alone: 'Si se lee el versículo por separado:',
+      frame: 'Marco amplio:',
+      changes: 'Qué cambia:',
       why: 'Por qué importa:',
       dig: 'Profundizar:',
-      honestTitle: 'Conclusión honesta',
       chapter: 'capítulo',
-      movement: 'movimiento narrativo / argumental',
+      situation: 'situación de los destinatarios',
       book: 'libro',
+      historical: 'contexto histórico',
       bible_line: 'línea bíblica amplia',
       none: 'no encontrado',
     }
@@ -138,12 +158,16 @@ function labels(language: SupportedLanguage) {
       leadPrefix:
         'Directions de contexte large qui aident réellement à mieux comprendre ce verset.',
       takeawayPrefix: 'Niveau de contexte large le plus utile :',
+      honestTitle: 'Conclusion honnête',
+      alone: 'Si on lit le verset isolément :',
+      frame: 'Cadre large :',
+      changes: 'Ce qui change :',
       why: 'Pourquoi cela compte :',
       dig: 'Creuser plus loin :',
-      honestTitle: 'Conclusion honnête',
       chapter: 'chapitre',
-      movement: 'mouvement narratif / argumentatif',
+      situation: 'situation des destinataires',
       book: 'livre',
+      historical: 'contexte historique',
       bible_line: 'ligne biblique large',
       none: 'non trouvé',
     }
@@ -154,12 +178,16 @@ function labels(language: SupportedLanguage) {
       leadPrefix:
         'Weite Kontext-Richtungen, die wirklich helfen, diesen Vers genauer zu verstehen.',
       takeawayPrefix: 'Hilfreichste Ebene des weiten Kontexts:',
+      honestTitle: 'Ehrliches Fazit',
+      alone: 'Wenn man den Vers isoliert liest:',
+      frame: 'Weiter Rahmen:',
+      changes: 'Was sich ändert:',
       why: 'Warum das wichtig ist:',
       dig: 'Weiter graben:',
-      honestTitle: 'Ehrliches Fazit',
       chapter: 'Kapitel',
-      movement: 'Erzähl- / Argumentbewegung',
+      situation: 'Situation der Adressaten',
       book: 'Buch',
+      historical: 'historischer Hintergrund',
       bible_line: 'weite Bibellinie',
       none: 'nicht gefunden',
     }
@@ -168,43 +196,36 @@ function labels(language: SupportedLanguage) {
   return {
     leadPrefix: 'Wider-context directions that genuinely help explain this verse more clearly.',
     takeawayPrefix: 'Most helpful wider-context level:',
+    honestTitle: 'Honest conclusion',
+    alone: 'If the verse is read alone:',
+    frame: 'Wider frame:',
+    changes: 'What changes:',
     why: 'Why this matters:',
     dig: 'Dig deeper:',
-    honestTitle: 'Honest conclusion',
     chapter: 'chapter',
-    movement: 'movement',
+    situation: 'recipient situation',
     book: 'book',
+    historical: 'historical setting',
     bible_line: 'wider Bible line',
     none: 'none',
   }
 }
 
-function bestLevelLabel(level: ContextAssessment['best_level'], language: SupportedLanguage) {
+function bestLevelLabel(level: ContextBestLevel, language: SupportedLanguage) {
   const l = labels(language)
   if (level === 'chapter') return l.chapter
-  if (level === 'movement') return l.movement
+  if (level === 'situation') return l.situation
   if (level === 'book') return l.book
+  if (level === 'historical') return l.historical
   if (level === 'bible_line') return l.bible_line
   return l.none
 }
 
 function outputLanguageInstruction(language: SupportedLanguage) {
-  if (language === 'ru') {
-    return 'Все человекочитаемые поля JSON верни на русском языке.'
-  }
-
-  if (language === 'es') {
-    return 'Все человекочитаемые поля JSON верни на испанском языке.'
-  }
-
-  if (language === 'fr') {
-    return 'Все человекочитаемые поля JSON верни на французском языке.'
-  }
-
-  if (language === 'de') {
-    return 'Все человекочитаемые поля JSON верни на немецком языке.'
-  }
-
+  if (language === 'ru') return 'Все человекочитаемые поля JSON верни на русском языке.'
+  if (language === 'es') return 'Все человекочитаемые поля JSON верни на испанском языке.'
+  if (language === 'fr') return 'Все человекочитаемые поля JSON верни на французском языке.'
+  if (language === 'de') return 'Все человекочитаемые поля JSON верни на немецком языке.'
   return 'All human-readable JSON fields must be returned in English.'
 }
 
@@ -232,7 +253,6 @@ async function getChapterSnapshot(
       .map((item) => {
         const verseNo = Number(item.verse)
         const text = normalizeText(item.text)
-
         if (!Number.isInteger(verseNo) || !text) return ''
         return `${verseNo}. ${text}`
       })
@@ -262,99 +282,107 @@ function buildPrompt(params: {
   return `
 Ты работаешь как исследователь ШИРОКОГО КОНТЕКСТА для Scriptura+.
 
-Твоя задача — определить:
-какой более широкий уровень контекста действительно помогает лучше понять выбранный стих, если ближайший контекст уже недостаточен или если более крупная рамка реально даёт новое уточнение.
+Твоя задача — показать, какая более крупная рамка помогает понять выбранный стих:
+- глава как целое
+- ситуация адресатов
+- логика книги
+- историческая обстановка
+- при реальном основании — более широкая библейская линия
 
-Центр всегда один: сам выбранный стих.
-Не абзац ради абзаца.
-Не глава ради главы.
-Не книга ради книги.
-Не общая тема Библии ради красивого звучания.
-
-Если широкий контекст не даёт реального усиления, ты обязан это признать.
+Это НЕ узкий контекст.
+Узкий контекст работает через соседние стихи и ближайший абзац.
+Широкий контекст не должен в основном опираться на соседние стихи.
 
 ГЛАВНЫЙ ВОПРОС:
-Что становится видно в этом стихе, если читать его в более широком движении главы, более крупном ходе повествования или аргумента, в логике книги, а при настоящем основании — в более широкой библейской линии?
+Какой более широкий контекст помогает точнее понять этот стих: кто написал, кому, в какой ситуации, в какой логике главы и книги, и как это меняет чтение стиха?
 
-ПРОВЕРЯЙ ШИРОКИЙ КОНТЕКСТ ПО УРОВНЯМ:
-1. chapter — движение главы, её сцена, аргумент, контраст, нарастание, функция стиха
-2. movement — ближайшее более крупное повествовательное или аргументативное движение до и после стиха
-3. book — роль стиха в книге, повторяющиеся линии, функция в замысле книги
-4. bible_line — только если есть естественная, сильная, текстово оправданная связь, реально проясняющая стих
+ЖЁСТКОЕ ПРАВИЛО:
+Если направление опирается в основном на соседние стихи до и после выбранного стиха, это не широкий контекст.
 
-ПРАВИЛА:
-- Всегда предпочитай самый низкий широкий уровень, который реально работает.
-- Не считай полезным то, что просто связано тематически.
-- Не превращай широкий контекст в инсайты вокруг стиха.
-- Направление допустимо только если оно показывает, как глава, движение, книга или более широкая линия реально меняют чтение самого стиха.
-- Если убрать выбранный стих, и мысль останется почти той же, направление нужно отбросить.
-- Если широкий контекст не даёт нового усиления по сравнению с ближайшим, это нужно честно признать.
-- Лучше 2–3 сильных направления, чем 5 просто приемлемых.
-- Не возвращай направление только потому, что оно звучит умно; возвращай только если оно даёт новый тип contextual gain.
+КАСКАД ШИРОКОГО КОНТЕКСТА:
+1. chapter — движение главы как целого
+2. situation — ситуация адресатов, давление, проблема, цель обращения
+3. book — линия книги, цель автора, место стиха в книге
+4. historical — историческая или социальная обстановка, если она реально помогает понять стих
+5. bible_line — только если есть естественная, сильная, текстово оправданная более широкая библейская линия
+
+ЧТО СЧИТАЕТСЯ ХОРОШИМ РЕЗУЛЬТАТОМ:
+Широкий контекст хорош, если он показывает:
+- почему стих сказан именно так
+- какую проблему он решает
+- на какую ситуацию отвечает
+- какова его функция в главе или книге
+- как авторское намерение меняет прочтение стиха
+- как историческая обстановка помогает понять тон и вес стиха
+- как более крупная линия делает стих точнее, а не просто масштабнее
+
+ЧТО НЕЛЬЗЯ ДЕЛАТЬ:
+- подменять широкий контекст пересказом соседних стихов
+- строить ответ почти целиком на ближайшем абзаце
+- выдавать локальный контекст за широкий
+- расширять ради красивой большой темы
+- делать общие богословские выводы без связи с ситуацией стиха
 
 ВНУТРЕННЕЕ СМЫСЛОВОЕ ЯДРО:
-Ниже перечислены допустимые крупные библейские линии, которые могут служить ВНУТРЕННИМ фильтром и ориентиром, но не должны автоматически вставляться в каждый стих:
+Ниже перечислены допустимые крупные библейские линии, которые могут работать как ВНУТРЕННИЙ фильтр, но не должны автоматически вставляться в ответ:
 - право владычества Бога
 - оправдание его имени / репутации
-- линия небесного правления и Царства
-- ограниченность человеческих систем правления
+- линия Царства и небесного правления
+- ограниченность человеческих систем
 - постепенное раскрытие Божьего замысла
-- посредничество, святилище, царствование, завет
+- завет
+- святилище / посредничество
 - восстановление Божьего порядка
-- передача власти Отцу в финальной перспективе
+- финальная передача власти Отцу
 
-Эти линии допустимы только как ВНУТРЕННИЙ ФИЛЬТР.
-Они должны использоваться только если:
-- сам стих, глава, книга или движение реально открывают такую связь
-- связь помогает понять стих точнее
-- связь не выглядит как вставленная извне
+Эти линии допустимы только если:
+- сам стих, глава, книга или ситуация реально их открывают
+- они помогают понять стих точнее
+- они не выглядят вставленными извне
 - текст наружу остаётся сдержанным, исследовательским и не звучит доктринально навязанным
 
-Запрещено:
-- механически выводить стих на тему Царства, оправдания имени Бога или любой другой крупной линии
-- делать большой богословский вывод только потому, что он в целом совместим с широкой рамкой
-- использовать внутреннее смысловое ядро как замену реального контекста
-
 ДВУХПОРОГОВАЯ СИСТЕМА:
-- Сильное направление: широкий контекст заметно меняет чтение стиха, показывает его функцию в главе/книге или даёт реальное новое понимание.
-- Скромное направление: широкий контекст не даёт прорыва, но честно уточняет стих или его место в большем потоке.
+- Сильное направление: широкий контекст заметно меняет чтение стиха или ясно показывает его функцию.
+- Скромное направление: широкий контекст не даёт прорыва, но честно снимает слишком узкое чтение или уточняет рамку стиха.
 - Не раздувай скромные наблюдения до сильных.
 
 АНТИВОДНЫЙ БЛОК:
 - Не раздувай.
-- Одно направление = один ясный contextual gain.
-- Не строй сложную архитектуру, если текст этого не требует.
-- Избегай литературного надувания.
-- Не используй выражения вроде:
-  "скрытая ось",
-  "не случайный порядок",
-  "это не просто..., а...",
-  "как будто печать",
-  "контрсила",
-  "общая архитектура"
-  если это нельзя строго показать из текста.
-- Пиши суше, строже и короче.
-- Если убрать красивые слова, должно остаться реальное уточнение стиха.
-- Если два направления слишком близки по типу gain, оставь только одно.
+- Одно направление = один ясный gain.
+- Не строй архитектуру и систему там, где достаточно прямого объяснения.
+- Не используй красивые формулы без реального уточнения стиха.
+- Если два направления говорят почти об одном и том же, оставь только одно.
+- Лучше 2–3 сильных направления, чем 5 просто приемлемых.
+
+ОБЯЗАТЕЛЬНО ПОКАЗЫВАЙ ЛОГИЧЕСКИЙ МОСТ:
+Для каждого направления объясни по шагам:
+1. как стих может читаться отдельно
+2. какая именно широкая рамка это уточняет
+3. что именно меняется в чтении стиха из-за этой рамки
+
+Не заставляй читателя самому достраивать мост.
 
 ОГРАНИЧИТЕЛЬ ДЛЯ bible_line:
-- Используй уровень bible_line только если он действительно проясняет этот стих, а не просто делает его масштабнее.
+- Используй уровень bible_line только если он действительно проясняет этот стих, а не просто делает его более масштабным.
 - Не вставляй автоматически общую тему Библии, Царство, оправдание имени Бога, восстановление и другие большие рамки, если сам текст естественно этого не открывает.
-- Если сомневаешься, оставайся на уровне chapter, movement или book.
-- При bible_line используй сдержанный язык, а не категоричность.
-- Лучше формулируй осторожно: "можно видеть", "в более широкой линии", "это может проясняться через", чем утверждай слишком жёстко.
+- Если сомневаешься, оставайся на уровне chapter, situation, book или historical.
+- При bible_line используй осторожный язык, а не категоричность.
 
 ФОРМАТ НАПРАВЛЕНИЙ:
 Для каждого направления дай:
 - id
 - level
 - title
-- summary
+- if_read_alone
+- wider_frame
+- what_changes
 - why_it_matters
 - dig_deeper
 
 ОГРАНИЧЕНИЯ ПО ДЛИНЕ:
-- summary: максимум 2 предложения
+- if_read_alone: максимум 2 предложения
+- wider_frame: максимум 2 предложения
+- what_changes: максимум 2 предложения
 - why_it_matters: максимум 1 короткое предложение
 - dig_deeper: максимум 1 короткое предложение
 
@@ -386,22 +414,24 @@ ${params.chapterText}
 
 {
   "context_assessment": {
-    "best_level": "chapter | movement | book | bible_line | none",
+    "best_level": "chapter | situation | book | historical | bible_line | none",
     "note": "string"
   },
   "directions": [
     {
       "id": "ctx_1",
-      "level": "chapter | movement | book | bible_line",
+      "level": "chapter | situation | book | historical | bible_line",
       "title": "string",
-      "summary": "string",
+      "if_read_alone": "string",
+      "wider_frame": "string",
+      "what_changes": "string",
       "why_it_matters": "string",
       "dig_deeper": "string"
     }
   ]
 }
 
-Если сильных или честных скромных направлений нет, верни:
+Если широкий контекст не даёт реального усиления:
 {
   "context_assessment": {
     "best_level": "none",
@@ -431,12 +461,14 @@ function validatePayload(
       const id = normalizeText(item.id) || `ctx_${i + 1}`
       const level = item.level
       const title = normalizeText(item.title)
-      const summary = normalizeText(item.summary)
+      const ifReadAlone = normalizeText(item.if_read_alone)
+      const widerFrame = normalizeText(item.wider_frame)
+      const whatChanges = normalizeText(item.what_changes)
       const why = normalizeText(item.why_it_matters)
       const dig = normalizeText(item.dig_deeper)
 
       if (!isValidLevel(level)) continue
-      if (!title || !summary || !why || !dig) continue
+      if (!title || !ifReadAlone || !widerFrame || !whatChanges || !why || !dig) continue
       if (seen.has(id)) continue
 
       seen.add(id)
@@ -445,7 +477,9 @@ function validatePayload(
         id,
         level,
         title,
-        summary,
+        if_read_alone: ifReadAlone,
+        wider_frame: widerFrame,
+        what_changes: whatChanges,
         why_it_matters: why,
         dig_deeper: dig,
       })
@@ -490,7 +524,11 @@ function toLegacyContextPayload(
     points: directions.map((direction) => ({
       title: direction.title,
       text: [
-        direction.summary,
+        `${l.alone} ${direction.if_read_alone}`,
+        '',
+        `${l.frame} ${direction.wider_frame}`,
+        '',
+        `${l.changes} ${direction.what_changes}`,
         '',
         `${l.why} ${direction.why_it_matters}`,
         '',
@@ -500,6 +538,41 @@ function toLegacyContextPayload(
         .join('\n'),
     })),
     takeaway: `${l.takeawayPrefix} ${bestLevelLabel(assessment.best_level, language)}. ${assessment.note}`,
+  }
+}
+
+async function getVerseData(reference: string, incomingVerseText: string) {
+  const match = reference.match(/^(.*)\s+(\d+):(\d+)$/)
+
+  if (!match) {
+    return { error: 'reference format is invalid.' as const }
+  }
+
+  const book = normalizeText(match[1])
+  const chapter = Number(match[2])
+  const verse = Number(match[3])
+
+  if (!book || !Number.isInteger(chapter) || !Number.isInteger(verse)) {
+    return { error: 'reference format is invalid.' as const }
+  }
+
+  const verseText = incomingVerseText || (await getVerseText(book, chapter, verse)) || incomingVerseText
+  const paragraphResult = await getParagraphText(book, chapter, verse)
+  const chapterSnapshot = await getChapterSnapshot(book, chapter)
+
+  if (!paragraphResult || !chapterSnapshot) {
+    return { error: 'Failed to build context sources.' as const }
+  }
+
+  return {
+    book,
+    chapter,
+    verse,
+    verseText,
+    paragraphReference: paragraphResult.paragraph.reference,
+    paragraphText: paragraphResult.paragraph.text,
+    chapterReference: chapterSnapshot.reference,
+    chapterText: chapterSnapshot.text,
   }
 }
 
@@ -525,61 +598,34 @@ export async function POST(req: Request) {
       )
     }
 
-    const referenceMatch = reference.match(/^(.*)\s+(\d+):(\d+)$/)
+    const verseData = await getVerseData(reference, incomingVerseText)
 
-    if (!referenceMatch) {
-      return NextResponse.json(
-        { error: 'reference format is invalid.' },
-        { status: 400 }
-      )
-    }
-
-    const book = normalizeText(referenceMatch[1])
-    const chapter = Number(referenceMatch[2])
-    const verse = Number(referenceMatch[3])
-
-    if (!book || !Number.isInteger(chapter) || !Number.isInteger(verse)) {
-      return NextResponse.json(
-        { error: 'reference format is invalid.' },
-        { status: 400 }
-      )
-    }
-
-    const verseText =
-      incomingVerseText || (await getVerseText(book, chapter, verse)) || incomingVerseText
-
-    const paragraphResult = await getParagraphText(book, chapter, verse)
-    const chapterSnapshot = await getChapterSnapshot(book, chapter)
-
-    if (!paragraphResult || !chapterSnapshot) {
-      return NextResponse.json(
-        { error: 'Failed to build context sources.' },
-        { status: 500 }
-      )
+    if ('error' in verseData) {
+      return NextResponse.json({ error: verseData.error }, { status: 400 })
     }
 
     const prompt = buildPrompt({
       reference,
-      verseText,
-      book,
-      paragraphReference: paragraphResult.paragraph.reference,
-      paragraphText: paragraphResult.paragraph.text,
-      chapterReference: chapterSnapshot.reference,
-      chapterText: chapterSnapshot.text,
+      verseText: verseData.verseText,
+      book: verseData.book,
+      paragraphReference: verseData.paragraphReference,
+      paragraphText: verseData.paragraphText,
+      chapterReference: verseData.chapterReference,
+      chapterText: verseData.chapterText,
       targetLanguage,
     })
 
     const result = await runModel({
       prompt,
       model: 'gpt-5.4-mini',
-      maxOutputTokens: 2600,
+      maxOutputTokens: 3000,
     })
 
     const rawText = result.rawText || ''
 
     if (!result.ok || !rawText) {
       return NextResponse.json(
-        { error: 'Model failed to generate context.', raw: rawText },
+        { error: 'Model failed to generate wide context.', raw: rawText },
         { status: 500 }
       )
     }
@@ -610,7 +656,7 @@ export async function POST(req: Request) {
 
     const response: ContextApiResponse = {
       reference,
-      verseText,
+      verseText: verseData.verseText,
       context,
       context_assessment: validated.assessment,
       directions: validated.directions,
@@ -619,14 +665,14 @@ export async function POST(req: Request) {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('Context API error:', error)
+    console.error('Wide Context API error:', error)
 
     return NextResponse.json(
       {
         error:
           error instanceof Error
             ? error.message
-            : 'Something went wrong while generating context.',
+            : 'Something went wrong while generating wide context.',
       },
       { status: 500 }
     )
