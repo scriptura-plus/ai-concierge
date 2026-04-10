@@ -162,14 +162,16 @@ function sanitizeNodes(value: unknown): WordLensNode[] {
 }
 
 function sanitizeArticle(value: unknown): WordLensArticlePayload | null {
-  if (!value || typeof value !== 'object') return null
+  if (!value || typeof value !== "object") return null
 
   const raw = value as Partial<WordLensArticlePayload>
 
   const title = isNonEmptyString(raw.title) ? raw.title.trim() : ''
   const lead = isNonEmptyString(raw.lead) ? raw.lead.trim() : ''
   const body = Array.isArray(raw.body)
-    ? raw.body.filter((item): item is string => isNonEmptyString(item)).map((item) => item.trim())
+    ? raw.body
+        .filter((item): item is string => isNonEmptyString(item))
+        .map((item) => item.trim())
     : []
   const highlight_line = isNonEmptyString(raw.highlight_line)
     ? raw.highlight_line.trim()
@@ -363,7 +365,10 @@ ${prompt}
 async function callModel(system: string, prompt: string) {
   const combinedPrompt = buildCombinedPrompt(system, prompt)
 
-  const result = await runModel(combinedPrompt)
+  const result = await runModel({
+    prompt: combinedPrompt,
+    temperature: 0.4,
+  })
 
   if (typeof result === 'string') return result
 
