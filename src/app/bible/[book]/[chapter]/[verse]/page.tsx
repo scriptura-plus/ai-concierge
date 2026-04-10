@@ -2847,6 +2847,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           copyFailedLabel={t.copyFailed}
           shareStatus={narrowShareStatus}
           copyStatus={narrowCopyStatus}
+          targetVerseText={displayedVerseText}
           onRetry={() => {
             void loadNarrowContext(true, appLanguage)
           }}
