@@ -466,8 +466,9 @@ export async function POST(req: Request) {
       })
     }
 
-    const prompt = isNonEmptyString((body as CustomDigRequestBody).prompt)
-      ? (body as CustomDigRequestBody).prompt.trim()
+    const customBody = body as CustomDigRequestBody
+    const prompt = isNonEmptyString(customBody.prompt)
+      ? customBody.prompt.trim()
       : ''
 
     if (!prompt) {
