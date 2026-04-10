@@ -16,7 +16,6 @@ type Range = {
   start: number
   end: number
   kind?: HighlightKind
-  inTargetVerse?: boolean
 }
 
 type HighlightedParagraphProps = {
@@ -33,19 +32,74 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function normalizeForLooseMatch(value: string) {
+  return normalizeWhitespace(value)
+    .replace(/[“”‘’"]/g, "'")
+    .replace(/\s*([,.;:!?])/g, '$1')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+    .toLowerCase()
+}
+
+function buildNormalizedTextMap(source: string) {
+  let normalized = ''
+  const map: number[] = []
+
+  for (let i = 0; i < source.length; i += 1) {
+    const ch = source[i]
+    const lower = ch.toLowerCase()
+
+    const normalizedChar =
+      ch === '“' || ch === '”' || ch === '‘' || ch === '’' || ch === '"'
+        ? "'"
+        : /\s/.test(ch)
+          ? ' '
+          : lower
+
+    if (normalizedChar === ' ') {
+      const prev = normalized[normalized.length - 1]
+      if (!normalized.length || prev === ' ' || /[,.;:!?]/.test(prev)) {
+        continue
+      }
+    }
+
+    if (/[,.;:!?]/.test(normalizedChar)) {
+      if (normalized.endsWith(' ')) {
+        normalized = normalized.slice(0, -1)
+        map.pop()
+      }
+    }
+
+    normalized += normalizedChar
+    map.push(i)
+  }
+
+  normalized = normalized.trim()
+  while (map.length > normalized.length) {
+    map.pop()
+  }
+
+  return { normalized, map }
+}
+
 function findTargetVerseRange(fullText: string, targetVerseText?: string): Range | null {
-  const cleanedTarget = normalizeWhitespace(String(targetVerseText ?? ''))
+  const cleanedTarget = normalizeForLooseMatch(String(targetVerseText ?? ''))
   if (!cleanedTarget) return null
 
-  const pattern = new RegExp(escapeRegExp(cleanedTarget), 'i')
-  const match = pattern.exec(fullText)
+  const { normalized, map } = buildNormalizedTextMap(fullText)
+  const startInNormalized = normalized.indexOf(cleanedTarget)
 
-  if (!match || typeof match.index !== 'number') return null
+  if (startInNormalized === -1) return null
+
+  const endInNormalized = startInNormalized + cleanedTarget.length - 1
+  const start = map[startInNormalized]
+  const end = map[endInNormalized]
+
+  if (typeof start !== 'number' || typeof end !== 'number') return null
 
   return {
-    start: match.index,
-    end: match.index + match[0].length,
-    inTargetVerse: true,
+    start,
+    end: end + 1,
   }
 }
 
@@ -143,18 +197,18 @@ function buildSegments(
 
 function highlightClassName(kind?: HighlightKind) {
   if (kind === 'pivot') {
-    return 'bg-[rgba(120,97,61,0.18)] text-stone-900 ring-1 ring-[rgba(120,97,61,0.16)]'
+    return 'bg-[rgba(176,132,61,0.22)] text-stone-950 ring-1 ring-[rgba(176,132,61,0.18)]'
   }
 
   if (kind === 'contrast') {
-    return 'bg-[rgba(161,98,7,0.14)] text-stone-900 ring-1 ring-[rgba(161,98,7,0.14)]'
+    return 'bg-[rgba(191,120,38,0.20)] text-stone-950 ring-1 ring-[rgba(191,120,38,0.16)]'
   }
 
   if (kind === 'phrase') {
-    return 'bg-[rgba(120,97,61,0.12)] text-stone-900'
+    return 'bg-[rgba(196,145,73,0.18)] text-stone-950'
   }
 
-  return 'bg-[rgba(120,97,61,0.10)] text-stone-900'
+  return 'bg-[rgba(196,145,73,0.16)] text-stone-950'
 }
 
 function targetVerseClassName() {
