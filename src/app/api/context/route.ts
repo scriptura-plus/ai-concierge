@@ -35,6 +35,15 @@ type ContextPayload = {
   takeaway: string
 }
 
+type ContextApiResponse = {
+  context: ContextPayload
+  context_assessment: ContextAssessment
+  directions: ContextDirection[]
+  reference: string
+  verseText: string
+  raw: string
+}
+
 type BibleApiVerse = {
   verse?: number
   text?: string
@@ -91,15 +100,91 @@ function isValidBestLevel(value: unknown): value is ContextAssessment['best_leve
   )
 }
 
-function languageName(language: SupportedLanguage) {
-  if (language === 'ru') return 'русском'
-  if (language === 'es') return 'испанском'
-  if (language === 'fr') return 'французском'
-  if (language === 'de') return 'немецком'
-  return 'английском'
+function labels(language: SupportedLanguage) {
+  if (language === 'ru') {
+    return {
+      leadPrefix: 'Контекстные направления, которые реально помогают точнее понять этот стих.',
+      takeawayPrefix: 'Наиболее полезный уровень контекста:',
+      why: 'Почему это важно:',
+      dig: 'Куда копать:',
+      honestTitle: 'Честный вывод',
+      paragraph: 'абзац',
+      chapter: 'глава',
+      book: 'книга',
+      bible_line: 'широкая библейская линия',
+      none: 'не найден',
+    }
+  }
+
+  if (language === 'es') {
+    return {
+      leadPrefix: 'Direcciones contextuales que realmente ayudan a entender mejor este versículo.',
+      takeawayPrefix: 'Nivel de contexto más útil:',
+      why: 'Por qué importa:',
+      dig: 'Profundizar:',
+      honestTitle: 'Conclusión honesta',
+      paragraph: 'párrafo',
+      chapter: 'capítulo',
+      book: 'libro',
+      bible_line: 'línea bíblica amplia',
+      none: 'no encontrado',
+    }
+  }
+
+  if (language === 'fr') {
+    return {
+      leadPrefix: 'Directions contextuelles qui aident réellement à mieux comprendre ce verset.',
+      takeawayPrefix: 'Niveau de contexte le plus utile :',
+      why: 'Pourquoi cela compte :',
+      dig: 'Creuser plus loin :',
+      honestTitle: 'Conclusion honnête',
+      paragraph: 'paragraphe',
+      chapter: 'chapitre',
+      book: 'livre',
+      bible_line: 'ligne biblique large',
+      none: 'non trouvé',
+    }
+  }
+
+  if (language === 'de') {
+    return {
+      leadPrefix: 'Kontext-Richtungen, die wirklich helfen, diesen Vers genauer zu verstehen.',
+      takeawayPrefix: 'Hilfreichste Kontextebene:',
+      why: 'Warum das wichtig ist:',
+      dig: 'Weiter graben:',
+      honestTitle: 'Ehrliches Fazit',
+      paragraph: 'Absatz',
+      chapter: 'Kapitel',
+      book: 'Buch',
+      bible_line: 'weite Bibellinie',
+      none: 'nicht gefunden',
+    }
+  }
+
+  return {
+    leadPrefix: 'Contextual directions that genuinely help explain this verse more clearly.',
+    takeawayPrefix: 'Most helpful context level:',
+    why: 'Why this matters:',
+    dig: 'Dig deeper:',
+    honestTitle: 'Honest conclusion',
+    paragraph: 'paragraph',
+    chapter: 'chapter',
+    book: 'book',
+    bible_line: 'wider Bible line',
+    none: 'none',
+  }
 }
 
-function outputInstruction(language: SupportedLanguage) {
+function bestLevelLabel(level: ContextAssessment['best_level'], language: SupportedLanguage) {
+  const l = labels(language)
+  if (level === 'paragraph') return l.paragraph
+  if (level === 'chapter') return l.chapter
+  if (level === 'book') return l.book
+  if (level === 'bible_line') return l.bible_line
+  return l.none
+}
+
+function outputLanguageInstruction(language: SupportedLanguage) {
   if (language === 'ru') {
     return 'Все человекочитаемые поля JSON верни на русском языке.'
   }
@@ -119,90 +204,6 @@ function outputInstruction(language: SupportedLanguage) {
   return 'All human-readable JSON fields must be returned in English.'
 }
 
-function labels(language: SupportedLanguage) {
-  if (language === 'ru') {
-    return {
-      honestTitle: 'Честный вывод',
-      why: 'Почему это важно:',
-      dig: 'Куда копать:',
-      leadPrefix: 'Контекстные направления, которые реально помогают точнее понять этот стих.',
-      takeawayPrefix: 'Лучший уровень контекста:',
-      paragraph: 'абзац',
-      chapter: 'глава',
-      book: 'книга',
-      bible_line: 'широкая библейская линия',
-      none: 'не найден',
-    }
-  }
-
-  if (language === 'es') {
-    return {
-      honestTitle: 'Conclusión honesta',
-      why: 'Por qué importa:',
-      dig: 'Profundizar:',
-      leadPrefix: 'Direcciones contextuales que realmente ayudan a entender mejor este versículo.',
-      takeawayPrefix: 'Nivel de contexto más útil:',
-      paragraph: 'párrafo',
-      chapter: 'capítulo',
-      book: 'libro',
-      bible_line: 'línea bíblica amplia',
-      none: 'no encontrado',
-    }
-  }
-
-  if (language === 'fr') {
-    return {
-      honestTitle: 'Conclusion honnête',
-      why: 'Pourquoi cela compte :',
-      dig: 'Creuser plus loin :',
-      leadPrefix: 'Directions contextuelles qui aident réellement à mieux comprendre ce verset.',
-      takeawayPrefix: 'Niveau de contexte le plus utile :',
-      paragraph: 'paragraphe',
-      chapter: 'chapitre',
-      book: 'livre',
-      bible_line: 'ligne biblique large',
-      none: 'non trouvé',
-    }
-  }
-
-  if (language === 'de') {
-    return {
-      honestTitle: 'Ehrliches Fazit',
-      why: 'Warum das wichtig ist:',
-      dig: 'Weiter graben:',
-      leadPrefix: 'Kontext-Richtungen, die wirklich helfen, diesen Vers genauer zu verstehen.',
-      takeawayPrefix: 'Hilfreichste Kontextebene:',
-      paragraph: 'Absatz',
-      chapter: 'Kapitel',
-      book: 'Buch',
-      bible_line: 'weite Bibellinie',
-      none: 'nicht gefunden',
-    }
-  }
-
-  return {
-    honestTitle: 'Honest conclusion',
-    why: 'Why this matters:',
-    dig: 'Dig deeper:',
-    leadPrefix: 'Contextual directions that genuinely help explain this verse more clearly.',
-    takeawayPrefix: 'Most helpful context level:',
-    paragraph: 'paragraph',
-    chapter: 'chapter',
-    book: 'book',
-    bible_line: 'wider Bible line',
-    none: 'none',
-  }
-}
-
-function bestLevelLabel(level: ContextAssessment['best_level'], language: SupportedLanguage) {
-  const l = labels(language)
-  if (level === 'paragraph') return l.paragraph
-  if (level === 'chapter') return l.chapter
-  if (level === 'book') return l.book
-  if (level === 'bible_line') return l.bible_line
-  return l.none
-}
-
 async function getChapterSnapshot(
   book: string,
   chapter: number
@@ -220,22 +221,24 @@ async function getChapterSnapshot(
     if (!response.ok) return null
 
     const data: BibleApiChapterResponse = await response.json()
+
     if (!Array.isArray(data.verses) || data.verses.length === 0) return null
 
-    const verses = data.verses
+    const parts = data.verses
       .map((item) => {
         const verseNo = Number(item.verse)
         const text = normalizeText(item.text)
+
         if (!Number.isInteger(verseNo) || !text) return ''
         return `${verseNo}. ${text}`
       })
       .filter(Boolean)
 
-    if (verses.length === 0) return null
+    if (parts.length === 0) return null
 
     return {
       reference: `${book} ${chapter}`,
-      text: verses.join(' '),
+      text: parts.join(' '),
     }
   } catch {
     return null
@@ -246,7 +249,6 @@ function buildPrompt(params: {
   reference: string
   verseText: string
   book: string
-  chapter: number
   paragraphReference: string
   paragraphText: string
   chapterReference: string
@@ -256,10 +258,10 @@ function buildPrompt(params: {
   return `
 Ты работаешь как исследователь контекста для Scriptura+.
 
-Твоя задача — определить, какой контекст, если вообще какой-то, действительно помогает точнее, глубже и честнее понять выбранный стих.
+Твоя задача — определить:
+какой контекст, если вообще какой-то, действительно помогает точнее, глубже и честнее понять выбранный стих.
 
 Центр всегда один: сам выбранный стих.
-
 Не абзац ради абзаца.
 Не глава ради главы.
 Не книга ради книги.
@@ -270,23 +272,47 @@ function buildPrompt(params: {
 ГЛАВНЫЙ ВОПРОС:
 Какой контекст, и на каком уровне, действительно помогает понять этот стих лучше?
 
-ПРОВЕРЯЙ КОНТЕКСТ ПО УРОВНЯМ:
-1. paragraph — ближайший осмысленный поток
-2. chapter — движение главы
-3. book — роль в книге
-4. bible_line — только если есть сильная, естественная, текстово оправданная более широкая библейская линия
+КАСКАД КОНТЕКСТА:
+1. paragraph — ближайший осмысленный поток вокруг стиха
+2. chapter — движение главы, сцена, аргумент, контраст, нарастание, функция стиха
+3. book — роль стиха в книге
+4. bible_line — только если есть естественная, сильная, текстово оправданная связь, реально проясняющая стих
 
 ПРАВИЛА:
-- Всегда предпочитай самый низкий уровень, который реально помогает.
-- Не награждай простую близость. То, что стоит рядом, ещё не значит, что оно объясняет стих.
-- Направление допустимо только если оно помогает понять именно выбранный стих, а не просто соседний материал.
-- Если убрать выбранный стих, и мысль останется почти такой же, направление нужно отбросить.
+- Всегда предпочитай самый низкий уровень, который реально работает.
+- Не считай полезным то, что просто стоит рядом.
+- Близость ещё не равна объяснению.
+- Направление допустимо только если оно помогает понять именно выбранный стих.
+- Если убрать выбранный стих, и мысль останется почти той же, направление нужно отбросить.
 - Если ближайший уровень уже работает, выше не поднимайся ради полноты.
 - Допустимы не только сильные направления, но и скромные, если они честно дают небольшое уточнение.
 - Если даже скромное усиление было бы натяжкой, верни честный пустой результат.
+- Лучше 3 сильных направления, чем 5 просто нормальных.
+- Не возвращай направление только потому, что оно приемлемое; возвращай только если оно ясно отличается по типу contextual gain от уже выбранных.
 
-ОСОБЫЙ ОГРАНИЧИТЕЛЬ ДЛЯ bible_line:
-- Используй уровень bible_line только если он реально проясняет этот стих, а не просто делает его более большим или богословски торжественным.
+ДВУХПОРОГОВАЯ СИСТЕМА:
+- Сильное направление: контекст заметно заостряет стих, меняет чтение или ясно объясняет его функцию, место или силу.
+- Скромное направление: контекст не даёт яркого прорыва, но честно уточняет стих, снимает недопонимание или делает его роль яснее.
+- Не раздувай скромные наблюдения до сильных.
+
+АНТИВОДНЫЙ БЛОК:
+- Не раздувай.
+- Одно направление = одно ясное contextual gain.
+- Не смешивай сразу несколько разных осей в одном блоке.
+- Избегай литературного надувания.
+- Не используй выражения вроде:
+  "скрытая ось",
+  "не случайный порядок",
+  "это не просто..., а...",
+  "как будто печать",
+  "контрсила",
+  "сам акт становится частью смысла"
+  если это нельзя строго показать из текста.
+- Пиши суше, строже и короче.
+- Если убрать красивые слова, должно остаться реальное уточнение стиха.
+
+ОГРАНИЧИТЕЛЬ ДЛЯ bible_line:
+- Используй уровень bible_line только если он действительно проясняет этот стих, а не просто делает его более большим или богословски торжественным.
 - Не вставляй автоматически общую тему Библии, Царство, оправдание имени Бога, восстановление и другие большие рамки, если сам стих естественно этого не открывает.
 - Если сомневаешься, оставайся на уровне paragraph, chapter или book.
 - При bible_line используй сдержанный язык, а не категоричность.
@@ -300,15 +326,17 @@ function buildPrompt(params: {
 - why_it_matters
 - dig_deeper
 
-Количество не фиксируй.
-Верни только столько направлений, сколько реально полезны.
+ОГРАНИЧЕНИЯ ПО ДЛИНЕ:
+- summary: максимум 2 предложения
+- why_it_matters: максимум 1 короткое предложение
+- dig_deeper: максимум 1 короткое предложение
 
 ФИНАЛЬНАЯ ПРОВЕРКА:
 Для каждого направления мысленно заверши фразу:
 "Это помогает понять стих лучше, потому что..."
 Если не можешь завершить её ясно и конкретно, направление нужно отбросить.
 
-${outputInstruction(params.targetLanguage)}
+${outputLanguageInstruction(params.targetLanguage)}
 
 ИСХОДНЫЕ ДАННЫЕ
 
@@ -358,8 +386,7 @@ ${params.chapterText}
 }
 
 function validatePayload(
-  payload: ContextModelPayload,
-  language: SupportedLanguage
+  payload: ContextModelPayload
 ): { assessment: ContextAssessment; directions: ContextDirection[] } | null {
   const bestLevel = payload.context_assessment?.best_level
   const note = normalizeText(payload.context_assessment?.note)
@@ -386,6 +413,7 @@ function validatePayload(
       if (seen.has(id)) continue
 
       seen.add(id)
+
       directions.push({
         id,
         level,
@@ -430,22 +458,20 @@ function toLegacyContextPayload(
     }
   }
 
-  const points: ContextPoint[] = directions.map((direction) => ({
-    title: direction.title,
-    text: [
-      direction.summary,
-      '',
-      `${l.why} ${direction.why_it_matters}`,
-      '',
-      `${l.dig} ${direction.dig_deeper}`,
-    ]
-      .filter(Boolean)
-      .join('\n'),
-  }))
-
   return {
     lead: `${l.leadPrefix} ${assessment.note}`,
-    points,
+    points: directions.map((direction) => ({
+      title: direction.title,
+      text: [
+        direction.summary,
+        '',
+        `${l.why} ${direction.why_it_matters}`,
+        '',
+        `${l.dig} ${direction.dig_deeper}`,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    })),
     takeaway: `${l.takeawayPrefix} ${bestLevelLabel(assessment.best_level, language)}. ${assessment.note}`,
   }
 }
@@ -456,6 +482,7 @@ export async function POST(req: Request) {
 
     const reference = normalizeText(body.reference)
     const incomingVerseText = normalizeText(body.verseText)
+
     const targetLanguage: SupportedLanguage =
       body.targetLanguage === 'ru' ||
       body.targetLanguage === 'es' ||
@@ -472,6 +499,7 @@ export async function POST(req: Request) {
     }
 
     const referenceMatch = reference.match(/^(.*)\s+(\d+):(\d+)$/)
+
     if (!referenceMatch) {
       return NextResponse.json(
         { error: 'reference format is invalid.' },
@@ -507,7 +535,6 @@ export async function POST(req: Request) {
       reference,
       verseText,
       book,
-      chapter,
       paragraphReference: paragraphResult.paragraph.reference,
       paragraphText: paragraphResult.paragraph.text,
       chapterReference: chapterSnapshot.reference,
@@ -518,7 +545,7 @@ export async function POST(req: Request) {
     const result = await runModel({
       prompt,
       model: 'gpt-5.4-mini',
-      maxOutputTokens: 3200,
+      maxOutputTokens: 2600,
     })
 
     const rawText = result.rawText || ''
@@ -531,6 +558,7 @@ export async function POST(req: Request) {
     }
 
     const parsed = parsePayload(rawText)
+
     if (!parsed) {
       return NextResponse.json(
         { error: 'Failed to parse model output.', raw: rawText },
@@ -538,7 +566,8 @@ export async function POST(req: Request) {
       )
     }
 
-    const validated = validatePayload(parsed, targetLanguage)
+    const validated = validatePayload(parsed)
+
     if (!validated) {
       return NextResponse.json(
         { error: 'Model output failed validation.', raw: rawText },
@@ -552,14 +581,16 @@ export async function POST(req: Request) {
       targetLanguage
     )
 
-    return NextResponse.json({
+    const response: ContextApiResponse = {
       reference,
       verseText,
       context,
       context_assessment: validated.assessment,
       directions: validated.directions,
       raw: rawText,
-    })
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Context API error:', error)
 
