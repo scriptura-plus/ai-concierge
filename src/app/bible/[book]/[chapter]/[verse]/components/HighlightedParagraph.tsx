@@ -18,6 +18,13 @@ type Range = {
   kind?: HighlightKind
 }
 
+type IndexedWord = {
+  raw: string
+  normalized: string
+  start: number
+  end: number
+}
+
 type HighlightedParagraphProps = {
   text: string
   highlights: HighlightItem[]
@@ -40,8 +47,8 @@ function normalizeWordForAnchor(value: string) {
     .trim()
 }
 
-function buildWordIndex(source: string) {
-  const words: Array<{ raw: string; normalized: string; start: number; end: number }> = []
+function buildWordIndex(source: string): IndexedWord[] {
+  const words: IndexedWord[] = []
   const regex = /[^\s]+/g
   let match: RegExpExecArray | null = regex.exec(source)
 
@@ -194,6 +201,68 @@ function findTargetVerseRangeByAnchors(fullText: string, targetVerseText: string
   return { start, end }
 }
 
+function findTargetVerseRangeByFuzzyWords(
+  fullText: string,
+  targetVerseText: string
+): Range | null {
+  const fullWords = buildWordIndex(fullText)
+  const targetWords = buildWordIndex(targetVerseText).map((word) => word.normalized)
+
+  if (fullWords.length === 0 || targetWords.length === 0) return null
+
+  const targetSet = new Set(targetWords)
+  let bestStart = -1
+  let bestEnd = -1
+  let bestScore = 0
+
+  for (let start = 0; start < fullWords.length; start += 1) {
+    if (!targetSet.has(fullWords[start].normalized)) continue
+
+    const seen = new Set<string>()
+    let matchCount = 0
+
+    for (let end = start; end < fullWords.length; end += 1) {
+      const normalized = fullWords[end].normalized
+
+      if (targetSet.has(normalized)) {
+        if (!seen.has(normalized)) {
+          seen.add(normalized)
+          matchCount += 1
+        }
+      }
+
+      const spanLength = end - start + 1
+      const density = matchCount / spanLength
+      const coverage = matchCount / Math.max(targetSet.size, 1)
+      const score = coverage * 100 + density * 10
+
+      const enoughMatches =
+        matchCount >= Math.min(6, targetSet.size) &&
+        coverage >= 0.45 &&
+        density >= 0.45
+
+      if (enoughMatches && score > bestScore) {
+        bestScore = score
+        bestStart = start
+        bestEnd = end
+      }
+
+      if (spanLength > targetWords.length + 12 && density < 0.35) {
+        break
+      }
+    }
+  }
+
+  if (bestStart === -1 || bestEnd === -1) return null
+
+  const start = fullWords[bestStart]?.start
+  const end = fullWords[bestEnd]?.end
+
+  if (typeof start !== 'number' || typeof end !== 'number') return null
+
+  return { start, end }
+}
+
 function findTargetVerseRange(fullText: string, targetVerseText?: string): Range | null {
   const cleanedTarget = normalizeWhitespace(String(targetVerseText ?? ''))
   if (!cleanedTarget) return null
@@ -203,7 +272,12 @@ function findTargetVerseRange(fullText: string, targetVerseText?: string): Range
     return exactNormalizedMatch
   }
 
-  return findTargetVerseRangeByAnchors(fullText, cleanedTarget)
+  const anchorMatch = findTargetVerseRangeByAnchors(fullText, cleanedTarget)
+  if (anchorMatch) {
+    return anchorMatch
+  }
+
+  return findTargetVerseRangeByFuzzyWords(fullText, cleanedTarget)
 }
 
 function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number) {
@@ -325,22 +399,22 @@ function buildSegments(
 
 function highlightClassName(kind?: HighlightKind) {
   if (kind === 'pivot') {
-    return 'bg-[rgba(176,132,61,0.22)] text-stone-950 ring-1 ring-[rgba(176,132,61,0.18)]'
+    return 'bg-[rgba(176,132,61,0.24)] text-stone-950 ring-1 ring-[rgba(176,132,61,0.18)]'
   }
 
   if (kind === 'contrast') {
-    return 'bg-[rgba(191,120,38,0.20)] text-stone-950 ring-1 ring-[rgba(191,120,38,0.16)]'
+    return 'bg-[rgba(191,120,38,0.22)] text-stone-950 ring-1 ring-[rgba(191,120,38,0.16)]'
   }
 
   if (kind === 'phrase') {
-    return 'bg-[rgba(196,145,73,0.18)] text-stone-950'
+    return 'bg-[rgba(196,145,73,0.19)] text-stone-950'
   }
 
-  return 'bg-[rgba(196,145,73,0.16)] text-stone-950'
+  return 'bg-[rgba(196,145,73,0.17)] text-stone-950'
 }
 
 function targetVerseClassName() {
-  return 'bg-[rgba(92,70,39,0.14)] text-stone-950'
+  return 'bg-[rgba(80,80,80,0.18)] text-stone-950 ring-1 ring-[rgba(80,80,80,0.10)]'
 }
 
 export default function HighlightedParagraph({
