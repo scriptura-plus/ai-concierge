@@ -162,7 +162,7 @@ function sanitizeNodes(value: unknown): WordLensNode[] {
 }
 
 function sanitizeArticle(value: unknown): WordLensArticlePayload | null {
-  if (!value || typeof value !== "object") return null
+  if (!value || typeof value !== 'object') return null
 
   const raw = value as Partial<WordLensArticlePayload>
 
@@ -367,7 +367,6 @@ async function callModel(system: string, prompt: string) {
 
   const result = await runModel({
     prompt: combinedPrompt,
-    temperature: 0.4,
   })
 
   if (typeof result === 'string') return result
