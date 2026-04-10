@@ -127,8 +127,10 @@ export default function NarrowContextView({
   whyItMattersLabel,
   digDeeperLabel,
   tryAgainLabel,
+  changeLabel,
   onRetry,
   onDirectionSelect,
+  onChangeMode,
 }: NarrowContextViewProps) {
   if (!isReady) {
     return renderIntroPanel(
@@ -190,9 +192,19 @@ export default function NarrowContextView({
     <div className="tab-panel-enter mt-5 space-y-5">
       <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
         <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-          <p className="mb-5 text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-            {paragraphLabel}
-          </p>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
+              {paragraphLabel}
+            </p>
+
+            <button
+              type="button"
+              onClick={onChangeMode}
+              className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
+            >
+              {changeLabel}
+            </button>
+          </div>
 
           <p className="mb-4 text-sm font-medium text-stone-500">{data.paragraph.reference}</p>
 
