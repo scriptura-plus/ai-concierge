@@ -103,9 +103,14 @@ function findTargetVerseRange(fullText: string, targetVerseText?: string): Range
   }
 }
 
+function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number) {
+  return !(aEnd <= bStart || aStart >= bEnd)
+}
+
 function findNonOverlappingHighlightRanges(
   fullText: string,
-  highlights: HighlightItem[]
+  highlights: HighlightItem[],
+  targetRange: Range | null
 ): Array<{ start: number; end: number; kind: HighlightKind }> {
   const ranges: Array<{ start: number; end: number; kind: HighlightKind }> = []
 
@@ -129,9 +134,11 @@ function findNonOverlappingHighlightRanges(
 
       const end = start + matchedText.length
 
-      const overlaps = ranges.some(
-        (range) => !(end <= range.start || start >= range.end)
-      )
+      if (targetRange && rangesOverlap(start, end, targetRange.start, targetRange.end)) {
+        continue
+      }
+
+      const overlaps = ranges.some((range) => rangesOverlap(start, end, range.start, range.end))
 
       if (overlaps) continue
 
@@ -212,7 +219,7 @@ function highlightClassName(kind?: HighlightKind) {
 }
 
 function targetVerseClassName() {
-  return 'bg-[rgba(92,70,39,0.10)] text-stone-950'
+  return 'bg-[rgba(92,70,39,0.14)] text-stone-950'
 }
 
 export default function HighlightedParagraph({
@@ -228,7 +235,11 @@ export default function HighlightedParagraph({
   }
 
   const targetRange = findTargetVerseRange(fullText, targetVerseText)
-  const highlightRanges = findNonOverlappingHighlightRanges(fullText, cleanedHighlights)
+  const highlightRanges = findNonOverlappingHighlightRanges(
+    fullText,
+    cleanedHighlights,
+    targetRange
+  )
   const segments = buildSegments(fullText, targetRange, highlightRanges)
 
   return (
@@ -240,16 +251,24 @@ export default function HighlightedParagraph({
           return <span key={key}>{segment.text}</span>
         }
 
-        const classes = [
-          'mx-[1px] rounded-md px-[0.22em] py-[0.08em]',
-          segment.inTargetVerse ? targetVerseClassName() : '',
-          segment.highlighted ? highlightClassName(segment.kind) : '',
-        ]
-          .filter(Boolean)
-          .join(' ')
+        if (segment.inTargetVerse) {
+          return (
+            <mark
+              key={key}
+              className={`mx-[1px] rounded-md px-[0.22em] py-[0.08em] ${targetVerseClassName()}`}
+            >
+              {segment.text}
+            </mark>
+          )
+        }
 
         return (
-          <mark key={key} className={classes}>
+          <mark
+            key={key}
+            className={`mx-[1px] rounded-md px-[0.22em] py-[0.08em] ${highlightClassName(
+              segment.kind
+            )}`}
+          >
             {segment.text}
           </mark>
         )
