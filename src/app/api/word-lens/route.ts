@@ -350,12 +350,20 @@ Requirements:
 `.trim()
 }
 
+function buildCombinedPrompt(system: string, prompt: string) {
+  return `
+[SYSTEM INSTRUCTIONS]
+${system}
+
+[USER TASK]
+${prompt}
+`.trim()
+}
+
 async function callModel(system: string, prompt: string) {
-  const result = await runModel({
-    system,
-    prompt,
-    temperature: 0.4,
-  })
+  const combinedPrompt = buildCombinedPrompt(system, prompt)
+
+  const result = await runModel(combinedPrompt)
 
   if (typeof result === 'string') return result
 
