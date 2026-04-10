@@ -32,75 +32,120 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function normalizeForLooseMatch(value: string) {
-  return normalizeWhitespace(value)
-    .replace(/[“”‘’"]/g, "'")
-    .replace(/\s*([,.;:!?])/g, '$1')
-    .replace(/\(\s+/g, '(')
-    .replace(/\s+\)/g, ')')
+function normalizeWordForAnchor(value: string) {
+  return value
     .toLowerCase()
+    .replace(/[“”‘’"'`´]/g, '')
+    .replace(/[^a-zа-яё0-9]+/gi, '')
+    .trim()
 }
 
-function buildNormalizedTextMap(source: string) {
-  let normalized = ''
-  const map: number[] = []
+function buildWordIndex(source: string) {
+  const words: Array<{ raw: string; normalized: string; start: number; end: number }> = []
+  const regex = /[^\s]+/g
+  const matches = source.matchAll(regex)
 
-  for (let i = 0; i < source.length; i += 1) {
-    const ch = source[i]
-    const lower = ch.toLowerCase()
+  for (const match of matches) {
+    const raw = match[0]
+    const start = match.index
 
-    const normalizedChar =
-      ch === '“' || ch === '”' || ch === '‘' || ch === '’' || ch === '"'
-        ? "'"
-        : /\s/.test(ch)
-          ? ' '
-          : lower
+    if (typeof start !== 'number') continue
 
-    if (normalizedChar === ' ') {
-      const prev = normalized[normalized.length - 1]
-      if (!normalized.length || prev === ' ' || /[,.;:!?]/.test(prev)) {
-        continue
-      }
-    }
+    const normalized = normalizeWordForAnchor(raw)
+    if (!normalized) continue
 
-    if (/[,.;:!?]/.test(normalizedChar)) {
-      if (normalized.endsWith(' ')) {
-        normalized = normalized.slice(0, -1)
-        map.pop()
-      }
-    }
-
-    normalized += normalizedChar
-    map.push(i)
+    words.push({
+      raw,
+      normalized,
+      start,
+      end: start + raw.length,
+    })
   }
 
-  normalized = normalized.trim()
-  while (map.length > normalized.length) {
-    map.pop()
+  return words
+}
+
+function buildAnchorPhrases(targetVerseText: string) {
+  const words = normalizeWhitespace(targetVerseText)
+    .split(' ')
+    .map(normalizeWordForAnchor)
+    .filter(Boolean)
+
+  if (words.length === 0) {
+    return null
   }
 
-  return { normalized, map }
+  const anchorSize = Math.min(5, Math.max(3, Math.floor(words.length / 3)))
+
+  const startAnchor = words.slice(0, anchorSize)
+  const endAnchor = words.slice(-anchorSize)
+
+  return {
+    startAnchor,
+    endAnchor,
+  }
+}
+
+function findSequenceIndex(
+  fullWords: Array<{ normalized: string }>,
+  anchor: string[],
+  fromLeft = true
+) {
+  if (anchor.length === 0 || fullWords.length < anchor.length) return -1
+
+  if (fromLeft) {
+    for (let i = 0; i <= fullWords.length - anchor.length; i += 1) {
+      let ok = true
+      for (let j = 0; j < anchor.length; j += 1) {
+        if (fullWords[i + j].normalized !== anchor[j]) {
+          ok = false
+          break
+        }
+      }
+      if (ok) return i
+    }
+    return -1
+  }
+
+  for (let i = fullWords.length - anchor.length; i >= 0; i -= 1) {
+    let ok = true
+    for (let j = 0; j < anchor.length; j += 1) {
+      if (fullWords[i + j].normalized !== anchor[j]) {
+        ok = false
+        break
+      }
+    }
+    if (ok) return i
+  }
+
+  return -1
 }
 
 function findTargetVerseRange(fullText: string, targetVerseText?: string): Range | null {
-  const cleanedTarget = normalizeForLooseMatch(String(targetVerseText ?? ''))
+  const cleanedTarget = normalizeWhitespace(String(targetVerseText ?? ''))
   if (!cleanedTarget) return null
 
-  const { normalized, map } = buildNormalizedTextMap(fullText)
-  const startInNormalized = normalized.indexOf(cleanedTarget)
+  const anchors = buildAnchorPhrases(cleanedTarget)
+  if (!anchors) return null
 
-  if (startInNormalized === -1) return null
+  const fullWords = buildWordIndex(fullText)
+  if (fullWords.length === 0) return null
 
-  const endInNormalized = startInNormalized + cleanedTarget.length - 1
-  const start = map[startInNormalized]
-  const end = map[endInNormalized]
+  const startIndex = findSequenceIndex(fullWords, anchors.startAnchor, true)
+  const endIndexStart = findSequenceIndex(fullWords, anchors.endAnchor, false)
+
+  if (startIndex === -1 || endIndexStart === -1) return null
+
+  const endIndex = endIndexStart + anchors.endAnchor.length - 1
+
+  if (endIndex < startIndex) return null
+
+  const start = fullWords[startIndex]?.start
+  const end = fullWords[endIndex]?.end
 
   if (typeof start !== 'number' || typeof end !== 'number') return null
 
-  return {
-    start,
-    end: end + 1,
-  }
+  return { start, end }
 }
 
 function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number) {
