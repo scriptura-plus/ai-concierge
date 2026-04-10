@@ -8,12 +8,21 @@ type HighlightItem = {
 type Segment = {
   text: string
   highlighted: boolean
+  inTargetVerse: boolean
   kind?: HighlightKind
+}
+
+type Range = {
+  start: number
+  end: number
+  kind?: HighlightKind
+  inTargetVerse?: boolean
 }
 
 type HighlightedParagraphProps = {
   text: string
   highlights: HighlightItem[]
+  targetVerseText?: string
 }
 
 function normalizeWhitespace(value: string) {
@@ -24,7 +33,23 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function findNonOverlappingRanges(
+function findTargetVerseRange(fullText: string, targetVerseText?: string): Range | null {
+  const cleanedTarget = normalizeWhitespace(String(targetVerseText ?? ''))
+  if (!cleanedTarget) return null
+
+  const pattern = new RegExp(escapeRegExp(cleanedTarget), 'i')
+  const match = pattern.exec(fullText)
+
+  if (!match || typeof match.index !== 'number') return null
+
+  return {
+    start: match.index,
+    end: match.index + match[0].length,
+    inTargetVerse: true,
+  }
+}
+
+function findNonOverlappingHighlightRanges(
   fullText: string,
   highlights: HighlightItem[]
 ): Array<{ start: number; end: number; kind: HighlightKind }> {
@@ -71,40 +96,49 @@ function findNonOverlappingRanges(
 
 function buildSegments(
   fullText: string,
-  ranges: Array<{ start: number; end: number; kind: HighlightKind }>
+  targetRange: Range | null,
+  highlightRanges: Array<{ start: number; end: number; kind: HighlightKind }>
 ): Segment[] {
-  if (ranges.length === 0) {
-    return [{ text: fullText, highlighted: false }]
+  const boundaries = new Set<number>([0, fullText.length])
+
+  if (targetRange) {
+    boundaries.add(targetRange.start)
+    boundaries.add(targetRange.end)
   }
 
+  for (const range of highlightRanges) {
+    boundaries.add(range.start)
+    boundaries.add(range.end)
+  }
+
+  const sorted = Array.from(boundaries).sort((a, b) => a - b)
   const segments: Segment[] = []
-  let cursor = 0
 
-  for (const range of ranges) {
-    if (range.start > cursor) {
-      segments.push({
-        text: fullText.slice(cursor, range.start),
-        highlighted: false,
-      })
-    }
+  for (let i = 0; i < sorted.length - 1; i += 1) {
+    const start = sorted[i]
+    const end = sorted[i + 1]
+
+    if (end <= start) continue
+
+    const text = fullText.slice(start, end)
+    if (!text) continue
+
+    const highlight = highlightRanges.find(
+      (range) => start >= range.start && end <= range.end
+    )
+
+    const inTargetVerse =
+      !!targetRange && start >= targetRange.start && end <= targetRange.end
 
     segments.push({
-      text: fullText.slice(range.start, range.end),
-      highlighted: true,
-      kind: range.kind,
-    })
-
-    cursor = range.end
-  }
-
-  if (cursor < fullText.length) {
-    segments.push({
-      text: fullText.slice(cursor),
-      highlighted: false,
+      text,
+      highlighted: !!highlight,
+      inTargetVerse,
+      kind: highlight?.kind,
     })
   }
 
-  return segments.filter((segment) => segment.text.length > 0)
+  return segments
 }
 
 function highlightClassName(kind?: HighlightKind) {
@@ -123,9 +157,14 @@ function highlightClassName(kind?: HighlightKind) {
   return 'bg-[rgba(120,97,61,0.10)] text-stone-900'
 }
 
+function targetVerseClassName() {
+  return 'bg-[rgba(92,70,39,0.10)] text-stone-950'
+}
+
 export default function HighlightedParagraph({
   text,
   highlights,
+  targetVerseText,
 }: HighlightedParagraphProps) {
   const fullText = String(text ?? '')
   const cleanedHighlights = Array.isArray(highlights) ? highlights : []
@@ -134,23 +173,29 @@ export default function HighlightedParagraph({
     return null
   }
 
-  const ranges = findNonOverlappingRanges(fullText, cleanedHighlights)
-  const segments = buildSegments(fullText, ranges)
+  const targetRange = findTargetVerseRange(fullText, targetVerseText)
+  const highlightRanges = findNonOverlappingHighlightRanges(fullText, cleanedHighlights)
+  const segments = buildSegments(fullText, targetRange, highlightRanges)
 
   return (
     <p className="text-[1.02rem] leading-8 text-stone-800 whitespace-pre-wrap">
       {segments.map((segment, index) => {
-        if (!segment.highlighted) {
-          return <span key={`${index}-${segment.text.slice(0, 12)}`}>{segment.text}</span>
+        const key = `${index}-${segment.text.slice(0, 12)}`
+
+        if (!segment.highlighted && !segment.inTargetVerse) {
+          return <span key={key}>{segment.text}</span>
         }
 
+        const classes = [
+          'mx-[1px] rounded-md px-[0.22em] py-[0.08em]',
+          segment.inTargetVerse ? targetVerseClassName() : '',
+          segment.highlighted ? highlightClassName(segment.kind) : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+
         return (
-          <mark
-            key={`${index}-${segment.text.slice(0, 12)}`}
-            className={`mx-[1px] rounded-md px-[0.22em] py-[0.08em] ${highlightClassName(
-              segment.kind
-            )}`}
-          >
+          <mark key={key} className={classes}>
             {segment.text}
           </mark>
         )
