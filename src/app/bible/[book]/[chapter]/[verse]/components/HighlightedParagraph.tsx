@@ -129,11 +129,49 @@ function findSequenceIndex(
   return -1
 }
 
-function findTargetVerseRange(fullText: string, targetVerseText?: string): Range | null {
-  const cleanedTarget = normalizeWhitespace(String(targetVerseText ?? ''))
-  if (!cleanedTarget) return null
+function buildNormalizedCharMap(source: string) {
+  let normalized = ''
+  const map: number[] = []
 
-  const anchors = buildAnchorPhrases(cleanedTarget)
+  for (let i = 0; i < source.length; i += 1) {
+    const normalizedChar = normalizeWordForAnchor(source[i])
+
+    if (!normalizedChar) continue
+
+    normalized += normalizedChar
+    map.push(i)
+  }
+
+  return { normalized, map }
+}
+
+function findTargetVerseRangeByNormalizedString(
+  fullText: string,
+  targetVerseText: string
+): Range | null {
+  const full = buildNormalizedCharMap(fullText)
+  const target = buildNormalizedCharMap(targetVerseText)
+
+  if (!full.normalized || !target.normalized) return null
+
+  const startInNormalized = full.normalized.indexOf(target.normalized)
+  if (startInNormalized === -1) return null
+
+  const endInNormalized = startInNormalized + target.normalized.length - 1
+
+  const start = full.map[startInNormalized]
+  const endCharIndex = full.map[endInNormalized]
+
+  if (typeof start !== 'number' || typeof endCharIndex !== 'number') return null
+
+  return {
+    start,
+    end: endCharIndex + 1,
+  }
+}
+
+function findTargetVerseRangeByAnchors(fullText: string, targetVerseText: string): Range | null {
+  const anchors = buildAnchorPhrases(targetVerseText)
   if (!anchors) return null
 
   const fullWords = buildWordIndex(fullText)
@@ -154,6 +192,18 @@ function findTargetVerseRange(fullText: string, targetVerseText?: string): Range
   if (typeof start !== 'number' || typeof end !== 'number') return null
 
   return { start, end }
+}
+
+function findTargetVerseRange(fullText: string, targetVerseText?: string): Range | null {
+  const cleanedTarget = normalizeWhitespace(String(targetVerseText ?? ''))
+  if (!cleanedTarget) return null
+
+  const exactNormalizedMatch = findTargetVerseRangeByNormalizedString(fullText, cleanedTarget)
+  if (exactNormalizedMatch) {
+    return exactNormalizedMatch
+  }
+
+  return findTargetVerseRangeByAnchors(fullText, cleanedTarget)
 }
 
 function rangesOverlap(aStart: number, aEnd: number, bStart: number, bEnd: number) {
