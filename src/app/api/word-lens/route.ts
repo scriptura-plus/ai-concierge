@@ -123,39 +123,42 @@ function cleanNodeKind(value: unknown): WordLensNodeKind {
 function sanitizeNodes(value: unknown): WordLensNode[] {
   if (!Array.isArray(value)) return []
 
-  return value
-    .map((item, index) => {
-      const raw = item as Partial<WordLensNode>
+  const result: WordLensNode[] = []
 
-      const label = isNonEmptyString(raw?.label) ? raw.label.trim() : ''
-      const original = isNonEmptyString(raw?.original) ? raw.original.trim() : ''
-      const semantic_core = isNonEmptyString(raw?.semantic_core)
-        ? raw.semantic_core.trim()
-        : ''
-      const why_it_matters = isNonEmptyString(raw?.why_it_matters)
-        ? raw.why_it_matters.trim()
-        : ''
-      const dig_deeper = isNonEmptyString(raw?.dig_deeper) ? raw.dig_deeper.trim() : ''
+  value.forEach((item, index) => {
+    const raw = item as Partial<WordLensNode>
 
-      if (!label || !original || !semantic_core || !why_it_matters || !dig_deeper) {
-        return null
-      }
+    const label = isNonEmptyString(raw?.label) ? raw.label.trim() : ''
+    const original = isNonEmptyString(raw?.original) ? raw.original.trim() : ''
+    const semantic_core = isNonEmptyString(raw?.semantic_core)
+      ? raw.semantic_core.trim()
+      : ''
+    const why_it_matters = isNonEmptyString(raw?.why_it_matters)
+      ? raw.why_it_matters.trim()
+      : ''
+    const dig_deeper = isNonEmptyString(raw?.dig_deeper)
+      ? raw.dig_deeper.trim()
+      : ''
 
-      return {
-        id: isNonEmptyString(raw?.id) ? raw.id.trim() : `node_${index + 1}`,
-        kind: cleanNodeKind(raw?.kind),
-        label,
-        original,
-        transliteration: isNonEmptyString(raw?.transliteration)
-          ? raw.transliteration.trim()
-          : '',
-        semantic_core,
-        why_it_matters,
-        dig_deeper,
-      }
+    if (!label || !original || !semantic_core || !why_it_matters || !dig_deeper) {
+      return
+    }
+
+    result.push({
+      id: isNonEmptyString(raw?.id) ? raw.id.trim() : `node_${index + 1}`,
+      kind: cleanNodeKind(raw?.kind),
+      label,
+      original,
+      transliteration: isNonEmptyString(raw?.transliteration)
+        ? raw.transliteration.trim()
+        : '',
+      semantic_core,
+      why_it_matters,
+      dig_deeper,
     })
-    .filter((item): item is WordLensNode => item !== null)
-    .slice(0, 7)
+  })
+
+  return result.slice(0, 7)
 }
 
 function sanitizeArticle(value: unknown): WordLensArticlePayload | null {
