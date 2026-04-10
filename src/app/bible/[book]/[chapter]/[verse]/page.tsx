@@ -144,6 +144,7 @@ type NarrowContextDirection = {
 }
 
 type NarrowContextPayload = {
+  verseText?: string
   paragraph: {
     reference: string
     full_text: string
@@ -1832,6 +1833,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       }
 
       setNarrowContextData({
+        verseText: String(data.verseText ?? ''),
         paragraph: {
           reference: String(data.paragraph.reference ?? ''),
           full_text: String(data.paragraph.full_text ?? ''),
@@ -2847,7 +2849,7 @@ export default function VerseDetailPage({ params }: PageProps) {
           copyFailedLabel={t.copyFailed}
           shareStatus={narrowShareStatus}
           copyStatus={narrowCopyStatus}
-          targetVerseText={displayedVerseText}
+          targetVerseText={narrowContextData?.verseText || displayedVerseText}
           onRetry={() => {
             void loadNarrowContext(true, appLanguage)
           }}
