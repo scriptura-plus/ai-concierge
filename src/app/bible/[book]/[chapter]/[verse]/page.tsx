@@ -14,6 +14,8 @@ import NarrowContextView from './components/NarrowContextView'
 import NarrowContextArticleView from './components/NarrowContextArticleView'
 import WordLensView from './components/WordLensView'
 import WordLensArticleView from './components/WordLensArticleView'
+import TensionLensView from './components/TensionLensView'
+import TensionLensArticleView from './components/TensionLensArticleView'
 
 type PageProps = {
   params: Promise<{
@@ -216,6 +218,53 @@ type WordLensArticleApiResponse = {
   reference?: string
   targetLanguage?: AppLanguage
   article?: WordLensArticle
+  error?: string
+  raw?: string
+}
+
+type TensionNodeKind =
+  | 'contrast'
+  | 'paradox'
+  | 'reversal'
+  | 'shock'
+  | 'pressure'
+  | 'collision'
+
+type TensionLensNode = {
+  id: string
+  kind: TensionNodeKind
+  label: string
+  tension_line: string
+  what_feels_strange: string
+  why_it_matters: string
+  dig_deeper: string
+}
+
+type TensionLensPayload = {
+  lead: string
+  nodes: TensionLensNode[]
+}
+
+type TensionLensMapApiResponse = {
+  reference?: string
+  targetLanguage?: AppLanguage
+  lead?: string
+  nodes?: TensionLensNode[]
+  error?: string
+  raw?: string
+}
+
+type TensionLensArticle = {
+  title: string
+  lead: string
+  body: string[]
+  highlight_line?: string
+}
+
+type TensionLensArticleApiResponse = {
+  reference?: string
+  targetLanguage?: AppLanguage
+  article?: TensionLensArticle
   error?: string
   raw?: string
 }
@@ -1118,6 +1167,14 @@ function emptyWordLensArticleMap(): Record<AppLanguage, WordLensArticle | null> 
   return { en: null, ru: null, es: null, fr: null, de: null }
 }
 
+function emptyTensionLensMap(): Record<AppLanguage, TensionLensPayload | null> {
+  return { en: null, ru: null, es: null, fr: null, de: null }
+}
+
+function emptyTensionLensArticleMap(): Record<AppLanguage, TensionLensArticle | null> {
+  return { en: null, ru: null, es: null, fr: null, de: null }
+}
+
 function formatBookLabel(bookSlug: string) {
   return bookSlug
     .split('-')
@@ -1196,18 +1253,22 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [insightsError, setInsightsError] = useState('')
   const [rawOutput, setRawOutput] = useState('')
 
-  const [wordLensCardsByLanguage, setWordLensCardsByLanguage] =
-    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
-  const [tensionLensCardsByLanguage, setTensionLensCardsByLanguage] =
-    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
   const [phraseLensCardsByLanguage, setPhraseLensCardsByLanguage] =
     useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
+
   const [wordLensDataByLanguage, setWordLensDataByLanguage] =
     useState<Record<AppLanguage, WordLensPayload | null>>(emptyWordLensMap())
   const [wordLensArticleByLanguage, setWordLensArticleByLanguage] =
     useState<Record<AppLanguage, WordLensArticle | null>>(emptyWordLensArticleMap())
   const [activeWordLensNodeId, setActiveWordLensNodeId] = useState('')
   const [wordLensCustomPrompt, setWordLensCustomPrompt] = useState('')
+
+  const [tensionLensDataByLanguage, setTensionLensDataByLanguage] =
+    useState<Record<AppLanguage, TensionLensPayload | null>>(emptyTensionLensMap())
+  const [tensionLensArticleByLanguage, setTensionLensArticleByLanguage] =
+    useState<Record<AppLanguage, TensionLensArticle | null>>(emptyTensionLensArticleMap())
+  const [activeTensionNodeId, setActiveTensionNodeId] = useState('')
+  const [tensionLensCustomPrompt, setTensionLensCustomPrompt] = useState('')
 
   const [compareByLanguage, setCompareByLanguage] =
     useState<Record<AppLanguage, ComparePayload | null>>(emptyCompareMap())
@@ -1252,6 +1313,15 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [tensionLensLoading, setTensionLensLoading] = useState(false)
   const [tensionLensError, setTensionLensError] = useState('')
+  const [tensionLensCopyStatus, setTensionLensCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [tensionLensShareStatus, setTensionLensShareStatus] = useState('')
+  const [tensionLensArticleLoading, setTensionLensArticleLoading] = useState(false)
+  const [tensionLensArticleError, setTensionLensArticleError] = useState('')
+  const [tensionLensArticleCopyStatus, setTensionLensArticleCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [tensionLensArticleShareStatus, setTensionLensArticleShareStatus] = useState('')
+
   const [phraseLensLoading, setPhraseLensLoading] = useState(false)
   const [phraseLensError, setPhraseLensError] = useState('')
 
@@ -1284,6 +1354,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const wordLensRequestIdRef = useRef(0)
   const wordLensArticleRequestIdRef = useRef(0)
   const tensionLensRequestIdRef = useRef(0)
+  const tensionLensArticleRequestIdRef = useRef(0)
   const phraseLensRequestIdRef = useRef(0)
   const verseRequestIdRef = useRef(0)
   const insightsRequestIdRef = useRef(0)
@@ -1348,9 +1419,9 @@ export default function VerseDetailPage({ params }: PageProps) {
       setInsightsStage('idle')
       setInsightsError('')
       setRawOutput('')
-      setWordLensCardsByLanguage(emptyLensMap())
-      setTensionLensCardsByLanguage(emptyLensMap())
+
       setPhraseLensCardsByLanguage(emptyLensMap())
+
       setWordLensDataByLanguage(emptyWordLensMap())
       setWordLensArticleByLanguage(emptyWordLensArticleMap())
       setActiveWordLensNodeId('')
@@ -1361,6 +1432,18 @@ export default function VerseDetailPage({ params }: PageProps) {
       setWordLensArticleError('')
       setWordLensArticleCopyStatus('idle')
       setWordLensArticleShareStatus('')
+
+      setTensionLensDataByLanguage(emptyTensionLensMap())
+      setTensionLensArticleByLanguage(emptyTensionLensArticleMap())
+      setActiveTensionNodeId('')
+      setTensionLensCustomPrompt('')
+      setTensionLensCopyStatus('idle')
+      setTensionLensShareStatus('')
+      setTensionLensArticleLoading(false)
+      setTensionLensArticleError('')
+      setTensionLensArticleCopyStatus('idle')
+      setTensionLensArticleShareStatus('')
+
       setCompareByLanguage(emptyCompareMap())
       setContextByLanguage(emptyContextMap())
       setCompareError('')
@@ -1405,6 +1488,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       wordLensRequestIdRef.current += 1
       wordLensArticleRequestIdRef.current += 1
       tensionLensRequestIdRef.current += 1
+      tensionLensArticleRequestIdRef.current += 1
       phraseLensRequestIdRef.current += 1
       insightsRequestIdRef.current += 1
 
@@ -1544,21 +1628,11 @@ export default function VerseDetailPage({ params }: PageProps) {
   }, [book, chapter, verse, verseText])
 
   const currentCards = useMemo(() => {
-    if (activeTab === 'lens' && selectedLens === 'tension') {
-      return tensionLensCardsByLanguage[appLanguage] || []
-    }
     if (activeTab === 'lens' && selectedLens === 'phrase') {
       return phraseLensCardsByLanguage[appLanguage] || []
     }
     return insights
-  }, [
-    activeTab,
-    selectedLens,
-    appLanguage,
-    tensionLensCardsByLanguage,
-    phraseLensCardsByLanguage,
-    insights,
-  ])
+  }, [activeTab, selectedLens, appLanguage, phraseLensCardsByLanguage, insights])
 
   const currentInsight = useMemo(() => currentCards[currentIndex], [currentCards, currentIndex])
 
@@ -1577,16 +1651,31 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const compareData = useMemo(() => compareByLanguage[appLanguage], [compareByLanguage, appLanguage])
   const contextData = useMemo(() => contextByLanguage[appLanguage], [contextByLanguage, appLanguage])
+
   const wordLensData = useMemo(() => wordLensDataByLanguage[appLanguage], [wordLensDataByLanguage, appLanguage])
   const wordLensArticle = useMemo(
     () => wordLensArticleByLanguage[appLanguage],
     [wordLensArticleByLanguage, appLanguage]
   )
 
+  const tensionLensData = useMemo(
+    () => tensionLensDataByLanguage[appLanguage],
+    [tensionLensDataByLanguage, appLanguage]
+  )
+  const tensionLensArticle = useMemo(
+    () => tensionLensArticleByLanguage[appLanguage],
+    [tensionLensArticleByLanguage, appLanguage]
+  )
+
   const activeWordLensNode = useMemo(() => {
     if (!wordLensData || !activeWordLensNodeId) return null
     return wordLensData.nodes.find((item) => item.id === activeWordLensNodeId) ?? null
   }, [wordLensData, activeWordLensNodeId])
+
+  const activeTensionNode = useMemo(() => {
+    if (!tensionLensData || !activeTensionNodeId) return null
+    return tensionLensData.nodes.find((item) => item.id === activeTensionNodeId) ?? null
+  }, [tensionLensData, activeTensionNodeId])
 
   const activeNarrowDirection = useMemo(() => {
     if (!narrowContextData || !activeNarrowDirectionId) return null
@@ -1812,13 +1901,12 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   async function loadTensionLens(force = false, language: AppLanguage = appLanguage) {
     if (!formattedReference || !verseText || !modesReady) return
-    if (!force && tensionLensCardsByLanguage[language]?.length > 0) return
+    if (!force && tensionLensDataByLanguage[language]) return
 
     const requestId = ++tensionLensRequestIdRef.current
 
     setTensionLensLoading(true)
     setTensionLensError('')
-    setCurrentIndex(0)
     setActiveArticleKey('')
 
     try {
@@ -1829,27 +1917,136 @@ export default function VerseDetailPage({ params }: PageProps) {
           reference: formattedReference,
           verseText,
           targetLanguage: language,
+          mode: 'map',
         }),
       })
 
-      const data = (await res.json()) as { cards?: InsightItem[]; error?: string }
+      const data: TensionLensMapApiResponse = await res.json()
 
       if (requestId !== tensionLensRequestIdRef.current) return
 
-      if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
+      if (!res.ok || !Array.isArray(data.nodes) || data.nodes.length === 0 || typeof data.lead !== 'string') {
         setTensionLensError(data.error || UI_TEXT[language].tensionLensUnavailable)
-        setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
+        setTensionLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
         return
       }
 
-      setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
+      setTensionLensDataByLanguage((prev) => ({
+        ...prev,
+        [language]: {
+          lead: data.lead as string,
+          nodes: data.nodes as TensionLensNode[],
+        },
+      }))
     } catch {
       if (requestId !== tensionLensRequestIdRef.current) return
       setTensionLensError(UI_TEXT[language].tensionLensUnavailable)
-      setTensionLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
+      setTensionLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
     } finally {
       if (requestId === tensionLensRequestIdRef.current) {
         setTensionLensLoading(false)
+      }
+    }
+  }
+
+  async function loadTensionLensDeepDive(
+    node: TensionLensNode,
+    force = false,
+    language: AppLanguage = appLanguage
+  ) {
+    if (!formattedReference || !verseText) return
+    if (!force && tensionLensArticle && activeTensionNodeId === node.id) return
+
+    const requestId = ++tensionLensArticleRequestIdRef.current
+
+    setTensionLensArticleLoading(true)
+    setTensionLensArticleError('')
+    setActiveTensionNodeId(node.id)
+    setTensionLensArticleCopyStatus('idle')
+    setTensionLensArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/tension-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'deep_dive',
+          node,
+        }),
+      })
+
+      const data: TensionLensArticleApiResponse = await res.json()
+
+      if (requestId !== tensionLensArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setTensionLensArticleError(data.error || UI_TEXT[language].tensionLensUnavailable)
+        return
+      }
+
+      setTensionLensArticleByLanguage((prev) => ({
+        ...prev,
+        [language]: data.article as TensionLensArticle,
+      }))
+    } catch {
+      if (requestId !== tensionLensArticleRequestIdRef.current) return
+      setTensionLensArticleError(UI_TEXT[language].tensionLensUnavailable)
+    } finally {
+      if (requestId === tensionLensArticleRequestIdRef.current) {
+        setTensionLensArticleLoading(false)
+      }
+    }
+  }
+
+  async function loadTensionLensCustomDig(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText) return
+    const prompt = tensionLensCustomPrompt.trim()
+    if (!prompt) return
+    if (!force && tensionLensArticle && activeTensionNodeId === 'custom') return
+
+    const requestId = ++tensionLensArticleRequestIdRef.current
+
+    setTensionLensArticleLoading(true)
+    setTensionLensArticleError('')
+    setActiveTensionNodeId('custom')
+    setTensionLensArticleCopyStatus('idle')
+    setTensionLensArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/tension-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'custom_dig',
+          prompt,
+        }),
+      })
+
+      const data: TensionLensArticleApiResponse = await res.json()
+
+      if (requestId !== tensionLensArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setTensionLensArticleError(data.error || UI_TEXT[language].tensionLensUnavailable)
+        return
+      }
+
+      setTensionLensArticleByLanguage((prev) => ({
+        ...prev,
+        [language]: data.article as TensionLensArticle,
+      }))
+    } catch {
+      if (requestId !== tensionLensArticleRequestIdRef.current) return
+      setTensionLensArticleError(UI_TEXT[language].tensionLensUnavailable)
+    } finally {
+      if (requestId === tensionLensArticleRequestIdRef.current) {
+        setTensionLensArticleLoading(false)
       }
     }
   }
@@ -2138,6 +2335,10 @@ export default function VerseDetailPage({ params }: PageProps) {
     setWordLensShareStatus('')
     setWordLensArticleCopyStatus('idle')
     setWordLensArticleShareStatus('')
+    setTensionLensCopyStatus('idle')
+    setTensionLensShareStatus('')
+    setTensionLensArticleCopyStatus('idle')
+    setTensionLensArticleShareStatus('')
 
     if (targetLanguage === 'en') {
       setAppLanguage('en')
@@ -2207,6 +2408,18 @@ export default function VerseDetailPage({ params }: PageProps) {
       setWordLensShareStatus('')
       setWordLensArticleCopyStatus('idle')
       setWordLensArticleShareStatus('')
+    }
+
+    if (activeTab === 'lens' && selectedLens === 'tension') {
+      setTensionLensDataByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
+      setTensionLensArticleByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
+      setActiveTensionNodeId('')
+      setTensionLensArticleError('')
+      setTensionLensArticleLoading(false)
+      setTensionLensCopyStatus('idle')
+      setTensionLensShareStatus('')
+      setTensionLensArticleCopyStatus('idle')
+      setTensionLensArticleShareStatus('')
     }
 
     setAppLanguage(targetLanguage)
@@ -2339,11 +2552,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const narrowShareText = useMemo(() => {
     if (!narrowContextData) return ''
-    return [
-      narrowContextData.paragraph.reference,
-      '',
-      narrowContextData.paragraph.full_text,
-    ]
+    return [narrowContextData.paragraph.reference, '', narrowContextData.paragraph.full_text]
       .filter(Boolean)
       .join('\n')
   }, [narrowContextData])
@@ -2399,6 +2608,42 @@ export default function VerseDetailPage({ params }: PageProps) {
       .filter(Boolean)
       .join('\n')
   }, [wordLensArticle, formattedReference])
+
+  const tensionLensShareText = useMemo(() => {
+    if (!tensionLensData || !formattedReference) return ''
+    return [
+      formattedReference,
+      '',
+      tensionLensData.lead,
+      '',
+      ...tensionLensData.nodes.flatMap((node) => [
+        node.label,
+        node.tension_line,
+        node.what_feels_strange,
+        node.why_it_matters,
+        node.dig_deeper,
+        '',
+      ]),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [tensionLensData, formattedReference])
+
+  const tensionLensArticleShareText = useMemo(() => {
+    if (!tensionLensArticle || !formattedReference) return ''
+    return [
+      formattedReference,
+      '',
+      tensionLensArticle.title,
+      '',
+      tensionLensArticle.lead,
+      '',
+      ...tensionLensArticle.body,
+      ...(tensionLensArticle.highlight_line ? ['', tensionLensArticle.highlight_line] : []),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [tensionLensArticle, formattedReference])
 
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
@@ -2716,6 +2961,72 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function handleCopyTensionLens() {
+    if (!tensionLensShareText) return
+
+    try {
+      await navigator.clipboard.writeText(tensionLensShareText)
+      setTensionLensCopyStatus('copied')
+      setTensionLensShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setTensionLensCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setTensionLensCopyStatus('failed')
+    }
+  }
+
+  async function handleShareTensionLens() {
+    if (!tensionLensShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: tensionLensShareText })
+        setTensionLensShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(tensionLensShareText)
+        setTensionLensShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setTensionLensShareStatus('')
+    }
+  }
+
+  async function handleCopyTensionLensArticle() {
+    if (!tensionLensArticleShareText) return
+
+    try {
+      await navigator.clipboard.writeText(tensionLensArticleShareText)
+      setTensionLensArticleCopyStatus('copied')
+      setTensionLensArticleShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setTensionLensArticleCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setTensionLensArticleCopyStatus('failed')
+    }
+  }
+
+  async function handleShareTensionLensArticle() {
+    if (!tensionLensArticleShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: tensionLensArticleShareText })
+        setTensionLensArticleShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(tensionLensArticleShareText)
+        setTensionLensArticleShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setTensionLensArticleShareStatus('')
+    }
+  }
+
   function handleCompareBackToTop() {
     if (articleTopRef.current) {
       articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -2814,6 +3125,13 @@ export default function VerseDetailPage({ params }: PageProps) {
       setWordLensArticleByLanguage(emptyWordLensArticleMap())
       setWordLensArticleError('')
       setWordLensCustomPrompt('')
+    }
+
+    if (lens === 'tension') {
+      setActiveTensionNodeId('')
+      setTensionLensArticleByLanguage(emptyTensionLensArticleMap())
+      setTensionLensArticleError('')
+      setTensionLensCustomPrompt('')
     }
 
     if (lens === 'translation') await loadCompare(false, appLanguage)
@@ -3083,32 +3401,94 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     if (selectedLens === 'tension') {
-      if (tensionLensLoading) {
+      if (activeTensionNodeId) {
         return (
-          <ModeStateCard
-            title={t.loadingTensionLens}
+          <TensionLensArticleView
+            article={tensionLensArticle}
+            isLoading={tensionLensArticleLoading}
+            error={tensionLensArticleError}
+            articleLabel={t.tension}
             loadingLabel={t.loadingTensionLens}
             loadingText={t.loadingTensionLensText}
-          />
-        )
-      }
-
-      if (tensionLensError) {
-        return (
-          <ModeStateCard
-            badgeLabel={lensBadgeLabel('tension', t)}
-            changeLabel={t.change}
-            onChange={() => setLensSheetOpen(true)}
-            error={tensionLensError}
-            retryLabel={t.tryAgain}
+            unavailableLabel={t.tensionLensUnavailable}
+            backLabel={t.backToMeanings}
+            shareLabel={t.share}
+            copiedLabel={t.copied}
+            copyLabel={t.copy}
+            copyFailedLabel={t.copyFailed}
+            shareStatus={tensionLensArticleShareStatus}
+            copyStatus={tensionLensArticleCopyStatus}
+            tryAgainLabel={t.tryAgain}
+            onBack={() => {
+              setActiveTensionNodeId('')
+              setTensionLensArticleByLanguage((prev) => ({ ...prev, [appLanguage]: null }))
+              setTensionLensArticleError('')
+              setTensionLensArticleLoading(false)
+              setTensionLensArticleCopyStatus('idle')
+              setTensionLensArticleShareStatus('')
+              articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            onCopy={() => {
+              void handleCopyTensionLensArticle()
+            }}
+            onShare={() => {
+              void handleShareTensionLensArticle()
+            }}
             onRetry={() => {
-              void loadTensionLens(true, appLanguage)
+              if (activeTensionNode && activeTensionNodeId !== 'custom') {
+                void loadTensionLensDeepDive(activeTensionNode, true, appLanguage)
+              } else if (activeTensionNodeId === 'custom') {
+                void loadTensionLensCustomDig(true, appLanguage)
+              }
             }}
           />
         )
       }
 
-      return renderSharedCardStack()
+      return (
+        <TensionLensView
+          isReady={modesReady}
+          isLoading={tensionLensLoading}
+          error={tensionLensError}
+          data={tensionLensData}
+          title={t.tension}
+          leadFallback={t.tensionHelper}
+          takeawayFallback={t.lensTakeawayDefault}
+          pointLabel={t.lensPointLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.loadingTensionLens}
+          loadingText={t.loadingTensionLensText}
+          unavailableLabel={t.tensionLensUnavailable}
+          tryAgainLabel={t.tryAgain}
+          changeLabel={t.change}
+          copyLabel={t.copy}
+          copiedLabel={t.copied}
+          copyFailedLabel={t.copyFailed}
+          shareLabel={t.share}
+          shareStatus={tensionLensShareStatus}
+          copyStatus={tensionLensCopyStatus}
+          customPromptValue={tensionLensCustomPrompt}
+          onCustomPromptChange={setTensionLensCustomPrompt}
+          onRetry={() => {
+            void loadTensionLens(true, appLanguage)
+          }}
+          onChangeMode={() => setLensSheetOpen(true)}
+          onCopy={() => {
+            void handleCopyTensionLens()
+          }}
+          onShare={() => {
+            void handleShareTensionLens()
+          }}
+          onNodeSelect={(nodeId) => {
+            const node = tensionLensData?.nodes.find((item) => item.id === nodeId)
+            if (!node) return
+            void loadTensionLensDeepDive(node, true, appLanguage)
+          }}
+          onCustomDig={() => {
+            void loadTensionLensCustomDig(true, appLanguage)
+          }}
+        />
+      )
     }
 
     if (selectedLens === 'phrase') {
