@@ -433,32 +433,6 @@ export default function WordLensView({
           ) : (
             <p className="text-[1rem] leading-8 text-stone-800">{data.lead}</p>
           )}
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onCopy}
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700"
-            >
-              {copyStatus === 'copied'
-                ? copiedLabel
-                : copyStatus === 'failed'
-                  ? copyFailedLabel
-                  : copyLabel}
-            </button>
-
-            <button
-              type="button"
-              onClick={onShare}
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700"
-            >
-              {shareLabel}
-            </button>
-
-            {shareStatus ? (
-              <span className="self-center text-sm text-stone-500">{shareStatus}</span>
-            ) : null}
-          </div>
         </div>
       </div>
 
