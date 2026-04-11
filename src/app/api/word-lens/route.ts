@@ -362,22 +362,65 @@ ${prompt}
 `.trim()
 }
 
+function extractFirstStringDeep(value: unknown, depth = 0): string | null {
+  if (depth > 6) return null
+
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = extractFirstStringDeep(item, depth + 1)
+      if (found) return found
+    }
+    return null
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    const priorityKeys = [
+      'text',
+      'content',
+      'output_text',
+      'output',
+      'response',
+      'message',
+      'completion',
+      'result',
+      'answer',
+    ]
+
+    for (const key of priorityKeys) {
+      if (key in record) {
+        const found = extractFirstStringDeep(record[key], depth + 1)
+        if (found) return found
+      }
+    }
+
+    for (const nested of Object.values(record)) {
+      const found = extractFirstStringDeep(nested, depth + 1)
+      if (found) return found
+    }
+  }
+
+  return null
+}
+
 async function callModel(system: string, prompt: string) {
   const combinedPrompt = buildCombinedPrompt(system, prompt)
-
   const result = await runModel({
     prompt: combinedPrompt,
   })
 
-  if (typeof result === 'string') return result
+  const extracted = extractFirstStringDeep(result)
+  if (extracted) return extracted
 
-  if (result && typeof result === 'object') {
-    if ('text' in result && typeof result.text === 'string') return result.text
-    if ('content' in result && typeof result.content === 'string') return result.content
-    if ('output' in result && typeof result.output === 'string') return result.output
-  }
-
-  throw new Error('Model returned an unsupported response format.')
+  throw new Error(
+    `Model returned an unsupported response format: ${JSON.stringify(result).slice(0, 1200)}`
+  )
 }
 
 export async function POST(req: Request) {
