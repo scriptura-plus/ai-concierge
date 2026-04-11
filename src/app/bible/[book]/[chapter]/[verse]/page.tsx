@@ -12,6 +12,8 @@ import CardStackView from './components/CardStackView'
 import ModeStateCard from './components/ModeStateCard'
 import NarrowContextView from './components/NarrowContextView'
 import NarrowContextArticleView from './components/NarrowContextArticleView'
+import WordLensView from './components/WordLensView'
+import WordLensArticleView from './components/WordLensArticleView'
 
 type PageProps = {
   params: Promise<{
@@ -61,12 +63,6 @@ type ArticlePayload = {
 
 type UnfoldApiResponse = {
   article?: ArticlePayload
-  error?: string
-  raw?: string
-}
-
-type LensApiResponse = {
-  cards?: InsightItem[]
   error?: string
   raw?: string
 }
@@ -195,12 +191,12 @@ type WordLensNode = {
   dig_deeper: string
 }
 
-type WordLensMapPayload = {
+type WordLensPayload = {
   lead: string
   nodes: WordLensNode[]
 }
 
-type WordLensMapResponse = {
+type WordLensMapApiResponse = {
   reference?: string
   targetLanguage?: AppLanguage
   lead?: string
@@ -209,17 +205,17 @@ type WordLensMapResponse = {
   raw?: string
 }
 
-type WordLensArticlePayload = {
+type WordLensArticle = {
   title: string
   lead: string
   body: string[]
   highlight_line?: string
 }
 
-type WordLensArticleResponse = {
+type WordLensArticleApiResponse = {
   reference?: string
   targetLanguage?: AppLanguage
-  article?: WordLensArticlePayload
+  article?: WordLensArticle
   error?: string
   raw?: string
 }
@@ -1102,74 +1098,6 @@ const UI_TEXT: Record<
   },
 }
 
-function wordLensUi(language: AppLanguage) {
-  if (language === 'ru') {
-    return {
-      title: 'Слово',
-      introKicker: 'ЛИНЗА 1',
-      buildMap: 'Построить карту слов',
-      buildMapHelper:
-        'Эта линза строит semantic map стиха и показывает 5–7 ключевых слов или выражений, которые реально несут смысловую нагрузку.',
-      buildMapHelper2:
-        'Из любого узла можно сразу пойти в глубокое word-study исследование или задать своё направление “куда копать”.',
-      nodeKicker: 'УЗЕЛ',
-      versePhraseLabel: 'СЛОВО / ВЫРАЖЕНИЕ В СТИХЕ',
-      originalLabel: 'ИСХОДНОЕ СЛОВО',
-      semanticCoreLabel: 'SEMANTIC CORE',
-      whyLabel: 'ПОЧЕМУ ЭТО ВАЖНО',
-      digLabel: 'КУДА КОПАТЬ ДАЛЬШЕ',
-      digDeeper: 'Копать глубже',
-      customDigTitle: 'Куда копать',
-      customDigPlaceholder:
-        'Опиши, куда именно копать по этому узлу. Например: как это слово понималось в I веке, есть ли здесь идиома, как оно используется у этого автора, почему выбрана именно такая формулировка?',
-      customDigButton: 'Сгенерировать исследование',
-      openCurrentArticle: 'Открыто текущее исследование',
-      articleKicker: 'ГЛУБОКОЕ ИССЛЕДОВАНИЕ',
-      emptyLead:
-        'Эта линза помогает найти смысловые узлы стиха: важные слова, выражения, формулы и необычные обороты, через которые текст открывается глубже.',
-      emptyTakeaway:
-        'Сначала строится карта слов. Затем можно выбрать узел и углубиться именно по нему.',
-      noNodes: 'Пока нет карты слов для этого стиха.',
-      noNodeSelected: 'Сначала выбери один узел из карты слов.',
-      articleCopied: 'Исследование скопировано',
-      articleShared: 'Исследование отправлено',
-      shareUnavailableCopied: 'Поделиться нельзя — исследование скопировано',
-    }
-  }
-
-  return {
-    title: 'Word',
-    introKicker: 'LENS 1',
-    buildMap: 'Build word map',
-    buildMapHelper:
-      'This lens builds a semantic map of the verse and surfaces 5–7 words or expressions that truly carry meaning-weight.',
-    buildMapHelper2:
-      'From any node you can go straight into a deep word-study article or set your own custom digging direction.',
-    nodeKicker: 'NODE',
-    versePhraseLabel: 'WORD / EXPRESSION IN THE VERSE',
-    originalLabel: 'ORIGINAL WORDING',
-    semanticCoreLabel: 'SEMANTIC CORE',
-    whyLabel: 'WHY THIS MATTERS',
-    digLabel: 'WHERE TO DIG NEXT',
-    digDeeper: 'Dig deeper',
-    customDigTitle: 'Where to dig',
-    customDigPlaceholder:
-      'Describe where you want to dig on this node. For example: how this word was heard in the first century, whether it may be idiomatic, how this author uses it elsewhere, or why this exact phrasing was chosen.',
-    customDigButton: 'Generate study',
-    openCurrentArticle: 'Current study open',
-    articleKicker: 'DEEP WORD STUDY',
-    emptyLead:
-      'This lens helps the verse open through its meaning-bearing words and phrases: key expressions, formulas, idioms, and semantic pivots.',
-    emptyTakeaway:
-      'First build the word map. Then choose one node and go deeper into it.',
-    noNodes: 'No word map is available for this verse yet.',
-    noNodeSelected: 'Choose one node from the map first.',
-    articleCopied: 'Study copied',
-    articleShared: 'Study shared',
-    shareUnavailableCopied: 'Share unavailable — study copied',
-  }
-}
-
 function emptyLensMap(): Record<AppLanguage, InsightItem[]> {
   return { en: [], ru: [], es: [], fr: [], de: [] }
 }
@@ -1182,7 +1110,11 @@ function emptyContextMap(): Record<AppLanguage, ContextPayload | null> {
   return { en: null, ru: null, es: null, fr: null, de: null }
 }
 
-function emptyWordLensMapRecord(): Record<AppLanguage, WordLensMapPayload | null> {
+function emptyWordLensMap(): Record<AppLanguage, WordLensPayload | null> {
+  return { en: null, ru: null, es: null, fr: null, de: null }
+}
+
+function emptyWordLensArticleMap(): Record<AppLanguage, WordLensArticle | null> {
   return { en: null, ru: null, es: null, fr: null, de: null }
 }
 
@@ -1264,21 +1196,19 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [insightsError, setInsightsError] = useState('')
   const [rawOutput, setRawOutput] = useState('')
 
-  const [wordLensMapByLanguage, setWordLensMapByLanguage] =
-    useState<Record<AppLanguage, WordLensMapPayload | null>>(emptyWordLensMapRecord())
-  const [activeWordLensNodeId, setActiveWordLensNodeId] = useState('')
-  const [wordLensArticle, setWordLensArticle] = useState<WordLensArticlePayload | null>(null)
-  const [wordLensArticleLoading, setWordLensArticleLoading] = useState(false)
-  const [wordLensArticleError, setWordLensArticleError] = useState('')
-  const [wordLensCustomPrompt, setWordLensCustomPrompt] = useState('')
-  const [wordLensArticleCopyStatus, setWordLensArticleCopyStatus] =
-    useState<'idle' | 'copied' | 'failed'>('idle')
-  const [wordLensArticleShareStatus, setWordLensArticleShareStatus] = useState('')
-
+  const [wordLensCardsByLanguage, setWordLensCardsByLanguage] =
+    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
   const [tensionLensCardsByLanguage, setTensionLensCardsByLanguage] =
     useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
   const [phraseLensCardsByLanguage, setPhraseLensCardsByLanguage] =
     useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
+  const [wordLensDataByLanguage, setWordLensDataByLanguage] =
+    useState<Record<AppLanguage, WordLensPayload | null>>(emptyWordLensMap())
+  const [wordLensArticleByLanguage, setWordLensArticleByLanguage] =
+    useState<Record<AppLanguage, WordLensArticle | null>>(emptyWordLensArticleMap())
+  const [activeWordLensNodeId, setActiveWordLensNodeId] = useState('')
+  const [wordLensCustomPrompt, setWordLensCustomPrompt] = useState('')
+
   const [compareByLanguage, setCompareByLanguage] =
     useState<Record<AppLanguage, ComparePayload | null>>(emptyCompareMap())
   const [contextByLanguage, setContextByLanguage] =
@@ -1312,6 +1242,14 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [wordLensLoading, setWordLensLoading] = useState(false)
   const [wordLensError, setWordLensError] = useState('')
+  const [wordLensCopyStatus, setWordLensCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [wordLensShareStatus, setWordLensShareStatus] = useState('')
+  const [wordLensArticleLoading, setWordLensArticleLoading] = useState(false)
+  const [wordLensArticleError, setWordLensArticleError] = useState('')
+  const [wordLensArticleCopyStatus, setWordLensArticleCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [wordLensArticleShareStatus, setWordLensArticleShareStatus] = useState('')
+
   const [tensionLensLoading, setTensionLensLoading] = useState(false)
   const [tensionLensError, setTensionLensError] = useState('')
   const [phraseLensLoading, setPhraseLensLoading] = useState(false)
@@ -1351,7 +1289,6 @@ export default function VerseDetailPage({ params }: PageProps) {
   const insightsRequestIdRef = useRef(0)
 
   const t = UI_TEXT[appLanguage]
-  const wl = wordLensUi(appLanguage)
   const insightsBlockingLoad = insightsStage === 'loading_saved' && insights.length === 0
   const insightsBackgroundFill = insightsStage === 'filling'
   const modesReady = insights.length > 0
@@ -1411,16 +1348,19 @@ export default function VerseDetailPage({ params }: PageProps) {
       setInsightsStage('idle')
       setInsightsError('')
       setRawOutput('')
-      setWordLensMapByLanguage(emptyWordLensMapRecord())
-      setActiveWordLensNodeId('')
-      setWordLensArticle(null)
-      setWordLensArticleLoading(false)
-      setWordLensArticleError('')
-      setWordLensCustomPrompt('')
-      setWordLensArticleCopyStatus('idle')
-      setWordLensArticleShareStatus('')
+      setWordLensCardsByLanguage(emptyLensMap())
       setTensionLensCardsByLanguage(emptyLensMap())
       setPhraseLensCardsByLanguage(emptyLensMap())
+      setWordLensDataByLanguage(emptyWordLensMap())
+      setWordLensArticleByLanguage(emptyWordLensArticleMap())
+      setActiveWordLensNodeId('')
+      setWordLensCustomPrompt('')
+      setWordLensCopyStatus('idle')
+      setWordLensShareStatus('')
+      setWordLensArticleLoading(false)
+      setWordLensArticleError('')
+      setWordLensArticleCopyStatus('idle')
+      setWordLensArticleShareStatus('')
       setCompareByLanguage(emptyCompareMap())
       setContextByLanguage(emptyContextMap())
       setCompareError('')
@@ -1637,12 +1577,16 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const compareData = useMemo(() => compareByLanguage[appLanguage], [compareByLanguage, appLanguage])
   const contextData = useMemo(() => contextByLanguage[appLanguage], [contextByLanguage, appLanguage])
-  const wordLensMap = useMemo(() => wordLensMapByLanguage[appLanguage], [wordLensMapByLanguage, appLanguage])
+  const wordLensData = useMemo(() => wordLensDataByLanguage[appLanguage], [wordLensDataByLanguage, appLanguage])
+  const wordLensArticle = useMemo(
+    () => wordLensArticleByLanguage[appLanguage],
+    [wordLensArticleByLanguage, appLanguage]
+  )
 
   const activeWordLensNode = useMemo(() => {
-    if (!wordLensMap || !activeWordLensNodeId) return null
-    return wordLensMap.nodes.find((item) => item.id === activeWordLensNodeId) ?? null
-  }, [wordLensMap, activeWordLensNodeId])
+    if (!wordLensData || !activeWordLensNodeId) return null
+    return wordLensData.nodes.find((item) => item.id === activeWordLensNodeId) ?? null
+  }, [wordLensData, activeWordLensNodeId])
 
   const activeNarrowDirection = useMemo(() => {
     if (!narrowContextData || !activeNarrowDirectionId) return null
@@ -1716,7 +1660,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   async function loadWordLens(force = false, language: AppLanguage = appLanguage) {
     if (!formattedReference || !verseText || !modesReady) return
-    if (!force && wordLensMapByLanguage[language]) return
+    if (!force && wordLensDataByLanguage[language]) return
 
     const requestId = ++wordLensRequestIdRef.current
 
@@ -1736,30 +1680,27 @@ export default function VerseDetailPage({ params }: PageProps) {
         }),
       })
 
-      const data: WordLensMapResponse = await res.json()
+      const data: WordLensMapApiResponse = await res.json()
 
       if (requestId !== wordLensRequestIdRef.current) return
 
-      if (!res.ok || !Array.isArray(data.nodes) || data.nodes.length === 0) {
+      if (!res.ok || !Array.isArray(data.nodes) || data.nodes.length === 0 || typeof data.lead !== 'string') {
         setWordLensError(data.error || UI_TEXT[language].wordLensUnavailable)
-        setWordLensMapByLanguage((prev) => ({ ...prev, [language]: null }))
+        setWordLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
         return
       }
 
-      const payload: WordLensMapPayload = {
-        lead: typeof data.lead === 'string' ? data.lead : '',
-        nodes: data.nodes,
-      }
-
-      setWordLensMapByLanguage((prev) => ({ ...prev, [language]: payload }))
-
-      if (!activeWordLensNodeId && payload.nodes[0]?.id) {
-        setActiveWordLensNodeId(payload.nodes[0].id)
-      }
+      setWordLensDataByLanguage((prev) => ({
+        ...prev,
+        [language]: {
+          lead: data.lead as string,
+          nodes: data.nodes as WordLensNode[],
+        },
+      }))
     } catch {
       if (requestId !== wordLensRequestIdRef.current) return
       setWordLensError(UI_TEXT[language].wordLensUnavailable)
-      setWordLensMapByLanguage((prev) => ({ ...prev, [language]: null }))
+      setWordLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
     } finally {
       if (requestId === wordLensRequestIdRef.current) {
         setWordLensLoading(false)
@@ -1767,45 +1708,36 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
-  async function loadWordLensArticle(
-    mode: 'deep_dive' | 'custom_dig',
+  async function loadWordLensDeepDive(
+    node: WordLensNode,
+    force = false,
     language: AppLanguage = appLanguage
   ) {
-    if (!formattedReference || !verseText || !activeWordLensNode) return
+    if (!formattedReference || !verseText) return
+    if (!force && wordLensArticle && activeWordLensNodeId === node.id) return
 
     const requestId = ++wordLensArticleRequestIdRef.current
 
     setWordLensArticleLoading(true)
     setWordLensArticleError('')
-    setWordLensArticle(null)
+    setActiveWordLensNodeId(node.id)
     setWordLensArticleCopyStatus('idle')
     setWordLensArticleShareStatus('')
 
     try {
-      const body =
-        mode === 'deep_dive'
-          ? {
-              reference: formattedReference,
-              verseText,
-              targetLanguage: language,
-              mode: 'deep_dive',
-              node: activeWordLensNode,
-            }
-          : {
-              reference: formattedReference,
-              verseText,
-              targetLanguage: language,
-              mode: 'custom_dig',
-              prompt: wordLensCustomPrompt.trim(),
-            }
-
       const res = await fetch('/api/word-lens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'deep_dive',
+          node,
+        }),
       })
 
-      const data: WordLensArticleResponse = await res.json()
+      const data: WordLensArticleApiResponse = await res.json()
 
       if (requestId !== wordLensArticleRequestIdRef.current) return
 
@@ -1814,12 +1746,60 @@ export default function VerseDetailPage({ params }: PageProps) {
         return
       }
 
-      setWordLensArticle({
-        title: String(data.article.title ?? ''),
-        lead: String(data.article.lead ?? ''),
-        body: Array.isArray(data.article.body) ? data.article.body : [],
-        highlight_line: String(data.article.highlight_line ?? ''),
+      setWordLensArticleByLanguage((prev) => ({
+        ...prev,
+        [language]: data.article as WordLensArticle,
+      }))
+    } catch {
+      if (requestId !== wordLensArticleRequestIdRef.current) return
+      setWordLensArticleError(UI_TEXT[language].wordLensUnavailable)
+    } finally {
+      if (requestId === wordLensArticleRequestIdRef.current) {
+        setWordLensArticleLoading(false)
+      }
+    }
+  }
+
+  async function loadWordLensCustomDig(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText) return
+    const prompt = wordLensCustomPrompt.trim()
+    if (!prompt) return
+    if (!force && wordLensArticle && activeWordLensNodeId === 'custom') return
+
+    const requestId = ++wordLensArticleRequestIdRef.current
+
+    setWordLensArticleLoading(true)
+    setWordLensArticleError('')
+    setActiveWordLensNodeId('custom')
+    setWordLensArticleCopyStatus('idle')
+    setWordLensArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/word-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'custom_dig',
+          prompt,
+        }),
       })
+
+      const data: WordLensArticleApiResponse = await res.json()
+
+      if (requestId !== wordLensArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setWordLensArticleError(data.error || UI_TEXT[language].wordLensUnavailable)
+        return
+      }
+
+      setWordLensArticleByLanguage((prev) => ({
+        ...prev,
+        [language]: data.article as WordLensArticle,
+      }))
     } catch {
       if (requestId !== wordLensArticleRequestIdRef.current) return
       setWordLensArticleError(UI_TEXT[language].wordLensUnavailable)
@@ -1852,7 +1832,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         }),
       })
 
-      const data: LensApiResponse = await res.json()
+      const data = (await res.json()) as { cards?: InsightItem[]; error?: string }
 
       if (requestId !== tensionLensRequestIdRef.current) return
 
@@ -1896,7 +1876,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         }),
       })
 
-      const data: LensApiResponse = await res.json()
+      const data = (await res.json()) as { cards?: InsightItem[]; error?: string }
 
       if (requestId !== phraseLensRequestIdRef.current) return
 
@@ -2154,20 +2134,12 @@ export default function VerseDetailPage({ params }: PageProps) {
     setNarrowShareStatus('')
     setNarrowArticleCopyStatus('idle')
     setNarrowArticleShareStatus('')
+    setWordLensCopyStatus('idle')
+    setWordLensShareStatus('')
     setWordLensArticleCopyStatus('idle')
     setWordLensArticleShareStatus('')
 
     if (targetLanguage === 'en') {
-      if (activeTab === 'context' && selectedContext === 'narrow') {
-        setNarrowContextData(null)
-        setActiveNarrowDirectionId('')
-        setNarrowArticle(null)
-        setNarrowArticleError('')
-      }
-      if (activeTab === 'lens' && selectedLens === 'word') {
-        setWordLensArticle(null)
-        setWordLensArticleError('')
-      }
       setAppLanguage('en')
       return
     }
@@ -2215,12 +2187,10 @@ export default function VerseDetailPage({ params }: PageProps) {
       setNarrowContextData(null)
       setNarrowContextError('')
       setNarrowContextLoading(false)
-
       setActiveNarrowDirectionId('')
       setNarrowArticle(null)
       setNarrowArticleError('')
       setNarrowArticleLoading(false)
-
       setNarrowCopyStatus('idle')
       setNarrowShareStatus('')
       setNarrowArticleCopyStatus('idle')
@@ -2228,9 +2198,13 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     if (activeTab === 'lens' && selectedLens === 'word') {
-      setWordLensArticle(null)
+      setWordLensDataByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
+      setWordLensArticleByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
+      setActiveWordLensNodeId('')
       setWordLensArticleError('')
       setWordLensArticleLoading(false)
+      setWordLensCopyStatus('idle')
+      setWordLensShareStatus('')
       setWordLensArticleCopyStatus('idle')
       setWordLensArticleShareStatus('')
     }
@@ -2390,12 +2364,30 @@ export default function VerseDetailPage({ params }: PageProps) {
       .join('\n')
   }, [narrowArticle, narrowContextData])
 
-  const wordLensArticleShareText = useMemo(() => {
-    if (!wordLensArticle || !formattedReference || !activeWordLensNode) return ''
+  const wordLensShareText = useMemo(() => {
+    if (!wordLensData || !formattedReference) return ''
     return [
       formattedReference,
       '',
-      `${wl.title}: ${activeWordLensNode.label}`,
+      wordLensData.lead,
+      '',
+      ...wordLensData.nodes.flatMap((node) => [
+        node.label,
+        `${node.original}${node.transliteration ? ` · ${node.transliteration}` : ''}`,
+        node.semantic_core,
+        node.why_it_matters,
+        node.dig_deeper,
+        '',
+      ]),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [wordLensData, formattedReference])
+
+  const wordLensArticleShareText = useMemo(() => {
+    if (!wordLensArticle || !formattedReference) return ''
+    return [
+      formattedReference,
       '',
       wordLensArticle.title,
       '',
@@ -2406,7 +2398,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     ]
       .filter(Boolean)
       .join('\n')
-  }, [wordLensArticle, formattedReference, activeWordLensNode, wl.title])
+  }, [wordLensArticle, formattedReference])
 
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
@@ -2658,6 +2650,39 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+  async function handleCopyWordLens() {
+    if (!wordLensShareText) return
+
+    try {
+      await navigator.clipboard.writeText(wordLensShareText)
+      setWordLensCopyStatus('copied')
+      setWordLensShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setWordLensCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setWordLensCopyStatus('failed')
+    }
+  }
+
+  async function handleShareWordLens() {
+    if (!wordLensShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: wordLensShareText })
+        setWordLensShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(wordLensShareText)
+        setWordLensShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setWordLensShareStatus('')
+    }
+  }
+
   async function handleCopyWordLensArticle() {
     if (!wordLensArticleShareText) return
 
@@ -2681,10 +2706,10 @@ export default function VerseDetailPage({ params }: PageProps) {
     try {
       if (navigator.share) {
         await navigator.share({ text: wordLensArticleShareText })
-        setWordLensArticleShareStatus(wl.articleShared)
+        setWordLensArticleShareStatus(t.sharedAsText)
       } else {
         await navigator.clipboard.writeText(wordLensArticleShareText)
-        setWordLensArticleShareStatus(wl.shareUnavailableCopied)
+        setWordLensArticleShareStatus(t.shareUnavailableCopiedInstead)
       }
     } catch {
       setWordLensArticleShareStatus('')
@@ -2784,12 +2809,11 @@ export default function VerseDetailPage({ params }: PageProps) {
     setArticleCopyStatus('idle')
     setCurrentIndex(0)
 
-    if (lens !== 'word') {
-      setWordLensArticle(null)
+    if (lens === 'word') {
+      setActiveWordLensNodeId('')
+      setWordLensArticleByLanguage(emptyWordLensArticleMap())
       setWordLensArticleError('')
-      setWordLensArticleLoading(false)
-      setWordLensArticleCopyStatus('idle')
-      setWordLensArticleShareStatus('')
+      setWordLensCustomPrompt('')
     }
 
     if (lens === 'translation') await loadCompare(false, appLanguage)
@@ -2922,336 +2946,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     )
   }
 
-  function renderWordLensView() {
-    if (!modesReady) {
-      return renderStructuredPanel(
-        wl.title,
-        wl.emptyLead,
-        t.lensPointLabel,
-        [wl.buildMapHelper, wl.buildMapHelper2],
-        t.takeaway,
-        wl.emptyTakeaway
-      )
-    }
-
-    if (wordLensLoading) {
-      return (
-        <ModeStateCard
-          title={t.loadingWordLens}
-          loadingLabel={t.loadingWordLens}
-          loadingText={t.loadingWordLensText}
-        />
-      )
-    }
-
-    if (wordLensError) {
-      return (
-        <ModeStateCard
-          badgeLabel={lensBadgeLabel('word', t)}
-          changeLabel={t.change}
-          onChange={() => setLensSheetOpen(true)}
-          error={wordLensError}
-          retryLabel={t.tryAgain}
-          onRetry={() => {
-            void loadWordLens(true, appLanguage)
-          }}
-        />
-      )
-    }
-
-    return (
-      <div className="tab-panel-enter mt-5 space-y-5">
-        <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-          <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                  {wl.introKicker}
-                </p>
-                <h3 className="mt-2 text-[1.9rem] font-semibold tracking-tight text-stone-900">
-                  {wl.title}
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={onWordLensChangeClick}
-                className="text-sm font-medium text-stone-600 underline decoration-stone-300 underline-offset-4"
-              >
-                {t.change}
-              </button>
-            </div>
-
-            <p className="text-[1rem] leading-8 text-stone-800">
-              {wordLensMap?.lead || wl.emptyLead}
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  void loadWordLens(true, appLanguage)
-                }}
-                className="rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-              >
-                {wl.buildMap}
-              </button>
-            </div>
-
-            <p className="mt-4 text-[0.96rem] leading-7 text-stone-700">
-              {wl.buildMapHelper}
-            </p>
-            <p className="mt-2 text-[0.96rem] leading-7 text-stone-700">
-              {wl.buildMapHelper2}
-            </p>
-          </div>
-        </div>
-
-        {wordLensMap && wordLensMap.nodes.length > 0 ? (
-          <>
-            {wordLensMap.nodes.map((node, index) => {
-              const isActive = activeWordLensNodeId === node.id
-
-              return (
-                <div
-                  key={node.id}
-                  className={`rounded-[34px] border p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)] transition ${
-                    isActive
-                      ? 'border-stone-400/80 bg-[linear-gradient(180deg,#f4e7c3_0%,#ead6a5_100%)]'
-                      : 'border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)]'
-                  }`}
-                >
-                  <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                    <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                      {wl.nodeKicker} {index + 1}
-                    </p>
-
-                    <div className="mt-5 grid gap-4 md:grid-cols-2">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          {wl.versePhraseLabel}
-                        </p>
-                        <p className="mt-2 text-[1.7rem] font-semibold tracking-tight text-stone-900">
-                          {node.label}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          {wl.originalLabel}
-                        </p>
-                        <p className="mt-2 text-[1.55rem] font-semibold tracking-tight text-stone-900">
-                          {node.original}
-                        </p>
-                        {node.transliteration ? (
-                          <p className="mt-2 text-[0.98rem] leading-7 text-stone-700">
-                            {node.transliteration}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="mt-5 grid gap-4 md:grid-cols-2">
-                      <div className="rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          {wl.semanticCoreLabel}
-                        </p>
-                        <p className="mt-2 text-[0.97rem] leading-8 text-stone-800">
-                          {node.semantic_core}
-                        </p>
-                      </div>
-
-                      <div className="rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          {wl.whyLabel}
-                        </p>
-                        <p className="mt-2 text-[0.97rem] leading-8 text-stone-800">
-                          {node.why_it_matters}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        {wl.digLabel}
-                      </p>
-                      <p className="mt-2 text-[0.97rem] leading-8 text-stone-800">
-                        {node.dig_deeper}
-                      </p>
-                    </div>
-
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveWordLensNodeId(node.id)
-                          void loadWordLensArticle('deep_dive', appLanguage)
-                        }}
-                        className="rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-                      >
-                        {wl.digDeeper}
-                      </button>
-
-                      {activeWordLensNodeId === node.id && wordLensArticle ? (
-                        <div className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700">
-                          {wl.openCurrentArticle}
-                        </div>
-                      ) : null}
-
-                      {!isActive ? (
-                        <button
-                          type="button"
-                          onClick={() => setActiveWordLensNodeId(node.id)}
-                          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                        >
-                          {t.change}
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-
-            <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-              <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                  {wl.customDigTitle}
-                </p>
-
-                <textarea
-                  value={wordLensCustomPrompt}
-                  onChange={(e) => setWordLensCustomPrompt(e.target.value)}
-                  placeholder={wl.customDigPlaceholder}
-                  className="mt-5 min-h-[150px] w-full rounded-[22px] border border-stone-300/60 bg-[#fbf6ea]/70 px-4 py-4 text-[0.98rem] leading-7 text-stone-800 outline-none placeholder:text-stone-400 focus:border-stone-400"
-                />
-
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!activeWordLensNode) {
-                        setWordLensArticleError(wl.noNodeSelected)
-                        return
-                      }
-                      if (!wordLensCustomPrompt.trim()) {
-                        setWordLensArticleError(wl.customDigPlaceholder)
-                        return
-                      }
-                      void loadWordLensArticle('custom_dig', appLanguage)
-                    }}
-                    className="rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-                  >
-                    {wl.customDigButton}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {wordLensArticleLoading ? (
-              <ModeStateCard
-                title={t.loadingWordLens}
-                loadingLabel={t.loadingWordLens}
-                loadingText={t.loadingWordLensText}
-              />
-            ) : null}
-
-            {wordLensArticleError ? (
-              <ModeStateCard
-                badgeLabel={lensBadgeLabel('word', t)}
-                changeLabel={t.change}
-                onChange={() => setLensSheetOpen(true)}
-                error={wordLensArticleError}
-                retryLabel={t.tryAgain}
-                onRetry={() => {
-                  if (!activeWordLensNode) return
-                  void loadWordLensArticle(
-                    wordLensCustomPrompt.trim() ? 'custom_dig' : 'deep_dive',
-                    appLanguage
-                  )
-                }}
-              />
-            ) : null}
-
-            {wordLensArticle ? (
-              <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-                <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-                  <p className="text-[13px] font-semibold uppercase tracking-[0.22em] text-stone-500">
-                    {wl.articleKicker}
-                  </p>
-
-                  <h3 className="mt-4 text-[2rem] font-semibold tracking-tight text-stone-900">
-                    {wordLensArticle.title}
-                  </h3>
-
-                  <p className="mt-5 text-[1.04rem] leading-8 text-stone-800">
-                    {wordLensArticle.lead}
-                  </p>
-
-                  <div className="mt-5 space-y-5">
-                    {wordLensArticle.body.map((paragraph, index) => (
-                      <p key={`wl-article-${index}`} className="text-[1.02rem] leading-9 text-stone-800">
-                        {paragraph}
-                      </p>
-                    ))}
-                  </div>
-
-                  {wordLensArticle.highlight_line ? (
-                    <div className="mt-6 rounded-[18px] border-l-4 border-stone-300 bg-[#fffaf1] px-4 py-4">
-                      <p className="text-[1.02rem] italic leading-8 text-stone-700">
-                        {wordLensArticle.highlight_line}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleCopyWordLensArticle()
-                      }}
-                      className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                    >
-                      {wordLensArticleCopyStatus === 'copied'
-                        ? wl.articleCopied
-                        : wordLensArticleCopyStatus === 'failed'
-                          ? t.copyFailed
-                          : t.copy}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleShareWordLensArticle()
-                      }}
-                      className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                    >
-                      {t.share}
-                    </button>
-                  </div>
-
-                  {wordLensArticleShareStatus ? (
-                    <p className="mt-4 text-sm text-stone-600">{wordLensArticleShareStatus}</p>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <div className="rounded-[34px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-6 shadow-[0_16px_34px_rgba(94,72,37,0.14)]">
-            <div className="rounded-[28px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-6 py-7 shadow-inner">
-              <p className="text-[1rem] leading-8 text-stone-800">{wl.noNodes}</p>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-
-    function onWordLensChangeClick() {
-      setLensSheetOpen(true)
-    }
-  }
-
   function renderLensView() {
     if (!modesReady) {
       return renderLensModeIntro()
@@ -3298,7 +2992,94 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
 
     if (selectedLens === 'word') {
-      return renderWordLensView()
+      if (activeWordLensNodeId) {
+        return (
+          <WordLensArticleView
+            article={wordLensArticle}
+            isLoading={wordLensArticleLoading}
+            error={wordLensArticleError}
+            articleLabel={t.word}
+            loadingLabel={t.loadingWordLens}
+            loadingText={t.loadingWordLensText}
+            unavailableLabel={t.wordLensUnavailable}
+            backLabel={t.backToMeanings}
+            shareLabel={t.share}
+            copiedLabel={t.copied}
+            copyLabel={t.copy}
+            copyFailedLabel={t.copyFailed}
+            shareStatus={wordLensArticleShareStatus}
+            copyStatus={wordLensArticleCopyStatus}
+            tryAgainLabel={t.tryAgain}
+            onBack={() => {
+              setActiveWordLensNodeId('')
+              setWordLensArticleByLanguage((prev) => ({ ...prev, [appLanguage]: null }))
+              setWordLensArticleError('')
+              setWordLensArticleLoading(false)
+              setWordLensArticleCopyStatus('idle')
+              setWordLensArticleShareStatus('')
+              articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            onCopy={() => {
+              void handleCopyWordLensArticle()
+            }}
+            onShare={() => {
+              void handleShareWordLensArticle()
+            }}
+            onRetry={() => {
+              if (activeWordLensNode && activeWordLensNodeId !== 'custom') {
+                void loadWordLensDeepDive(activeWordLensNode, true, appLanguage)
+              } else if (activeWordLensNodeId === 'custom') {
+                void loadWordLensCustomDig(true, appLanguage)
+              }
+            }}
+          />
+        )
+      }
+
+      return (
+        <WordLensView
+          isReady={modesReady}
+          isLoading={wordLensLoading}
+          error={wordLensError}
+          data={wordLensData}
+          title={t.word}
+          leadFallback={t.wordHelper}
+          takeawayFallback={t.lensTakeawayDefault}
+          pointLabel={t.lensPointLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.loadingWordLens}
+          loadingText={t.loadingWordLensText}
+          unavailableLabel={t.wordLensUnavailable}
+          tryAgainLabel={t.tryAgain}
+          changeLabel={t.change}
+          copyLabel={t.copy}
+          copiedLabel={t.copied}
+          copyFailedLabel={t.copyFailed}
+          shareLabel={t.share}
+          shareStatus={wordLensShareStatus}
+          copyStatus={wordLensCopyStatus}
+          customPromptValue={wordLensCustomPrompt}
+          onCustomPromptChange={setWordLensCustomPrompt}
+          onRetry={() => {
+            void loadWordLens(true, appLanguage)
+          }}
+          onChangeMode={() => setLensSheetOpen(true)}
+          onCopy={() => {
+            void handleCopyWordLens()
+          }}
+          onShare={() => {
+            void handleShareWordLens()
+          }}
+          onNodeSelect={(nodeId) => {
+            const node = wordLensData?.nodes.find((item) => item.id === nodeId)
+            if (!node) return
+            void loadWordLensDeepDive(node, true, appLanguage)
+          }}
+          onCustomDig={() => {
+            void loadWordLensCustomDig(true, appLanguage)
+          }}
+        />
+      )
     }
 
     if (selectedLens === 'tension') {
