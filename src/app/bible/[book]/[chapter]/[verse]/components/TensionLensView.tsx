@@ -40,10 +40,18 @@ type TensionLensViewProps = {
   unavailableLabel: string
   tryAgainLabel: string
   changeLabel: string
+  copyLabel: string
+  copiedLabel: string
+  copyFailedLabel: string
+  shareLabel: string
+  shareStatus: string
+  copyStatus: 'idle' | 'copied' | 'failed'
   customPromptValue: string
   onCustomPromptChange: (value: string) => void
   onRetry: () => void
   onChangeMode: () => void
+  onCopy: () => void
+  onShare: () => void
   onNodeSelect: (nodeId: string) => void
   onCustomDig: () => void
 }
@@ -55,11 +63,10 @@ const UI_COPY: Record<
     intro2: string
     intro3: string
     keyTension: string
-    hiddenPressure: string
-    whyThisTensionMatters: string
-    tensionMap: string
     tensionLine: string
     whatFeelsStrange: string
+    whyThisOpens: string
+    tensionMap: string
     whyThisMatters: string
     digDeeper: string
     yourDiggingDirection: string
@@ -75,21 +82,20 @@ const UI_COPY: Record<
 > = {
   en: {
     intro1:
-      'This lens builds a map of the strongest pressure-points inside the verse.',
+      'This lens maps the strongest pressure-points inside the verse — the places where the wording resists a smooth first reading.',
     intro2:
-      'The goal is not lexical depth, but the places where the wording resists a smooth reading.',
+      'The goal is not lexical depth, but inner tension: contrast, reversal, paradox, collision, or rhetorical pressure.',
     intro3:
-      'Each node should feel like real inner force: contrast, paradox, reversal, collision, pressure, or shock.',
+      'Each node should feel like a real fracture-line in the verse where meaning becomes sharper, stranger, or more forceful.',
     keyTension: 'Key tension',
-    hiddenPressure: 'Hidden pressure',
-    whyThisTensionMatters: 'Why this tension matters',
-    tensionMap: 'Tension map',
     tensionLine: 'Tension line',
     whatFeelsStrange: 'What feels strange',
+    whyThisOpens: 'Why this opens the verse',
+    tensionMap: 'Tension map',
     whyThisMatters: 'Why this matters',
     digDeeper: 'Dig deeper',
     yourDiggingDirection: 'Your own digging direction',
-    customPlaceholder: 'Describe what exact tension you want to explore in this verse...',
+    customPlaceholder: 'Describe what tension or pressure-point you want to explore more deeply...',
     customButton: 'Dig into this tension',
     contrast: 'Contrast',
     paradox: 'Paradox',
@@ -100,46 +106,44 @@ const UI_COPY: Record<
   },
   ru: {
     intro1:
-      'Эта линза строит карту самых сильных точек напряжения внутри самого стиха.',
+      'Эта линза показывает самые сильные точки напряжения внутри стиха — места, где текст не даёт прочитать себя слишком гладко.',
     intro2:
-      'Задача здесь не в разборе слов как таковых, а в тех местах, где текст не даёт прочитать себя слишком гладко.',
+      'Задача здесь не в лексической глубине, а во внутреннем напряжении: контрасте, перевороте, парадоксе, столкновении или смысловом давлении.',
     intro3:
-      'Каждый узел должен ощущаться как внутренняя сила стиха: контраст, парадокс, разворот, столкновение, давление или шок.',
+      'Каждый узел должен ощущаться как настоящая линия разлома, где стих становится острее, страннее или сильнее.',
     keyTension: 'Ключевое напряжение',
-    hiddenPressure: 'Скрытое давление',
-    whyThisTensionMatters: 'Почему это напряжение важно',
-    tensionMap: 'Карта напряжений',
     tensionLine: 'Линия напряжения',
-    whatFeelsStrange: 'Что здесь ощущается необычно',
+    whatFeelsStrange: 'Что здесь ощущается непривычно',
+    whyThisOpens: 'Почему отсюда стих раскрывается',
+    tensionMap: 'Карта напряжений',
     whyThisMatters: 'Почему это важно',
     digDeeper: 'Куда копать дальше',
     yourDiggingDirection: 'Своё направление поиска',
-    customPlaceholder: 'Опиши, какое именно напряжение ты хочешь исследовать в этом стихе...',
+    customPlaceholder: 'Опиши, какое напряжение или внутренний узел ты хочешь исследовать глубже...',
     customButton: 'Копать это напряжение',
     contrast: 'Контраст',
     paradox: 'Парадокс',
-    reversal: 'Разворот',
+    reversal: 'Переворот',
     shock: 'Шок',
     pressure: 'Давление',
     collision: 'Столкновение',
   },
   es: {
     intro1:
-      'Esta lente construye un mapa de los puntos de presión más fuertes dentro del versículo.',
+      'Esta lente muestra los puntos de presión más fuertes dentro del versículo: los lugares donde la redacción se resiste a una lectura demasiado fluida.',
     intro2:
-      'La meta no es profundidad léxica, sino los lugares donde la redacción resiste una lectura demasiado fluida.',
+      'La meta aquí no es la profundidad léxica, sino la tensión interna: contraste, giro, paradoja, choque o presión retórica.',
     intro3:
-      'Cada nodo debe sentirse como una fuerza interna real: contraste, paradoja, giro, colisión, presión o choque.',
+      'Cada nodo debe sentirse como una verdadera línea de fractura donde el versículo se vuelve más agudo, extraño o intenso.',
     keyTension: 'Tensión clave',
-    hiddenPressure: 'Presión oculta',
-    whyThisTensionMatters: 'Por qué importa esta tensión',
-    tensionMap: 'Mapa de tensiones',
     tensionLine: 'Línea de tensión',
     whatFeelsStrange: 'Qué se siente extraño',
+    whyThisOpens: 'Por qué esto abre el versículo',
+    tensionMap: 'Mapa de tensiones',
     whyThisMatters: 'Por qué importa',
     digDeeper: 'Profundizar',
     yourDiggingDirection: 'Tu propia dirección de búsqueda',
-    customPlaceholder: 'Describe qué tensión exacta quieres explorar en este versículo...',
+    customPlaceholder: 'Describe qué tensión o punto de presión quieres explorar más a fondo...',
     customButton: 'Explorar esta tensión',
     contrast: 'Contraste',
     paradox: 'Paradoja',
@@ -150,21 +154,20 @@ const UI_COPY: Record<
   },
   fr: {
     intro1:
-      'Cette lentille construit une carte des points de pression les plus forts dans le verset.',
+      'Cette lentille montre les points de tension les plus forts dans le verset — les endroits où la formulation résiste à une lecture trop lisse.',
     intro2:
-      'Le but n’est pas la profondeur lexicale, mais les endroits où la formulation résiste à une lecture trop lisse.',
+      'Le but ici n’est pas la profondeur lexicale, mais la tension interne : contraste, renversement, paradoxe, collision ou pression rhétorique.',
     intro3:
-      'Chaque nœud doit ressembler à une vraie force intérieure: contraste, paradoxe, renversement, collision, pression ou choc.',
+      'Chaque nœud doit ressembler à une vraie ligne de fracture où le verset devient plus vif, plus étrange ou plus puissant.',
     keyTension: 'Tension clé',
-    hiddenPressure: 'Pression cachée',
-    whyThisTensionMatters: 'Pourquoi cette tension compte',
-    tensionMap: 'Carte des tensions',
     tensionLine: 'Ligne de tension',
-    whatFeelsStrange: 'Ce qui semble étrange',
+    whatFeelsStrange: 'Ce qui paraît étrange',
+    whyThisOpens: 'Pourquoi cela ouvre le verset',
+    tensionMap: 'Carte des tensions',
     whyThisMatters: 'Pourquoi cela compte',
     digDeeper: 'Creuser plus loin',
     yourDiggingDirection: 'Votre propre direction de recherche',
-    customPlaceholder: 'Décrivez la tension exacte que vous voulez explorer dans ce verset...',
+    customPlaceholder: 'Décrivez quelle tension ou quel point de pression vous voulez explorer plus profondément...',
     customButton: 'Creuser cette tension',
     contrast: 'Contraste',
     paradox: 'Paradoxe',
@@ -175,21 +178,20 @@ const UI_COPY: Record<
   },
   de: {
     intro1:
-      'Diese Linse baut eine Karte der stärksten Spannungspunkte im Vers.',
+      'Diese Linse zeigt die stärksten Spannungspunkte im Vers — die Stellen, an denen sich die Formulierung gegen eine zu glatte Erstlesung sperrt.',
     intro2:
-      'Das Ziel ist nicht lexikalische Tiefe, sondern die Stellen, an denen sich der Text einer zu glatten Lesart widersetzt.',
+      'Das Ziel ist hier nicht lexikalische Tiefe, sondern innere Spannung: Kontrast, Umkehrung, Paradox, Kollision oder rhetorischer Druck.',
     intro3:
-      'Jeder Knoten soll wie echte innere Kraft wirken: Kontrast, Paradox, Umkehrung, Kollision, Druck oder Schock.',
-    keyTension: 'Schlüsselspannung',
-    hiddenPressure: 'Verborgener Druck',
-    whyThisTensionMatters: 'Warum diese Spannung wichtig ist',
-    tensionMap: 'Spannungskarte',
+      'Jeder Knoten soll wie eine echte Bruchlinie wirken, an der der Vers schärfer, fremder oder kraftvoller wird.',
+    keyTension: 'Kernspannung',
     tensionLine: 'Spannungslinie',
-    whatFeelsStrange: 'Was hier ungewöhnlich wirkt',
+    whatFeelsStrange: 'Was daran ungewöhnlich wirkt',
+    whyThisOpens: 'Warum sich der Vers hier öffnet',
+    tensionMap: 'Spannungskarte',
     whyThisMatters: 'Warum das wichtig ist',
     digDeeper: 'Weiter graben',
     yourDiggingDirection: 'Eigene Suchrichtung',
-    customPlaceholder: 'Beschreibe, welche genaue Spannung du in diesem Vers erforschen willst...',
+    customPlaceholder: 'Beschreibe, welche Spannung oder welchen inneren Druckpunkt du tiefer untersuchen willst...',
     customButton: 'Diese Spannung vertiefen',
     contrast: 'Kontrast',
     paradox: 'Paradox',
@@ -204,13 +206,25 @@ function detectLocale(changeLabel: string, title: string): LocaleCode {
   const source = `${changeLabel} ${title}`.toLowerCase()
 
   if (/[а-яё]/i.test(source)) return 'ru'
-  if (source.includes('cambiar') || source.includes('lente') || source.includes('tensión')) {
+  if (
+    source.includes('cambiar') ||
+    source.includes('lente') ||
+    source.includes('tensión')
+  ) {
     return 'es'
   }
-  if (source.includes('changer') || source.includes('lentille') || source.includes('tension')) {
+  if (
+    source.includes('changer') ||
+    source.includes('lentille') ||
+    source.includes('tension')
+  ) {
     return 'fr'
   }
-  if (source.includes('ändern') || source.includes('linse') || source.includes('spannung')) {
+  if (
+    source.includes('ändern') ||
+    source.includes('linse') ||
+    source.includes('spannung')
+  ) {
     return 'de'
   }
 
@@ -285,10 +299,18 @@ export default function TensionLensView({
   unavailableLabel,
   tryAgainLabel,
   changeLabel,
+  copyLabel,
+  copiedLabel,
+  copyFailedLabel,
+  shareLabel,
+  shareStatus,
+  copyStatus,
   customPromptValue,
   onCustomPromptChange,
   onRetry,
   onChangeMode,
+  onCopy,
+  onShare,
   onNodeSelect,
   onCustomDig,
 }: TensionLensViewProps) {
@@ -384,7 +406,7 @@ export default function TensionLensView({
 
               <div className="mt-4 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  {copy.hiddenPressure}
+                  {copy.tensionLine}
                 </p>
                 <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
                   {primaryNode.tension_line}
@@ -393,7 +415,16 @@ export default function TensionLensView({
 
               <div className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  {copy.whyThisTensionMatters}
+                  {copy.whatFeelsStrange}
+                </p>
+                <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
+                  {primaryNode.what_feels_strange}
+                </p>
+              </div>
+
+              <div className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  {copy.whyThisOpens}
                 </p>
                 <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
                   {primaryNode.why_it_matters}
