@@ -39,34 +39,6 @@ type DirectionSearchResponse = {
   raw?: string
 }
 
-type WordMapNode = {
-  focus_label: string
-  original_word: string
-  transliteration: string
-  core_meaning: string
-  why_it_matters: string
-  dig_deeper_hint: string
-}
-
-type ModeratorWordLensResponse = {
-  payload?: WordMapNode[]
-  error?: string
-  raw?: string
-}
-
-type DeepWordArticle = {
-  title: string
-  lead: string
-  body: string[]
-  quote?: string
-}
-
-type DeepWordArticleResponse = {
-  article?: DeepWordArticle
-  error?: string
-  raw?: string
-}
-
 type WorkspaceClientProps = {
   reference: string
   verseText: string
@@ -87,11 +59,6 @@ type PersistedWorkspaceState = {
   directionInput: string
   directionArticle: DirectionArticle | null
   directionRaw: string
-  wordLensPayload: WordMapNode[] | null
-  wordLensRaw: string
-  deepWordIndex: number | null
-  deepWordArticle: DeepWordArticle | null
-  deepWordRaw: string
 }
 
 function normalizeText(value: string) {
@@ -106,17 +73,6 @@ function containsVerbatimSacredPassage(sacredPassage: string, candidateText: str
   const normalizedSacred = normalizeForCompare(sacredPassage)
   const normalizedCandidate = normalizeForCompare(candidateText)
   return normalizedCandidate.includes(normalizedSacred)
-}
-
-function buildDeepArticleText(article: DeepWordArticle) {
-  return [
-    article.title,
-    '',
-    article.lead,
-    '',
-    ...article.body,
-    ...(article.quote ? ['', `“${article.quote}”`] : []),
-  ].join('\n\n')
 }
 
 function buildDirectionArticleText(article: DirectionArticle) {
@@ -169,20 +125,8 @@ export default function WorkspaceClient({
   const [directionLoading, setDirectionLoading] = useState(false)
   const [directionError, setDirectionError] = useState('')
   const [directionRaw, setDirectionRaw] = useState('')
-
-  const [wordLensPayload, setWordLensPayload] = useState<WordMapNode[] | null>(null)
-  const [wordLensLoading, setWordLensLoading] = useState(false)
-  const [wordLensError, setWordLensError] = useState('')
-  const [wordLensRaw, setWordLensRaw] = useState('')
-
-  const [deepWordIndex, setDeepWordIndex] = useState<number | null>(null)
-  const [deepWordArticle, setDeepWordArticle] = useState<DeepWordArticle | null>(null)
-  const [deepWordLoadingIndex, setDeepWordLoadingIndex] = useState<number | null>(null)
-  const [deepWordError, setDeepWordError] = useState('')
-  const [deepWordRaw, setDeepWordRaw] = useState('')
-
-  const [articleActionMessage, setArticleActionMessage] = useState('')
   const [directionActionMessage, setDirectionActionMessage] = useState('')
+
   const [isHydrated, setIsHydrated] = useState(false)
 
   const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
@@ -210,13 +154,6 @@ export default function WorkspaceClient({
       setDirectionInput(typeof parsed.directionInput === 'string' ? parsed.directionInput : '')
       setDirectionArticle(parsed.directionArticle ?? null)
       setDirectionRaw(typeof parsed.directionRaw === 'string' ? parsed.directionRaw : '')
-
-      setWordLensPayload(Array.isArray(parsed.wordLensPayload) ? parsed.wordLensPayload : null)
-      setWordLensRaw(typeof parsed.wordLensRaw === 'string' ? parsed.wordLensRaw : '')
-
-      setDeepWordIndex(typeof parsed.deepWordIndex === 'number' ? parsed.deepWordIndex : null)
-      setDeepWordArticle(parsed.deepWordArticle ?? null)
-      setDeepWordRaw(typeof parsed.deepWordRaw === 'string' ? parsed.deepWordRaw : '')
     } catch {
       // ignore broken persisted state
     } finally {
@@ -234,11 +171,6 @@ export default function WorkspaceClient({
       directionInput,
       directionArticle,
       directionRaw,
-      wordLensPayload,
-      wordLensRaw,
-      deepWordIndex,
-      deepWordArticle,
-      deepWordRaw,
     }
 
     try {
@@ -256,41 +188,7 @@ export default function WorkspaceClient({
     directionInput,
     directionArticle,
     directionRaw,
-    wordLensPayload,
-    wordLensRaw,
-    deepWordIndex,
-    deepWordArticle,
-    deepWordRaw,
   ])
-
-  async function copyDeepArticle(article: DeepWordArticle) {
-    try {
-      await navigator.clipboard.writeText(buildDeepArticleText(article))
-      setArticleActionMessage('Статья скопирована.')
-    } catch {
-      setArticleActionMessage('Не удалось скопировать статью.')
-    }
-  }
-
-  async function shareDeepArticle(article: DeepWordArticle) {
-    const text = buildDeepArticleText(article)
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: article.title,
-          text,
-        })
-        setArticleActionMessage('Статья отправлена в меню «Поделиться».')
-        return
-      }
-
-      await navigator.clipboard.writeText(text)
-      setArticleActionMessage('Меню «Поделиться» недоступно. Текст скопирован.')
-    } catch {
-      setArticleActionMessage('Не удалось поделиться статьёй.')
-    }
-  }
 
   async function copyDirectionArticle(article: DirectionArticle) {
     try {
@@ -460,83 +358,6 @@ export default function WorkspaceClient({
     }
   }
 
-  async function generateWordLens() {
-    setWordLensLoading(true)
-    setWordLensError('')
-    setWordLensRaw('')
-    setWordLensPayload(null)
-    setDeepWordIndex(null)
-    setDeepWordArticle(null)
-    setDeepWordError('')
-    setDeepWordRaw('')
-    setArticleActionMessage('')
-
-    try {
-      const res = await fetch('/api/moderator/workspace/word-lens', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference,
-          verseText,
-        }),
-      })
-
-      const data: ModeratorWordLensResponse = await res.json()
-
-      if (!res.ok || !data.payload || data.payload.length === 0) {
-        setWordLensError(data.error || 'Не удалось сгенерировать линзу «Слово».')
-        setWordLensRaw(data.raw || '')
-        return
-      }
-
-      setWordLensPayload(data.payload)
-    } catch {
-      setWordLensError('Не удалось сгенерировать линзу «Слово».')
-    } finally {
-      setWordLensLoading(false)
-    }
-  }
-
-  async function generateDeepWordArticle(node: WordMapNode, index: number) {
-    setDeepWordLoadingIndex(index)
-    setDeepWordError('')
-    setDeepWordRaw('')
-    setDeepWordIndex(index)
-    setDeepWordArticle(null)
-    setArticleActionMessage('')
-
-    try {
-      const res = await fetch('/api/moderator/workspace/word-lens/deep', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference,
-          verseText,
-          focus_label: node.focus_label,
-          original_word: node.original_word,
-          transliteration: node.transliteration,
-          core_meaning: node.core_meaning,
-          why_it_matters: node.why_it_matters,
-          dig_deeper_hint: node.dig_deeper_hint,
-        }),
-      })
-
-      const data: DeepWordArticleResponse = await res.json()
-
-      if (!res.ok || !data.article) {
-        setDeepWordError(data.error || 'Не удалось сгенерировать глубокое исследование по слову.')
-        setDeepWordRaw(data.raw || '')
-        return
-      }
-
-      setDeepWordArticle(data.article)
-    } catch {
-      setDeepWordError('Не удалось сгенерировать глубокое исследование по слову.')
-    } finally {
-      setDeepWordLoadingIndex(null)
-    }
-  }
-
   return (
     <div className="space-y-5">
       <div className="grid gap-5 lg:grid-cols-2">
@@ -644,15 +465,14 @@ export default function WorkspaceClient({
               Куда копать
             </h2>
             <p className="mt-2 text-sm leading-6 text-stone-600">
-              Сюда модератор формулирует направление поиска: какой угол интересует, что хочется
-              найти, какой оттенок мысли нужен. Сейчас это поле генерирует длинный unfold-style
-              разворот мысли по заданному направлению.
+              При желании опиши, как именно хочешь доработать эту мысль. Это поле остаётся свободным:
+              ты сам задаёшь направление, если хочешь углубить или перестроить карточку.
             </p>
 
             <textarea
               value={directionInput}
               onChange={(e) => setDirectionInput(e.target.value)}
-              placeholder="Опиши, куда именно копать по этому стиху. Например: почему здесь знание связано не с объемом информации, а с типом отношения?"
+              placeholder="При желании опиши, как именно хочешь доработать эту мысль."
               className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
             />
 
@@ -740,205 +560,6 @@ export default function WorkspaceClient({
           </div>
         </section>
       </div>
-
-      <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-        <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Линза 1
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                Слово
-              </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-                Эта линза строит semantic map стиха и показывает 3–5 ключевых слов или выражений,
-                которые реально несут смысловую нагрузку. Из любого узла можно сразу пойти в
-                глубокое word-study исследование.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => void generateWordLens()}
-              disabled={wordLensLoading}
-              className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
-            >
-              {wordLensLoading ? 'Генерация...' : 'Построить карту слов'}
-            </button>
-          </div>
-
-          {wordLensError ? <p className="mt-3 text-sm text-red-700">{wordLensError}</p> : null}
-
-          {wordLensRaw ? (
-            <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-              <summary className="cursor-pointer text-sm font-medium text-stone-700">
-                Показать raw output
-              </summary>
-              <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                {wordLensRaw}
-              </pre>
-            </details>
-          ) : null}
-
-          {wordLensPayload ? (
-            <div className="mt-5 space-y-4">
-              {wordLensPayload.map((item, index) => {
-                const isDeepLoading = deepWordLoadingIndex === index
-                const isDeepOpen = deepWordIndex === index && !!deepWordArticle
-
-                return (
-                  <article
-                    key={`${item.focus_label}-${index}`}
-                    className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
-                  >
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                      Узел {index + 1}
-                    </p>
-
-                    <div className="mt-3 grid gap-4 md:grid-cols-2">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          Слово / выражение в стихе
-                        </p>
-                        <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
-                          {item.focus_label}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          Исходное слово
-                        </p>
-                        <p className="mt-2 text-lg font-semibold leading-7 text-stone-900">
-                          {item.original_word}
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-stone-700">
-                          {item.transliteration}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <div className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          Semantic core
-                        </p>
-                        <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                          {item.core_meaning}
-                        </p>
-                      </div>
-
-                      <div className="rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          Почему это важно
-                        </p>
-                        <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                          {item.why_it_matters}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Куда копать дальше
-                      </p>
-                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                        {item.dig_deeper_hint}
-                      </p>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => void generateDeepWordArticle(item, index)}
-                        disabled={isDeepLoading}
-                        className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
-                      >
-                        {isDeepLoading ? 'Генерация...' : 'Копать глубже'}
-                      </button>
-
-                      {isDeepOpen ? (
-                        <span className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700">
-                          Открыто текущее исследование
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {deepWordIndex === index && deepWordError ? (
-                      <p className="mt-3 text-sm text-red-700">{deepWordError}</p>
-                    ) : null}
-
-                    {deepWordIndex === index && deepWordRaw ? (
-                      <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fdf9f1] px-4 py-4">
-                        <summary className="cursor-pointer text-sm font-medium text-stone-700">
-                          Показать raw output
-                        </summary>
-                        <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                          {deepWordRaw}
-                        </pre>
-                      </details>
-                    ) : null}
-
-                    {deepWordIndex === index && deepWordArticle ? (
-                      <article className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fdf9f1] px-4 py-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                          Глубокое исследование
-                        </p>
-                        <h3 className="mt-2 text-2xl font-semibold leading-tight text-stone-900">
-                          {deepWordArticle.title}
-                        </h3>
-                        <p className="mt-4 text-[1rem] leading-8 text-stone-900">
-                          {deepWordArticle.lead}
-                        </p>
-
-                        <div className="mt-5 space-y-5">
-                          {deepWordArticle.body.map((paragraph, paragraphIndex) => (
-                            <p
-                              key={`${paragraphIndex}-${paragraph.slice(0, 24)}`}
-                              className="text-[0.98rem] leading-8 text-stone-800"
-                            >
-                              {paragraph}
-                            </p>
-                          ))}
-                        </div>
-
-                        {deepWordArticle.quote ? (
-                          <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
-                            {deepWordArticle.quote}
-                          </blockquote>
-                        ) : null}
-
-                        <div className="mt-5 flex flex-wrap gap-3">
-                          <button
-                            type="button"
-                            onClick={() => void copyDeepArticle(deepWordArticle)}
-                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                          >
-                            Скопировать
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => void shareDeepArticle(deepWordArticle)}
-                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                          >
-                            Поделиться
-                          </button>
-                        </div>
-
-                        {articleActionMessage ? (
-                          <p className="mt-3 text-sm text-stone-700">{articleActionMessage}</p>
-                        ) : null}
-                      </article>
-                    ) : null}
-                  </article>
-                )
-              })}
-            </div>
-          ) : null}
-        </div>
-      </section>
     </div>
   )
 }
