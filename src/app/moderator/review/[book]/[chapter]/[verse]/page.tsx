@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { unstable_noStore as noStore } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { getVerseText } from '@/lib/bible/getVerseText'
+import { runModel } from '@/lib/ai/run-model'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -116,6 +117,50 @@ function statusClasses(status: string) {
   return 'border-amber-400 bg-amber-100 text-amber-900'
 }
 
+function looksRussian(text: string) {
+  const sample = text.slice(0, 400)
+  const cyrillicMatches = sample.match(/[А-Яа-яЁё]/g) ?? []
+  return cyrillicMatches.length >= 12
+}
+
+async function ensureRussianVerseText(reference: string, verseText: string): Promise<string> {
+  const clean = verseText.trim()
+
+  if (!clean) return ''
+  if (looksRussian(clean)) return clean
+
+  const prompt = `
+Translate the following Bible verse into Russian.
+
+REFERENCE:
+${reference}
+
+VERSE TEXT:
+${clean}
+
+RULES:
+- Return only the translated verse text
+- No explanation
+- No quotation marks
+- No JSON
+- No markdown
+- Natural, clear Russian
+`.trim()
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 300,
+  })
+
+  if (!result.ok) {
+    return clean
+  }
+
+  const translated = result.rawText.trim()
+  return translated || clean
+}
+
 async function loadCandidates(book: string, chapter: number, verse: number) {
   const supabase = getSupabaseServerClient()
 
@@ -183,7 +228,7 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
       loadSavedInsights(dbBook, chapter, verse),
     ])
 
-    verseText = rawVerse ?? ''
+    verseText = await ensureRussianVerseText(reference, rawVerse ?? '')
     candidates = candidateRows
     saved = savedRows
   } catch (error) {
@@ -195,13 +240,13 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
     verseError = 'Не удалось загрузить текст стиха.'
   }
 
+  const featuredCandidates = candidates.filter((item) => item.candidate_status === 'featured')
   const newCandidates = candidates.filter((item) => item.candidate_status === 'new')
-  const extendedCandidates = candidates.filter(
-    (item) =>
-      item.candidate_status !== 'new' &&
-      item.candidate_status !== 'featured' &&
-      item.candidate_status !== 'trashed'
+  const extendedCandidates = candidates.filter((item) =>
+    ['extended', 'reserve', 'needs_repair'].includes(item.candidate_status)
   )
+
+  const workingPoolCount = newCandidates.length + extendedCandidates.length
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#F7F5EF_0%,#F3F0E8_46%,#F6F3EC_100%)] text-stone-900">
@@ -271,7 +316,7 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
 
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Extended
+                Запас
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">
                 {extendedCandidates.length}
@@ -280,9 +325,9 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
 
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Всего candidates
+                Рабочий пул
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-900">{candidates.length}</p>
+              <p className="mt-2 text-3xl font-semibold text-stone-900">{workingPoolCount}</p>
             </div>
           </div>
         </section>
@@ -298,6 +343,12 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
                   Active / Saved
                 </h2>
               </div>
+
+              {featuredCandidates.length > 0 ? (
+                <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
+                  promoted traces: {featuredCandidates.length}
+                </span>
+              ) : null}
             </div>
 
             {saved.length === 0 ? (
