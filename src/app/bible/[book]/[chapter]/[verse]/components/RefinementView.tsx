@@ -45,7 +45,6 @@ const UI_COPY: Record<
     copiedLabel: string
     copyFailedLabel: string
     shareLabel: string
-    readyHint: string
   }
 > = {
   en: {
@@ -74,8 +73,6 @@ const UI_COPY: Record<
     copiedLabel: 'Copied',
     copyFailedLabel: 'Copy failed',
     shareLabel: 'Share',
-    readyHint:
-      'The result should feel easy to say into the microphone without sounding rehearsed.',
   },
   ru: {
     title: 'Огранка',
@@ -103,8 +100,6 @@ const UI_COPY: Record<
     copiedLabel: 'Скопировано',
     copyFailedLabel: 'Ошибка копирования',
     shareLabel: 'Поделиться',
-    readyHint:
-      'Результат должен легко звучать в микрофон и не создавать ощущения заученного текста.',
   },
   es: {
     title: 'Refinar',
@@ -132,8 +127,6 @@ const UI_COPY: Record<
     copiedLabel: 'Copiado',
     copyFailedLabel: 'Error al copiar',
     shareLabel: 'Compartir',
-    readyHint:
-      'El resultado debe sentirse fácil de decir en el micrófono sin sonar ensayado.',
   },
   fr: {
     title: 'Affiner',
@@ -161,8 +154,6 @@ const UI_COPY: Record<
     copiedLabel: 'Copié',
     copyFailedLabel: 'Échec de copie',
     shareLabel: 'Partager',
-    readyHint:
-      'Le résultat doit être facile à dire au micro sans paraître appris.',
   },
   de: {
     title: 'Verfeinern',
@@ -190,8 +181,6 @@ const UI_COPY: Record<
     copiedLabel: 'Kopiert',
     copyFailedLabel: 'Kopieren fehlgeschlagen',
     shareLabel: 'Teilen',
-    readyHint:
-      'Das Ergebnis soll sich leicht ins Mikrofon sagen lassen, ohne einstudiert zu wirken.',
   },
 }
 
@@ -262,7 +251,7 @@ export default function RefinementView({
       copy.introPointLabel,
       [copy.intro1, copy.intro2, copy.intro3],
       copy.introTakeawayLabel,
-      copy.readyHint
+      copy.intro3
     )
   }
 
@@ -334,10 +323,6 @@ export default function RefinementView({
                 {result.text}
               </p>
             </div>
-
-            <p className="mt-4 text-[0.92rem] leading-7 text-stone-600">
-              {copy.readyHint}
-            </p>
 
             <div className="mt-5 flex flex-wrap gap-3">
               <button
