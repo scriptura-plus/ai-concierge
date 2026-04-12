@@ -20,9 +20,9 @@ type ExactBuilderResponse = {
   raw?: string
 }
 
-type SaveCandidateResponse = {
+type SaveCardResponse = {
   ok?: boolean
-  candidateId?: string
+  savedId?: string
   error?: string
 }
 
@@ -74,6 +74,10 @@ type WorkspaceClientProps = {
   book: string
   chapter: number
   verse: number
+  initialExactInput?: string
+  initialDirectionInput?: string
+  prefillMode?: boolean
+  initialCandidateId?: string
 }
 
 type PersistedWorkspaceState = {
@@ -133,13 +137,17 @@ export default function WorkspaceClient({
   book,
   chapter,
   verse,
+  initialExactInput = '',
+  initialDirectionInput = '',
+  prefillMode = false,
+  initialCandidateId = '',
 }: WorkspaceClientProps) {
   const storageKey = useMemo(
     () => `moderator-workspace-state:${book}:${chapter}:${verse}`,
     [book, chapter, verse]
   )
 
-  const [exactInput, setExactInput] = useState('')
+  const [exactInput, setExactInput] = useState(() => initialExactInput)
   const [exactOptions, setExactOptions] = useState<ExactBuilderOption[]>([])
   const [exactLoading, setExactLoading] = useState(false)
   const [exactError, setExactError] = useState('')
@@ -147,10 +155,16 @@ export default function WorkspaceClient({
 
   const [savingIndex, setSavingIndex] = useState<number | null>(null)
   const [savedIndexes, setSavedIndexes] = useState<number[]>([])
-  const [saveMessage, setSaveMessage] = useState('')
+  const [saveMessage, setSaveMessage] = useState(() =>
+    prefillMode
+      ? initialCandidateId
+        ? `Кандидат ${initialCandidateId.slice(0, 8)} загружен в режим доработки.`
+        : 'Кандидат загружен в режим доработки.'
+      : ''
+  )
   const [saveError, setSaveError] = useState('')
 
-  const [directionInput, setDirectionInput] = useState('')
+  const [directionInput, setDirectionInput] = useState(() => initialDirectionInput)
   const [directionArticle, setDirectionArticle] = useState<DirectionArticle | null>(null)
   const [directionLoading, setDirectionLoading] = useState(false)
   const [directionError, setDirectionError] = useState('')
@@ -175,6 +189,11 @@ export default function WorkspaceClient({
   const directionRequest = useMemo(() => normalizeText(directionInput), [directionInput])
 
   useEffect(() => {
+    if (prefillMode) {
+      setIsHydrated(true)
+      return
+    }
+
     try {
       const raw = sessionStorage.getItem(storageKey)
       if (!raw) {
@@ -203,10 +222,10 @@ export default function WorkspaceClient({
     } finally {
       setIsHydrated(true)
     }
-  }, [storageKey])
+  }, [storageKey, prefillMode])
 
   useEffect(() => {
-    if (!isHydrated) return
+    if (!isHydrated || prefillMode) return
 
     const payload: PersistedWorkspaceState = {
       exactInput,
@@ -229,6 +248,7 @@ export default function WorkspaceClient({
     }
   }, [
     isHydrated,
+    prefillMode,
     storageKey,
     exactInput,
     exactOptions,
@@ -369,36 +389,33 @@ export default function WorkspaceClient({
     setSaveError('')
 
     try {
-      const res = await fetch('/api/moderator/workspace/save-candidate', {
+      const res = await fetch('/api/moderator/workspace/save-card', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reference,
+          verseText,
           book,
           chapter,
           verse,
           titleRu: option.title,
           textRu: option.text,
           mode: 'insights',
-          sourceType: 'manual_workspace',
           angleNote: sacredPassage || null,
-          reviewNote: 'Saved from Exact Builder',
-          generationProvider: 'openai',
-          generationModel: 'gpt-5.4-mini',
         }),
       })
 
-      const data: SaveCandidateResponse = await res.json()
+      const data: SaveCardResponse = await res.json()
 
       if (!res.ok || !data.ok) {
-        setSaveError(data.error || 'Не удалось сохранить кандидата.')
+        setSaveError(data.error || 'Не удалось сохранить карточку.')
         return
       }
 
       setSavedIndexes((prev) => [...prev, index])
-      setSaveMessage(`Вариант ${index + 1} сохранён в candidates.`)
+      setSaveMessage(`Карточка ${index + 1} сохранена.`)
     } catch {
-      setSaveError('Не удалось сохранить кандидата.')
+      setSaveError('Не удалось сохранить карточку.')
     } finally {
       setSavingIndex(null)
     }
@@ -603,11 +620,11 @@ export default function WorkspaceClient({
                             ? 'Сохранение...'
                             : isSaved
                               ? 'Сохранено'
-                              : 'Сохранить в candidates'}
+                              : 'Сохранить как карточку'}
                         </button>
 
                         {isSaved ? (
-                          <span className="text-sm text-emerald-700">Кандидат уже сохранён</span>
+                          <span className="text-sm text-emerald-700">Карточка уже сохранена</span>
                         ) : null}
                       </div>
                     </article>
