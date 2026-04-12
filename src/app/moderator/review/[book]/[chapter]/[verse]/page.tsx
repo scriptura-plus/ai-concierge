@@ -390,12 +390,15 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
                     ) : null}
 
                     <div className="mt-4 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-                      >
-                        Сохранить
-                      </button>
+                      <form action={`/api/moderator/candidates/${item.id}/promote`} method="POST">
+                        <input type="hidden" name="returnTo" value={reviewHref} />
+                        <button
+                          type="submit"
+                          className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+                        >
+                          Сохранить
+                        </button>
+                      </form>
 
                       <form action={`/api/moderator/candidates/${item.id}/reject`} method="POST">
                         <input type="hidden" name="returnTo" value={reviewHref} />
