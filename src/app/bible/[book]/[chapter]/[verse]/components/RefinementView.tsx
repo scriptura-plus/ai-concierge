@@ -254,7 +254,6 @@ export default function RefinementView({
 }: RefinementViewProps) {
   const copy = UI_COPY[locale]
   const hasInput = inputValue.trim().length > 0
-  const hasResult = Boolean(result)
 
   if (!isReady) {
     return renderIntroPanel(
@@ -282,16 +281,18 @@ export default function RefinementView({
             className="min-h-[150px] w-full rounded-[20px] border border-stone-300/70 bg-[#fffaf1] px-4 py-3 text-[0.98rem] leading-7 text-stone-800 outline-none placeholder:text-stone-400"
           />
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={hasResult ? onRegenerate : onGenerate}
-              disabled={!hasInput || isLoading}
-              className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              {hasResult ? copy.regenerateLabel : copy.generateLabel}
-            </button>
-          </div>
+          {!result ? (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={onGenerate}
+                disabled={!hasInput || isLoading}
+                className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {copy.generateLabel}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 
