@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import { NextResponse } from 'next/server'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
 type RouteContext = {
@@ -8,13 +8,16 @@ type RouteContext = {
   }>
 }
 
-export async function POST(_req: Request, context: RouteContext) {
+export async function POST(req: Request, context: RouteContext) {
   try {
     const { id } = await context.params
 
     if (!id) {
       return NextResponse.json({ error: 'Candidate id is required.' }, { status: 400 })
     }
+
+    const formData = await req.formData()
+    const returnTo = String(formData.get('returnTo') ?? '/moderator').trim() || '/moderator'
 
     const supabase = getSupabaseServerClient()
 
@@ -35,9 +38,9 @@ export async function POST(_req: Request, context: RouteContext) {
     }
 
     revalidatePath('/moderator')
-    revalidatePath('/moderator/review/[book]/[chapter]/[verse]', 'page')
+    revalidatePath(returnTo)
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.redirect(new URL(returnTo, req.url))
   } catch (error) {
     console.error('Reject candidate API error:', error)
 
