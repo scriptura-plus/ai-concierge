@@ -20,9 +20,9 @@ type ExactBuilderResponse = {
   raw?: string
 }
 
-type SaveCardResponse = {
+type SaveCandidateResponse = {
   ok?: boolean
-  savedId?: string
+  candidateId?: string
   error?: string
 }
 
@@ -369,33 +369,36 @@ export default function WorkspaceClient({
     setSaveError('')
 
     try {
-      const res = await fetch('/api/moderator/workspace/save-card', {
+      const res = await fetch('/api/moderator/workspace/save-candidate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reference,
-          verseText,
           book,
           chapter,
           verse,
           titleRu: option.title,
           textRu: option.text,
           mode: 'insights',
+          sourceType: 'manual_workspace',
           angleNote: sacredPassage || null,
+          reviewNote: 'Saved from Exact Builder',
+          generationProvider: 'openai',
+          generationModel: 'gpt-5.4-mini',
         }),
       })
 
-      const data: SaveCardResponse = await res.json()
+      const data: SaveCandidateResponse = await res.json()
 
       if (!res.ok || !data.ok) {
-        setSaveError(data.error || 'Не удалось сохранить карточку.')
+        setSaveError(data.error || 'Не удалось сохранить кандидата.')
         return
       }
 
       setSavedIndexes((prev) => [...prev, index])
-      setSaveMessage(`Карточка ${index + 1} сохранена.`)
+      setSaveMessage(`Вариант ${index + 1} сохранён в candidates.`)
     } catch {
-      setSaveError('Не удалось сохранить карточку.')
+      setSaveError('Не удалось сохранить кандидата.')
     } finally {
       setSavingIndex(null)
     }
@@ -600,11 +603,11 @@ export default function WorkspaceClient({
                             ? 'Сохранение...'
                             : isSaved
                               ? 'Сохранено'
-                              : 'Сохранить как карточку'}
+                              : 'Сохранить в candidates'}
                         </button>
 
                         {isSaved ? (
-                          <span className="text-sm text-emerald-700">Карточка уже сохранена</span>
+                          <span className="text-sm text-emerald-700">Кандидат уже сохранён</span>
                         ) : null}
                       </div>
                     </article>
