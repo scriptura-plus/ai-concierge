@@ -50,22 +50,22 @@ const UI_COPY: Record<
   en: {
     title: 'Refine',
     introLead:
-      'Turn a rough thought into a natural spoken comment that sounds like your own words and can still be shared as a clean card.',
+      'Turn the foundation of a comment into a natural spoken response that sounds like your own words and is still clean enough to share as a card.',
     intro1:
-      'The result should sound natural out loud, not like a written mini-article.',
+      'You can paste 1–2 strong sentences that should remain the core of the final comment.',
     intro2:
-      'It should move straight into the thought without template openings or artificial phrasing.',
+      'The result should sound natural out loud, not like a written mini-article or an overbuilt speech.',
     intro3:
-      'One strong version is enough. If it does not feel right, regenerate it.',
+      'The system should preserve strong wording where possible and build a complete 30-second comment around it.',
     introPointLabel: 'Point',
     introTakeawayLabel: 'Takeaway',
-    inputLabel: 'Your draft thought',
+    inputLabel: 'Comment foundation',
     inputPlaceholder:
-      'Paste 1–2 sentences or a rough comment draft here...',
+      'Paste 1–2 strong sentences that should remain the core of the final comment...',
     resultLabel: 'Refined comment',
     loadingLabel: 'Refining comment',
     loadingText:
-      'Shaping your draft into a natural 20–35 second spoken comment…',
+      'Building a natural congregation-ready spoken comment around your core thought…',
     unavailableLabel: 'Unable to refine comment.',
     generateLabel: 'Generate',
     regenerateLabel: 'Regenerate',
@@ -77,22 +77,22 @@ const UI_COPY: Record<
   ru: {
     title: 'Огранка',
     introLead:
-      'Преврати черновую мысль в естественный устный комментарий, который звучит как свои слова и при этом аккуратно выглядит как карточка.',
+      'Преврати основу комментария в естественный устный ответ, который звучит как свои слова и при этом аккуратно выглядит как карточка.',
     intro1:
-      'Результат должен звучать естественно вслух, а не как написанная мини-статья.',
+      'Сюда можно вставить 1–2 сильные фразы, которые должны остаться смысловым ядром готового комментария.',
     intro2:
-      'Он должен сразу входить в мысль, без шаблонных заходов и искусственных фраз.',
+      'Результат должен звучать естественно вслух, а не как написанная мини-статья или переусложнённая мини-речь.',
     intro3:
-      'Достаточно одного сильного варианта. Если он не лёг на слух, его можно перегенерировать.',
+      'Система должна по возможности сохранить удачную формулировку и достроить вокруг неё полноценный комментарий примерно на 30 секунд.',
     introPointLabel: 'Пункт',
     introTakeawayLabel: 'Итог',
-    inputLabel: 'Черновая мысль',
+    inputLabel: 'Основа комментария',
     inputPlaceholder:
-      'Вставь сюда 1–2 предложения или черновик комментария...',
+      'Вставь 1–2 сильные фразы, которые должны остаться смысловым ядром готового комментария...',
     resultLabel: 'Готовый комментарий',
     loadingLabel: 'Огранка комментария',
     loadingText:
-      'Превращаем черновик в естественный устный комментарий на 20–35 секунд…',
+      'Достраиваем вокруг твоей мысли естественный устный комментарий для собрания…',
     unavailableLabel: 'Не удалось огранить комментарий.',
     generateLabel: 'Сгенерировать',
     regenerateLabel: 'Перегенерировать',
@@ -104,22 +104,22 @@ const UI_COPY: Record<
   es: {
     title: 'Refinar',
     introLead:
-      'Convierte una idea en borrador en un comentario natural que suene como tus propias palabras y que todavía pueda compartirse como una tarjeta limpia.',
+      'Convierte la base de un comentario en una respuesta hablada natural que suene como tus propias palabras y que aún pueda compartirse como una tarjeta limpia.',
     intro1:
-      'El resultado debe sonar natural en voz alta, no como un miniartículo escrito.',
+      'Aquí puedes pegar 1–2 frases fuertes que deben seguir siendo el núcleo del comentario final.',
     intro2:
-      'Debe entrar directamente en la idea sin comienzos plantillados ni frases artificiales.',
+      'El resultado debe sonar natural en voz alta, no como un miniartículo escrito ni como un discurso excesivamente construido.',
     intro3:
-      'Un solo buen resultado basta. Si no suena bien, vuelve a generarlo.',
+      'El sistema debe conservar la buena redacción cuando sea posible y construir alrededor de ella un comentario completo de unos 30 segundos.',
     introPointLabel: 'Punto',
     introTakeawayLabel: 'Conclusión',
-    inputLabel: 'Tu borrador',
+    inputLabel: 'Base del comentario',
     inputPlaceholder:
-      'Pega aquí 1–2 frases o un borrador breve del comentario...',
+      'Pega 1–2 frases fuertes que deban seguir siendo el núcleo del comentario final...',
     resultLabel: 'Comentario refinado',
     loadingLabel: 'Refinando comentario',
     loadingText:
-      'Convirtiendo tu borrador en un comentario hablado natural de 20–35 segundos…',
+      'Construyendo un comentario hablado natural para la congregación alrededor de tu idea central…',
     unavailableLabel: 'No se pudo refinar el comentario.',
     generateLabel: 'Generar',
     regenerateLabel: 'Regenerar',
@@ -131,22 +131,22 @@ const UI_COPY: Record<
   fr: {
     title: 'Affiner',
     introLead:
-      'Transformez une pensée brute en un commentaire oral naturel qui sonne comme vos propres mots et peut encore être partagé sous forme de carte propre.',
+      'Transformez la base d’un commentaire en une réponse orale naturelle qui sonne comme vos propres mots et reste assez propre pour être partagée comme carte.',
     intro1:
-      'Le résultat doit sonner naturellement à l’oral, pas comme un mini-article écrit.',
+      'Vous pouvez coller ici 1–2 phrases fortes qui doivent rester le noyau du commentaire final.',
     intro2:
-      'Il doit entrer directement dans l’idée, sans formules toutes faites ni tournures artificielles.',
+      'Le résultat doit sonner naturellement à l’oral, pas comme un mini-article écrit ni comme un discours trop fabriqué.',
     intro3:
-      'Une seule bonne version suffit. Si elle ne sonne pas juste, régénérez-la.',
+      'Le système doit préserver une bonne formulation lorsque c’est possible et construire autour d’elle un commentaire complet d’environ 30 secondes.',
     introPointLabel: 'Point',
     introTakeawayLabel: 'Conclusion',
-    inputLabel: 'Votre brouillon',
+    inputLabel: 'Base du commentaire',
     inputPlaceholder:
-      'Collez ici 1–2 phrases ou un brouillon court du commentaire...',
+      'Collez 1–2 phrases fortes qui doivent rester le noyau du commentaire final...',
     resultLabel: 'Commentaire affiné',
     loadingLabel: 'Affinage du commentaire',
     loadingText:
-      'Transformation du brouillon en un commentaire oral naturel de 20–35 secondes…',
+      'Construction d’un commentaire oral naturel pour l’assemblée autour de votre idée centrale…',
     unavailableLabel: 'Impossible d’affiner le commentaire.',
     generateLabel: 'Générer',
     regenerateLabel: 'Régénérer',
@@ -158,22 +158,22 @@ const UI_COPY: Record<
   de: {
     title: 'Verfeinern',
     introLead:
-      'Verwandle einen rohen Gedanken in einen natürlichen gesprochenen Kommentar, der wie deine eigenen Worte klingt und sich trotzdem sauber als Karte teilen lässt.',
+      'Verwandle die Grundlage eines Kommentars in eine natürliche gesprochene Antwort, die wie deine eigenen Worte klingt und sich trotzdem sauber als Karte teilen lässt.',
     intro1:
-      'Das Ergebnis soll laut natürlich klingen, nicht wie ein geschriebener Mini-Artikel.',
+      'Hier kannst du 1–2 starke Sätze einfügen, die der gedankliche Kern des fertigen Kommentars bleiben sollen.',
     intro2:
-      'Es soll direkt in den Gedanken gehen, ohne Schablonenanfänge oder künstliche Formulierungen.',
+      'Das Ergebnis soll laut natürlich klingen, nicht wie ein geschriebener Mini-Artikel oder eine überbaute Mini-Rede.',
     intro3:
-      'Eine starke Version reicht. Wenn sie nicht richtig klingt, generiere neu.',
+      'Das System soll starke Formulierungen möglichst bewahren und darum einen vollständigen Kommentar von etwa 30 Sekunden aufbauen.',
     introPointLabel: 'Punkt',
     introTakeawayLabel: 'Fazit',
-    inputLabel: 'Dein Entwurf',
+    inputLabel: 'Grundlage des Kommentars',
     inputPlaceholder:
-      'Füge hier 1–2 Sätze oder einen kurzen Kommentarentwurf ein...',
+      'Füge 1–2 starke Sätze ein, die der gedankliche Kern des fertigen Kommentars bleiben sollen...',
     resultLabel: 'Verfeinerter Kommentar',
     loadingLabel: 'Kommentar wird verfeinert',
     loadingText:
-      'Dein Entwurf wird in einen natürlichen gesprochenen Kommentar von 20–35 Sekunden geformt…',
+      'Rund um deinen Kerngedanken wird ein natürlicher gesprochener Kommentar für die Zusammenkunft aufgebaut…',
     unavailableLabel: 'Kommentar konnte nicht verfeinert werden.',
     generateLabel: 'Generieren',
     regenerateLabel: 'Neu generieren',
@@ -271,7 +271,7 @@ export default function RefinementView({
           />
 
           {!result ? (
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 flex justify-center">
               <button
                 type="button"
                 onClick={onGenerate}
@@ -324,7 +324,7 @@ export default function RefinementView({
               </p>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={onCopy}
@@ -339,24 +339,26 @@ export default function RefinementView({
 
               <button
                 type="button"
-                onClick={onShare}
-                className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-              >
-                {copy.shareLabel}
-              </button>
-
-              <button
-                type="button"
                 onClick={onRegenerate}
                 disabled={isLoading || !hasInput}
                 className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 {copy.regenerateLabel}
               </button>
+
+              <button
+                type="button"
+                onClick={onShare}
+                className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+              >
+                {copy.shareLabel}
+              </button>
             </div>
 
             {shareStatus ? (
-              <p className="mt-4 text-[0.92rem] leading-7 text-stone-600">{shareStatus}</p>
+              <p className="mt-4 text-center text-[0.92rem] leading-7 text-stone-600">
+                {shareStatus}
+              </p>
             ) : null}
           </div>
         </div>
