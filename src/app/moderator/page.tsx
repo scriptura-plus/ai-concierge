@@ -1,26 +1,4 @@
-'use client'
-
 import Link from 'next/link'
-
-type VerseQueueItem = {
-  reference: string
-  href: string
-  curatedCount: number
-  candidateCount: number
-  newCount: number
-  updatedLabel: string
-  sources: string[]
-}
-
-type DashboardProps = {
-  summary?: {
-    newCandidates: number
-    versesInQueue: number
-    withSaved: number
-    needAttention: number
-  }
-  queue?: VerseQueueItem[]
-}
 
 function statCard(label: string, value: number) {
   return (
@@ -33,23 +11,24 @@ function statCard(label: string, value: number) {
   )
 }
 
-function sourceLabel(source: string) {
-  if (source === 'user_request') return 'user'
-  if (source === 'background_fill') return 'background'
-  if (source === 'repair') return 'repair'
-  if (source === 'unfold_derived') return 'unfold'
-  return source
-}
-
-export default function ModeratorIndexPage({
-  summary = {
+export default function ModeratorIndexPage() {
+  const summary = {
     newCandidates: 0,
     versesInQueue: 0,
     withSaved: 0,
     needAttention: 0,
-  },
-  queue = [],
-}: DashboardProps) {
+  }
+
+  const queue: Array<{
+    reference: string
+    href: string
+    curatedCount: number
+    candidateCount: number
+    newCount: number
+    updatedLabel: string
+    sources: string[]
+  }> = []
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#F7F5EF_0%,#F3F0E8_46%,#F6F3EC_100%)] text-stone-900">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -177,7 +156,7 @@ export default function ModeratorIndexPage({
                               key={source}
                               className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1 text-xs font-medium text-stone-700"
                             >
-                              {sourceLabel(source)}
+                              {source}
                             </span>
                           ))
                         ) : (
