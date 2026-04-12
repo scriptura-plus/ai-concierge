@@ -14,7 +14,6 @@ import NarrowContextArticleView from './components/NarrowContextArticleView'
 import WordLensView from './components/WordLensView'
 import WordLensArticleView from './components/WordLensArticleView'
 import PhraseLensView from './components/PhraseLensView'
-import PhraseLensArticleView from './components/PhraseLensArticleView'
 import TensionLensView from './components/TensionLensView'
 import TensionLensArticleView from './components/TensionLensArticleView'
 
@@ -266,54 +265,6 @@ type TensionLensArticleApiResponse = {
   reference?: string
   targetLanguage?: AppLanguage
   article?: TensionLensArticle
-  error?: string
-  raw?: string
-}
-
-
-type PhraseNodeKind =
-  | 'precision'
-  | 'framing'
-  | 'sequence'
-  | 'restriction'
-  | 'emphasis'
-  | 'rhetorical_choice'
-
-type PhraseLensNode = {
-  id: string
-  kind: PhraseNodeKind
-  label: string
-  phrase_line: string
-  what_is_precise: string
-  why_this_wording: string
-  dig_deeper: string
-}
-
-type PhraseLensPayload = {
-  lead: string
-  nodes: PhraseLensNode[]
-}
-
-type PhraseLensMapApiResponse = {
-  reference?: string
-  targetLanguage?: AppLanguage
-  lead?: string
-  nodes?: PhraseLensNode[]
-  error?: string
-  raw?: string
-}
-
-type PhraseLensArticle = {
-  title: string
-  lead: string
-  body: string[]
-  highlight_line?: string
-}
-
-type PhraseLensArticleApiResponse = {
-  reference?: string
-  targetLanguage?: AppLanguage
-  article?: PhraseLensArticle
   error?: string
   raw?: string
 }
@@ -1196,12 +1147,8 @@ const UI_TEXT: Record<
   },
 }
 
-function emptyPhraseLensMap(): Record<AppLanguage, PhraseLensPayload | null> {
-  return { en: null, ru: null, es: null, fr: null, de: null }
-}
-
-function emptyPhraseLensArticleMap(): Record<AppLanguage, PhraseLensArticle | null> {
-  return { en: null, ru: null, es: null, fr: null, de: null }
+function emptyLensMap(): Record<AppLanguage, InsightItem[]> {
+  return { en: [], ru: [], es: [], fr: [], de: [] }
 }
 
 function emptyCompareMap(): Record<AppLanguage, ComparePayload | null> {
@@ -1296,12 +1243,8 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [insightsError, setInsightsError] = useState('')
   const [rawOutput, setRawOutput] = useState('')
 
-  const [phraseLensDataByLanguage, setPhraseLensDataByLanguage] =
-    useState<Record<AppLanguage, PhraseLensPayload | null>>(emptyPhraseLensMap())
-  const [phraseLensArticleByLanguage, setPhraseLensArticleByLanguage] =
-    useState<Record<AppLanguage, PhraseLensArticle | null>>(emptyPhraseLensArticleMap())
-  const [activePhraseNodeId, setActivePhraseNodeId] = useState('')
-  const [phraseLensCustomPrompt, setPhraseLensCustomPrompt] = useState('')
+  const [phraseLensCardsByLanguage, setPhraseLensCardsByLanguage] =
+    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
 
   const [wordLensDataByLanguage, setWordLensDataByLanguage] =
     useState<Record<AppLanguage, WordLensPayload | null>>(emptyWordLensMap())
@@ -1371,11 +1314,6 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [phraseLensLoading, setPhraseLensLoading] = useState(false)
   const [phraseLensError, setPhraseLensError] = useState('')
-  const [phraseLensArticleLoading, setPhraseLensArticleLoading] = useState(false)
-  const [phraseLensArticleError, setPhraseLensArticleError] = useState('')
-  const [phraseLensArticleCopyStatus, setPhraseLensArticleCopyStatus] =
-    useState<'idle' | 'copied' | 'failed'>('idle')
-  const [phraseLensArticleShareStatus, setPhraseLensArticleShareStatus] = useState('')
 
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en')
   const [translationLoading, setTranslationLoading] = useState(false)
@@ -1408,7 +1346,6 @@ export default function VerseDetailPage({ params }: PageProps) {
   const tensionLensRequestIdRef = useRef(0)
   const tensionLensArticleRequestIdRef = useRef(0)
   const phraseLensRequestIdRef = useRef(0)
-  const phraseLensArticleRequestIdRef = useRef(0)
   const verseRequestIdRef = useRef(0)
   const insightsRequestIdRef = useRef(0)
 
@@ -1473,14 +1410,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       setInsightsError('')
       setRawOutput('')
 
-      setPhraseLensDataByLanguage(emptyPhraseLensMap())
-      setPhraseLensArticleByLanguage(emptyPhraseLensArticleMap())
-      setActivePhraseNodeId('')
-      setPhraseLensCustomPrompt('')
-      setPhraseLensArticleLoading(false)
-      setPhraseLensArticleError('')
-      setPhraseLensArticleCopyStatus('idle')
-      setPhraseLensArticleShareStatus('')
+      setPhraseLensCardsByLanguage(emptyLensMap())
 
       setWordLensDataByLanguage(emptyWordLensMap())
       setWordLensArticleByLanguage(emptyWordLensArticleMap())
@@ -1550,7 +1480,6 @@ export default function VerseDetailPage({ params }: PageProps) {
       tensionLensRequestIdRef.current += 1
       tensionLensArticleRequestIdRef.current += 1
       phraseLensRequestIdRef.current += 1
-      phraseLensArticleRequestIdRef.current += 1
       insightsRequestIdRef.current += 1
 
       try {
@@ -1688,7 +1617,12 @@ export default function VerseDetailPage({ params }: PageProps) {
     return `${book}:${chapter}:${verse}:${verseText}`
   }, [book, chapter, verse, verseText])
 
-  const currentCards = useMemo(() => insights, [insights])
+  const currentCards = useMemo(() => {
+    if (activeTab === 'lens' && selectedLens === 'phrase') {
+      return phraseLensCardsByLanguage[appLanguage] || []
+    }
+    return insights
+  }, [activeTab, selectedLens, appLanguage, phraseLensCardsByLanguage, insights])
 
   const currentInsight = useMemo(() => currentCards[currentIndex], [currentCards, currentIndex])
 
@@ -1723,15 +1657,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     [tensionLensArticleByLanguage, appLanguage]
   )
 
-  const phraseLensData = useMemo(
-    () => phraseLensDataByLanguage[appLanguage],
-    [phraseLensDataByLanguage, appLanguage]
-  )
-  const phraseLensArticle = useMemo(
-    () => phraseLensArticleByLanguage[appLanguage],
-    [phraseLensArticleByLanguage, appLanguage]
-  )
-
   const activeWordLensNode = useMemo(() => {
     if (!wordLensData || !activeWordLensNodeId) return null
     return wordLensData.nodes.find((item) => item.id === activeWordLensNodeId) ?? null
@@ -1742,19 +1667,13 @@ export default function VerseDetailPage({ params }: PageProps) {
     return tensionLensData.nodes.find((item) => item.id === activeTensionNodeId) ?? null
   }, [tensionLensData, activeTensionNodeId])
 
-
-  const activePhraseNode = useMemo(() => {
-    if (!phraseLensData || !activePhraseNodeId) return null
-    return phraseLensData.nodes.find((item) => item.id === activePhraseNodeId) ?? null
-  }, [phraseLensData, activePhraseNodeId])
-
   const activeNarrowDirection = useMemo(() => {
     if (!narrowContextData || !activeNarrowDirectionId) return null
     return narrowContextData.directions.find((item) => item.id === activeNarrowDirectionId) ?? null
   }, [narrowContextData, activeNarrowDirectionId])
 
   async function translateCard(
-    targetLanguage: 'ru' | 'es' | 'fr' | 'de',
+    targetLanguage: AppLanguage,
     card: InsightItem,
     cardKey: string
   ) {
@@ -1786,7 +1705,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   }
 
   async function translateVerseText(
-    targetLanguage: 'ru' | 'es' | 'fr' | 'de',
+    targetLanguage: AppLanguage,
     text: string,
     key: string
   ) {
@@ -2122,15 +2041,15 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
-
   async function loadPhraseLens(force = false, language: AppLanguage = appLanguage) {
     if (!formattedReference || !verseText || !modesReady) return
-    if (!force && phraseLensDataByLanguage[language]) return
+    if (!force && phraseLensCardsByLanguage[language]?.length > 0) return
 
     const requestId = ++phraseLensRequestIdRef.current
 
     setPhraseLensLoading(true)
     setPhraseLensError('')
+    setCurrentIndex(0)
     setActiveArticleKey('')
 
     try {
@@ -2141,136 +2060,27 @@ export default function VerseDetailPage({ params }: PageProps) {
           reference: formattedReference,
           verseText,
           targetLanguage: language,
-          mode: 'map',
         }),
       })
 
-      const data: PhraseLensMapApiResponse = await res.json()
+      const data = (await res.json()) as { cards?: InsightItem[]; error?: string }
 
       if (requestId !== phraseLensRequestIdRef.current) return
 
-      if (!res.ok || !Array.isArray(data.nodes) || data.nodes.length === 0 || typeof data.lead !== 'string') {
+      if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
         setPhraseLensError(data.error || UI_TEXT[language].phraseLensUnavailable)
-        setPhraseLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
+        setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
         return
       }
 
-      setPhraseLensDataByLanguage((prev) => ({
-        ...prev,
-        [language]: {
-          lead: data.lead as string,
-          nodes: data.nodes as PhraseLensNode[],
-        },
-      }))
+      setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
     } catch {
       if (requestId !== phraseLensRequestIdRef.current) return
       setPhraseLensError(UI_TEXT[language].phraseLensUnavailable)
-      setPhraseLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
+      setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
     } finally {
       if (requestId === phraseLensRequestIdRef.current) {
         setPhraseLensLoading(false)
-      }
-    }
-  }
-
-  async function loadPhraseLensDeepDive(
-    node: PhraseLensNode,
-    force = false,
-    language: AppLanguage = appLanguage
-  ) {
-    if (!formattedReference || !verseText) return
-    if (!force && phraseLensArticle && activePhraseNodeId === node.id) return
-
-    const requestId = ++phraseLensArticleRequestIdRef.current
-
-    setPhraseLensArticleLoading(true)
-    setPhraseLensArticleError('')
-    setActivePhraseNodeId(node.id)
-    setPhraseLensArticleCopyStatus('idle')
-    setPhraseLensArticleShareStatus('')
-
-    try {
-      const res = await fetch('/api/phrase-lens', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference: formattedReference,
-          verseText,
-          targetLanguage: language,
-          mode: 'deep_dive',
-          node,
-        }),
-      })
-
-      const data: PhraseLensArticleApiResponse = await res.json()
-
-      if (requestId !== phraseLensArticleRequestIdRef.current) return
-
-      if (!res.ok || !data.article) {
-        setPhraseLensArticleError(data.error || UI_TEXT[language].phraseLensUnavailable)
-        return
-      }
-
-      setPhraseLensArticleByLanguage((prev) => ({
-        ...prev,
-        [language]: data.article as PhraseLensArticle,
-      }))
-    } catch {
-      if (requestId !== phraseLensArticleRequestIdRef.current) return
-      setPhraseLensArticleError(UI_TEXT[language].phraseLensUnavailable)
-    } finally {
-      if (requestId === phraseLensArticleRequestIdRef.current) {
-        setPhraseLensArticleLoading(false)
-      }
-    }
-  }
-
-  async function loadPhraseLensCustomDig(force = false, language: AppLanguage = appLanguage) {
-    if (!formattedReference || !verseText) return
-    const prompt = phraseLensCustomPrompt.trim()
-    if (!prompt) return
-    if (!force && phraseLensArticle && activePhraseNodeId === 'custom') return
-
-    const requestId = ++phraseLensArticleRequestIdRef.current
-
-    setPhraseLensArticleLoading(true)
-    setPhraseLensArticleError('')
-    setActivePhraseNodeId('custom')
-    setPhraseLensArticleCopyStatus('idle')
-    setPhraseLensArticleShareStatus('')
-
-    try {
-      const res = await fetch('/api/phrase-lens', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference: formattedReference,
-          verseText,
-          targetLanguage: language,
-          mode: 'custom_dig',
-          prompt,
-        }),
-      })
-
-      const data: PhraseLensArticleApiResponse = await res.json()
-
-      if (requestId !== phraseLensArticleRequestIdRef.current) return
-
-      if (!res.ok || !data.article) {
-        setPhraseLensArticleError(data.error || UI_TEXT[language].phraseLensUnavailable)
-        return
-      }
-
-      setPhraseLensArticleByLanguage((prev) => ({
-        ...prev,
-        [language]: data.article as PhraseLensArticle,
-      }))
-    } catch {
-      if (requestId !== phraseLensArticleRequestIdRef.current) return
-      setPhraseLensArticleError(UI_TEXT[language].phraseLensUnavailable)
-    } finally {
-      if (requestId === phraseLensArticleRequestIdRef.current) {
-        setPhraseLensArticleLoading(false)
       }
     }
   }
@@ -2520,7 +2330,10 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTensionLensArticleCopyStatus('idle')
     setTensionLensArticleShareStatus('')
 
-    const isEnglish = targetLanguage === 'en'
+    if (targetLanguage === 'en') {
+      setAppLanguage('en')
+      return
+    }
 
     if (activeTab === 'insights') {
       if (!currentInsight) {
@@ -2549,7 +2362,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       return
     }
 
-    if (!isEnglish && verseText && verseTranslationKey) {
+    if (verseText && verseTranslationKey) {
       setTranslationLoading(true)
 
       try {
@@ -2597,17 +2410,6 @@ export default function VerseDetailPage({ params }: PageProps) {
       setTensionLensShareStatus('')
       setTensionLensArticleCopyStatus('idle')
       setTensionLensArticleShareStatus('')
-    }
-
-    if (activeTab === 'lens' && selectedLens === 'phrase') {
-      setPhraseLensDataByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
-      setPhraseLensArticleByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
-      setActivePhraseNodeId('')
-      setPhraseLensCustomPrompt('')
-      setPhraseLensArticleError('')
-      setPhraseLensArticleLoading(false)
-      setPhraseLensArticleCopyStatus('idle')
-      setPhraseLensArticleShareStatus('')
     }
 
     setAppLanguage(targetLanguage)
@@ -2832,22 +2634,6 @@ export default function VerseDetailPage({ params }: PageProps) {
       .filter(Boolean)
       .join('\n')
   }, [tensionLensArticle, formattedReference])
-
-  const phraseLensArticleShareText = useMemo(() => {
-    if (!phraseLensArticle || !formattedReference) return ''
-    return [
-      formattedReference,
-      '',
-      phraseLensArticle.title,
-      '',
-      phraseLensArticle.lead,
-      '',
-      ...phraseLensArticle.body,
-      ...(phraseLensArticle.highlight_line ? ['', phraseLensArticle.highlight_line] : []),
-    ]
-      .filter(Boolean)
-      .join('\n')
-  }, [phraseLensArticle, formattedReference])
 
   const shareText = useMemo(() => {
     if (!displayedCard || !formattedReference) return ''
@@ -3231,40 +3017,6 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
-  async function handleCopyPhraseLensArticle() {
-    if (!phraseLensArticleShareText) return
-
-    try {
-      await navigator.clipboard.writeText(phraseLensArticleShareText)
-      setPhraseLensArticleCopyStatus('copied')
-      setPhraseLensArticleShareStatus('')
-
-      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
-      copyTimerRef.current = window.setTimeout(() => {
-        setPhraseLensArticleCopyStatus('idle')
-      }, 1600)
-    } catch {
-      setPhraseLensArticleCopyStatus('failed')
-    }
-  }
-
-  async function handleSharePhraseLensArticle() {
-    if (!phraseLensArticleShareText) return
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ text: phraseLensArticleShareText })
-        setPhraseLensArticleShareStatus(t.sharedAsText)
-      } else {
-        await navigator.clipboard.writeText(phraseLensArticleShareText)
-        setPhraseLensArticleShareStatus(t.shareUnavailableCopiedInstead)
-      }
-    } catch {
-      setPhraseLensArticleShareStatus('')
-    }
-  }
-
-
   function handleCompareBackToTop() {
     if (articleTopRef.current) {
       articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -3370,13 +3122,6 @@ export default function VerseDetailPage({ params }: PageProps) {
       setTensionLensArticleByLanguage(emptyTensionLensArticleMap())
       setTensionLensArticleError('')
       setTensionLensCustomPrompt('')
-    }
-
-    if (lens === 'phrase') {
-      setActivePhraseNodeId('')
-      setPhraseLensArticleByLanguage(emptyPhraseLensArticleMap())
-      setPhraseLensArticleError('')
-      setPhraseLensCustomPrompt('')
     }
 
     if (lens === 'translation') await loadCompare(false, appLanguage)
@@ -3736,59 +3481,13 @@ export default function VerseDetailPage({ params }: PageProps) {
       )
     }
 
-
     if (selectedLens === 'phrase') {
-      if (activePhraseNodeId) {
-        return (
-          <PhraseLensArticleView
-            article={phraseLensArticle}
-            isLoading={phraseLensArticleLoading}
-            error={phraseLensArticleError}
-            articleLabel={t.phrase}
-            loadingLabel={t.loadingPhraseLens}
-            loadingText={t.loadingPhraseLensText}
-            unavailableLabel={t.phraseLensUnavailable}
-            backLabel={t.backToMeanings}
-            shareLabel={t.share}
-            copiedLabel={t.copied}
-            copyLabel={t.copy}
-            copyFailedLabel={t.copyFailed}
-            shareStatus={phraseLensArticleShareStatus}
-            copyStatus={phraseLensArticleCopyStatus}
-            tryAgainLabel={t.tryAgain}
-            onBack={() => {
-              setActivePhraseNodeId('')
-              setPhraseLensArticleByLanguage((prev) => ({ ...prev, [appLanguage]: null }))
-              setPhraseLensArticleError('')
-              setPhraseLensArticleLoading(false)
-              setPhraseLensArticleCopyStatus('idle')
-              setPhraseLensArticleShareStatus('')
-              articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }}
-            onCopy={() => {
-              void handleCopyPhraseLensArticle()
-            }}
-            onShare={() => {
-              void handleSharePhraseLensArticle()
-            }}
-            onRetry={() => {
-              if (activePhraseNode && activePhraseNodeId !== 'custom') {
-                void loadPhraseLensDeepDive(activePhraseNode, true, appLanguage)
-              } else if (activePhraseNodeId === 'custom') {
-                void loadPhraseLensCustomDig(true, appLanguage)
-              }
-            }}
-          />
-        )
-      }
-
       return (
         <PhraseLensView
-          locale={appLanguage}
           isReady={modesReady}
           isLoading={phraseLensLoading}
           error={phraseLensError}
-          data={phraseLensData}
+          data={null}
           title={t.phrase}
           leadFallback={t.phraseHelper}
           takeawayFallback={t.lensTakeawayDefault}
@@ -3799,20 +3498,14 @@ export default function VerseDetailPage({ params }: PageProps) {
           unavailableLabel={t.phraseLensUnavailable}
           tryAgainLabel={t.tryAgain}
           changeLabel={t.change}
-          customPromptValue={phraseLensCustomPrompt}
-          onCustomPromptChange={setPhraseLensCustomPrompt}
+          customPromptValue=""
+          onCustomPromptChange={() => {}}
           onRetry={() => {
             void loadPhraseLens(true, appLanguage)
           }}
           onChangeMode={() => setLensSheetOpen(true)}
-          onNodeSelect={(nodeId) => {
-            const node = phraseLensData?.nodes.find((item) => item.id === nodeId)
-            if (!node) return
-            void loadPhraseLensDeepDive(node, true, appLanguage)
-          }}
-          onCustomDig={() => {
-            void loadPhraseLensCustomDig(true, appLanguage)
-          }}
+          onNodeSelect={() => {}}
+          onCustomDig={() => {}}
         />
       )
     }
