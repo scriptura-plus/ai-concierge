@@ -201,17 +201,6 @@ const UI_COPY: Record<
   },
 }
 
-function detectLocale(changeLabel: string, title: string): LocaleCode {
-  const source = `${changeLabel} ${title}`.toLowerCase()
-
-  if (/[а-яё]/i.test(source)) return 'ru'
-  if (source.includes('cambiar') || source.includes('lente') || source.includes('frase')) return 'es'
-  if (source.includes('changer') || source.includes('lentille') || source.includes('phrase')) return 'fr'
-  if (source.includes('ändern') || source.includes('linse') || source.includes('formulierung')) return 'de'
-
-  return 'en'
-}
-
 function kindBadge(kind: PhraseNodeKind, locale: LocaleCode) {
   const t = UI_COPY[locale]
 
