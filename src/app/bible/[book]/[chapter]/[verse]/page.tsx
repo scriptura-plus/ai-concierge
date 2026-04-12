@@ -111,7 +111,7 @@ type ContextApiResponse = {
 type AppLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 type ArticleJobStatus = 'idle' | 'generating' | 'ready' | 'failed'
 type InsightsStage = 'idle' | 'loading_saved' | 'filling' | 'ready' | 'failed'
-type TopTab = 'insights' | 'context' | 'lens'
+type TopTab = 'insights' | 'context' | 'lens' | 'refine'
 type LensKind = 'translation' | 'word' | 'tension' | 'phrase'
 type ContextKind = 'narrow' | 'wide'
 type SourceMode = 'insights' | 'word' | 'tension' | 'why_this_phrase'
@@ -336,6 +336,7 @@ const UI_TEXT: Record<
     translations: string
     context: string
     lens: string
+    refine: string
 
     verseLoading: string
     verseLoadingText: string
@@ -483,6 +484,7 @@ const UI_TEXT: Record<
     translations: 'Translations',
     context: 'Context',
     lens: 'Lens',
+    refine: 'Refine',
     verseLoading: 'Loading verse',
     verseLoadingText: 'Preparing the verse text for reading.',
     verseUnavailable: 'Unable to load verse.',
@@ -626,6 +628,7 @@ const UI_TEXT: Record<
     translations: 'Переводы',
     context: 'Контекст',
     lens: 'Линза',
+    refine: 'Refine',
     verseLoading: 'Загрузка стиха',
     verseLoadingText: 'Подготавливаем текст стиха для чтения.',
     verseUnavailable: 'Не удалось загрузить стих.',
@@ -772,6 +775,7 @@ const UI_TEXT: Record<
     translations: 'Traducciones',
     context: 'Contexto',
     lens: 'Lente',
+    refine: 'Refine',
     verseLoading: 'Cargando versículo',
     verseLoadingText: 'Preparando el texto del versículo para leerlo.',
     verseUnavailable: 'No se pudo cargar el versículo.',
@@ -916,6 +920,7 @@ const UI_TEXT: Record<
     translations: 'Traductions',
     context: 'Contexte',
     lens: 'Lentille',
+    refine: 'Refine',
     verseLoading: 'Chargement du verset',
     verseLoadingText: 'Préparation du texte du verset pour la lecture.',
     verseUnavailable: 'Impossible de charger le verset.',
@@ -1061,6 +1066,7 @@ const UI_TEXT: Record<
     translations: 'Übersetzungen',
     context: 'Kontext',
     lens: 'Linse',
+    refine: 'Refine',
     verseLoading: 'Vers wird geladen',
     verseLoadingText: 'Der Verstext wird zum Lesen vorbereitet.',
     verseUnavailable: 'Vers konnte nicht geladen werden.',
@@ -2522,7 +2528,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     const isEnglish = targetLanguage === 'en'
 
-    if (activeTab === 'insights') {
+    if (activeTab === 'insights' || activeTab === 'refine') {
       if (!currentInsight) {
         setAppLanguage(targetLanguage)
         return
@@ -2618,7 +2624,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     const nextIndex = (currentIndex + 1) % currentCards.length
     setCurrentIndex(nextIndex)
 
-    if (activeTab === 'insights' && appLanguage !== 'en') {
+    if ((activeTab === 'insights' || activeTab === 'refine') && appLanguage !== 'en') {
       const nextInsight = currentCards[nextIndex]
       if (!nextInsight) return
 
@@ -2642,7 +2648,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     const prevIndex = (currentIndex - 1 + currentCards.length) % currentCards.length
     setCurrentIndex(prevIndex)
 
-    if (activeTab === 'insights' && appLanguage !== 'en') {
+    if ((activeTab === 'insights' || activeTab === 'refine') && appLanguage !== 'en') {
       const prevInsight = currentCards[prevIndex]
       if (!prevInsight) return
 
@@ -2686,7 +2692,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const displayedCard = useMemo(() => {
     if (!currentInsight) return null
 
-    if (activeTab === 'insights' && appLanguage !== 'en') {
+    if ((activeTab === 'insights' || activeTab === 'refine') && appLanguage !== 'en') {
       const baseKey = `${currentModeKey}:${currentIndex}:${currentInsight.title}:${currentInsight.text}`
       return translatedCards[`${appLanguage}:${baseKey}`] || currentInsight
     }
@@ -4052,6 +4058,18 @@ export default function VerseDetailPage({ params }: PageProps) {
             },
             !modesReady
           )}
+          {renderTabButton(
+            t.refine,
+            activeTab === 'refine',
+            () => {
+              if (!modesReady) return
+              setActiveTab('refine')
+              setLensSheetOpen(false)
+              setContextSheetOpen(false)
+              setActiveArticleKey('')
+            },
+            !modesReady
+          )}
         </div>
 
         <VerseBlock
@@ -4067,6 +4085,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         {!verseLoading && !verseError && activeTab === 'insights' && renderSharedCardStack()}
         {!verseLoading && !verseError && activeTab === 'context' && renderContextView()}
         {!verseLoading && !verseError && activeTab === 'lens' && renderLensView()}
+        {!verseLoading && !verseError && activeTab === 'refine' && renderSharedCardStack()}
       </div>
 
       {displayedCard && !insightsBlockingLoad && !insightsError && (
