@@ -9,12 +9,13 @@ import ContextSheet from './components/ContextSheet'
 import CompareView from './components/CompareView'
 import ContextView from './components/ContextView'
 import CardStackView from './components/CardStackView'
-import ModeStateCard from './components/ModeStateCard'
 import NarrowContextView from './components/NarrowContextView'
 import NarrowContextArticleView from './components/NarrowContextArticleView'
 import WordLensView from './components/WordLensView'
 import WordLensArticleView from './components/WordLensArticleView'
 import PhraseLensView from './components/PhraseLensView'
+import TensionLensView from './components/TensionLensView'
+import TensionLensArticleView from './components/TensionLensArticleView'
 
 type PageProps = {
   params: Promise<{
@@ -217,6 +218,53 @@ type WordLensArticleApiResponse = {
   reference?: string
   targetLanguage?: AppLanguage
   article?: WordLensArticle
+  error?: string
+  raw?: string
+}
+
+type TensionNodeKind =
+  | 'contrast'
+  | 'paradox'
+  | 'reversal'
+  | 'shock'
+  | 'pressure'
+  | 'collision'
+
+type TensionLensNode = {
+  id: string
+  kind: TensionNodeKind
+  label: string
+  tension_line: string
+  what_feels_strange: string
+  why_it_matters: string
+  dig_deeper: string
+}
+
+type TensionLensPayload = {
+  lead: string
+  nodes: TensionLensNode[]
+}
+
+type TensionLensMapApiResponse = {
+  reference?: string
+  targetLanguage?: AppLanguage
+  lead?: string
+  nodes?: TensionLensNode[]
+  error?: string
+  raw?: string
+}
+
+type TensionLensArticle = {
+  title: string
+  lead: string
+  body: string[]
+  highlight_line?: string
+}
+
+type TensionLensArticleApiResponse = {
+  reference?: string
+  targetLanguage?: AppLanguage
+  article?: TensionLensArticle
   error?: string
   raw?: string
 }
@@ -1119,6 +1167,14 @@ function emptyWordLensArticleMap(): Record<AppLanguage, WordLensArticle | null> 
   return { en: null, ru: null, es: null, fr: null, de: null }
 }
 
+function emptyTensionLensMap(): Record<AppLanguage, TensionLensPayload | null> {
+  return { en: null, ru: null, es: null, fr: null, de: null }
+}
+
+function emptyTensionLensArticleMap(): Record<AppLanguage, TensionLensArticle | null> {
+  return { en: null, ru: null, es: null, fr: null, de: null }
+}
+
 function formatBookLabel(bookSlug: string) {
   return bookSlug
     .split('-')
@@ -1172,16 +1228,6 @@ function renderStructuredPanel(
   )
 }
 
-function lensBadgeLabel(
-  selectedLens: LensKind | null,
-  t: (typeof UI_TEXT)['en']
-) {
-  if (selectedLens === 'translation') return `${t.lensLabel}: ${t.translation}`
-  if (selectedLens === 'word') return `${t.lensLabel}: ${t.word}`
-  if (selectedLens === 'tension') return `${t.lensLabel}: ${t.tension}`
-  return `${t.lensLabel}: ${t.phrase}`
-}
-
 export default function VerseDetailPage({ params }: PageProps) {
   const [book, setBook] = useState('')
   const [chapter, setChapter] = useState('')
@@ -1197,18 +1243,22 @@ export default function VerseDetailPage({ params }: PageProps) {
   const [insightsError, setInsightsError] = useState('')
   const [rawOutput, setRawOutput] = useState('')
 
-  const [wordLensCardsByLanguage, setWordLensCardsByLanguage] =
-    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
-  const [tensionLensCardsByLanguage, setTensionLensCardsByLanguage] =
-    useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
   const [phraseLensCardsByLanguage, setPhraseLensCardsByLanguage] =
     useState<Record<AppLanguage, InsightItem[]>>(emptyLensMap())
+
   const [wordLensDataByLanguage, setWordLensDataByLanguage] =
     useState<Record<AppLanguage, WordLensPayload | null>>(emptyWordLensMap())
   const [wordLensArticleByLanguage, setWordLensArticleByLanguage] =
     useState<Record<AppLanguage, WordLensArticle | null>>(emptyWordLensArticleMap())
   const [activeWordLensNodeId, setActiveWordLensNodeId] = useState('')
   const [wordLensCustomPrompt, setWordLensCustomPrompt] = useState('')
+
+  const [tensionLensDataByLanguage, setTensionLensDataByLanguage] =
+    useState<Record<AppLanguage, TensionLensPayload | null>>(emptyTensionLensMap())
+  const [tensionLensArticleByLanguage, setTensionLensArticleByLanguage] =
+    useState<Record<AppLanguage, TensionLensArticle | null>>(emptyTensionLensArticleMap())
+  const [activeTensionNodeId, setActiveTensionNodeId] = useState('')
+  const [tensionLensCustomPrompt, setTensionLensCustomPrompt] = useState('')
 
   const [compareByLanguage, setCompareByLanguage] =
     useState<Record<AppLanguage, ComparePayload | null>>(emptyCompareMap())
@@ -1223,4 +1273,2723 @@ export default function VerseDetailPage({ params }: PageProps) {
 
   const [contextLoading, setContextLoading] = useState(false)
   const [contextError, setContextError] = useState('')
-  const [contextCopyStatus, setContextCopyStatus] = useState<'idle' | 'copied'
+  const [contextCopyStatus, setContextCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [contextShareStatus, setContextShareStatus] = useState('')
+  const [contextSheetOpen, setContextSheetOpen] = useState(false)
+  const [selectedContext, setSelectedContext] = useState<ContextKind | null>(null)
+
+  const [narrowContextData, setNarrowContextData] = useState<NarrowContextPayload | null>(null)
+  const [narrowContextLoading, setNarrowContextLoading] = useState(false)
+  const [narrowContextError, setNarrowContextError] = useState('')
+  const [narrowCopyStatus, setNarrowCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [narrowShareStatus, setNarrowShareStatus] = useState('')
+  const [activeNarrowDirectionId, setActiveNarrowDirectionId] = useState('')
+  const [narrowArticle, setNarrowArticle] = useState<NarrowContextArticle | null>(null)
+  const [narrowArticleLoading, setNarrowArticleLoading] = useState(false)
+  const [narrowArticleError, setNarrowArticleError] = useState('')
+  const [narrowArticleCopyStatus, setNarrowArticleCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [narrowArticleShareStatus, setNarrowArticleShareStatus] = useState('')
+
+  const [wordLensLoading, setWordLensLoading] = useState(false)
+  const [wordLensError, setWordLensError] = useState('')
+  const [wordLensCopyStatus, setWordLensCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [wordLensShareStatus, setWordLensShareStatus] = useState('')
+  const [wordLensArticleLoading, setWordLensArticleLoading] = useState(false)
+  const [wordLensArticleError, setWordLensArticleError] = useState('')
+  const [wordLensArticleCopyStatus, setWordLensArticleCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [wordLensArticleShareStatus, setWordLensArticleShareStatus] = useState('')
+
+  const [tensionLensLoading, setTensionLensLoading] = useState(false)
+  const [tensionLensError, setTensionLensError] = useState('')
+  const [tensionLensCopyStatus, setTensionLensCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [tensionLensShareStatus, setTensionLensShareStatus] = useState('')
+  const [tensionLensArticleLoading, setTensionLensArticleLoading] = useState(false)
+  const [tensionLensArticleError, setTensionLensArticleError] = useState('')
+  const [tensionLensArticleCopyStatus, setTensionLensArticleCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [tensionLensArticleShareStatus, setTensionLensArticleShareStatus] = useState('')
+
+  const [phraseLensLoading, setPhraseLensLoading] = useState(false)
+  const [phraseLensError, setPhraseLensError] = useState('')
+
+  const [appLanguage, setAppLanguage] = useState<AppLanguage>('en')
+  const [translationLoading, setTranslationLoading] = useState(false)
+  const [translationError, setTranslationError] = useState('')
+  const [translatedCards, setTranslatedCards] = useState<Record<string, InsightItem>>({})
+
+  const [shareStatus, setShareStatus] = useState('')
+
+  const [articleJobs, setArticleJobs] = useState<Record<string, ArticleJob>>({})
+  const [activeArticleKey, setActiveArticleKey] = useState('')
+  const [articleShareStatus, setArticleShareStatus] = useState('')
+  const [articleCopyStatus, setArticleCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+
+  const [activeTab, setActiveTab] = useState<TopTab>('insights')
+  const [lensSheetOpen, setLensSheetOpen] = useState(false)
+  const [selectedLens, setSelectedLens] = useState<LensKind | null>(null)
+
+  const copyTimerRef = useRef<number | null>(null)
+  const exportCardRef = useRef<HTMLDivElement | null>(null)
+  const articleTopRef = useRef<HTMLDivElement | null>(null)
+  const touchStartXRef = useRef<number | null>(null)
+  const touchDeltaXRef = useRef(0)
+
+  const compareRequestIdRef = useRef(0)
+  const contextRequestIdRef = useRef(0)
+  const narrowRequestIdRef = useRef(0)
+  const narrowArticleRequestIdRef = useRef(0)
+  const wordLensRequestIdRef = useRef(0)
+  const wordLensArticleRequestIdRef = useRef(0)
+  const tensionLensRequestIdRef = useRef(0)
+  const tensionLensArticleRequestIdRef = useRef(0)
+  const phraseLensRequestIdRef = useRef(0)
+  const verseRequestIdRef = useRef(0)
+  const insightsRequestIdRef = useRef(0)
+
+  const t = UI_TEXT[appLanguage]
+  const insightsBlockingLoad = insightsStage === 'loading_saved' && insights.length === 0
+  const insightsBackgroundFill = insightsStage === 'filling'
+  const modesReady = insights.length > 0
+  const interactionsLocked = verseLoading || insightsBlockingLoad
+
+  useEffect(() => {
+    async function loadInitial() {
+      const resolved = await params
+      setBook(resolved.book)
+      setChapter(resolved.chapter)
+      setVerse(resolved.verse)
+    }
+    loadInitial()
+  }, [params])
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(ARTICLE_STORAGE_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw) as Record<string, ArticleJob>
+      if (parsed && typeof parsed === 'object') {
+        setArticleJobs(parsed)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      const readyJobs = Object.fromEntries(
+        Object.entries(articleJobs).filter(([, job]) => job.status === 'ready' && job.article)
+      )
+      window.localStorage.setItem(ARTICLE_STORAGE_KEY, JSON.stringify(readyJobs))
+    } catch {
+      // ignore
+    }
+  }, [articleJobs])
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!book || !chapter || !verse) return
+
+    async function loadVerseOnly() {
+      const requestId = ++verseRequestIdRef.current
+
+      setVerseLoading(true)
+      setVerseError('')
+      setVerseText('')
+      setTranslatedVerseTexts({})
+      setInsights([])
+      setInsightsStage('idle')
+      setInsightsError('')
+      setRawOutput('')
+
+      setPhraseLensCardsByLanguage(emptyLensMap())
+
+      setWordLensDataByLanguage(emptyWordLensMap())
+      setWordLensArticleByLanguage(emptyWordLensArticleMap())
+      setActiveWordLensNodeId('')
+      setWordLensCustomPrompt('')
+      setWordLensCopyStatus('idle')
+      setWordLensShareStatus('')
+      setWordLensArticleLoading(false)
+      setWordLensArticleError('')
+      setWordLensArticleCopyStatus('idle')
+      setWordLensArticleShareStatus('')
+
+      setTensionLensDataByLanguage(emptyTensionLensMap())
+      setTensionLensArticleByLanguage(emptyTensionLensArticleMap())
+      setActiveTensionNodeId('')
+      setTensionLensCustomPrompt('')
+      setTensionLensCopyStatus('idle')
+      setTensionLensShareStatus('')
+      setTensionLensArticleLoading(false)
+      setTensionLensArticleError('')
+      setTensionLensArticleCopyStatus('idle')
+      setTensionLensArticleShareStatus('')
+
+      setCompareByLanguage(emptyCompareMap())
+      setContextByLanguage(emptyContextMap())
+      setCompareError('')
+      setCompareCopyStatus('idle')
+      setCompareShareStatus('')
+      setContextError('')
+      setContextCopyStatus('idle')
+      setContextShareStatus('')
+      setContextSheetOpen(false)
+      setSelectedContext(null)
+      setNarrowContextData(null)
+      setNarrowContextLoading(false)
+      setNarrowContextError('')
+      setNarrowCopyStatus('idle')
+      setNarrowShareStatus('')
+      setActiveNarrowDirectionId('')
+      setNarrowArticle(null)
+      setNarrowArticleLoading(false)
+      setNarrowArticleError('')
+      setNarrowArticleCopyStatus('idle')
+      setNarrowArticleShareStatus('')
+      setWordLensError('')
+      setTensionLensError('')
+      setPhraseLensError('')
+      setCurrentIndex(0)
+      setTranslationLoading(false)
+      setTranslationError('')
+      setTranslatedCards({})
+      setShareStatus('')
+      setActiveArticleKey('')
+      setArticleShareStatus('')
+      setArticleCopyStatus('idle')
+      setActiveTab('insights')
+      setSelectedLens(null)
+      setLensSheetOpen(false)
+      setAppLanguage('en')
+
+      compareRequestIdRef.current += 1
+      contextRequestIdRef.current += 1
+      narrowRequestIdRef.current += 1
+      narrowArticleRequestIdRef.current += 1
+      wordLensRequestIdRef.current += 1
+      wordLensArticleRequestIdRef.current += 1
+      tensionLensRequestIdRef.current += 1
+      tensionLensArticleRequestIdRef.current += 1
+      phraseLensRequestIdRef.current += 1
+      insightsRequestIdRef.current += 1
+
+      try {
+        const res = await fetch('/api/verse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ book, chapter, verse }),
+        })
+
+        const data: VerseApiResponse = await res.json()
+
+        if (requestId !== verseRequestIdRef.current) return
+
+        if (!res.ok || !data.verseText) {
+          setVerseError(data.error || t.verseUnavailable)
+          return
+        }
+
+        setVerseText(data.verseText)
+      } catch {
+        if (requestId !== verseRequestIdRef.current) return
+        setVerseError(t.verseUnavailable)
+      } finally {
+        if (requestId === verseRequestIdRef.current) {
+          setVerseLoading(false)
+        }
+      }
+    }
+
+    loadVerseOnly()
+  }, [book, chapter, verse])
+
+  async function loadInsightsTwoPhase() {
+    if (!book || !chapter || !verse || !verseText || verseError) return
+
+    const requestId = ++insightsRequestIdRef.current
+
+    setInsightsError('')
+    setRawOutput('')
+    setInsightsStage('loading_saved')
+
+    let savedSnapshot: InsightItem[] = []
+
+    try {
+      const savedRes = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book, chapter, verse, count: 0, targetLanguage: 'en' }),
+      })
+
+      const savedData: InsightsApiResponse = await savedRes.json()
+
+      if (requestId !== insightsRequestIdRef.current) return
+
+      if (savedRes.ok) {
+        const receivedSaved = Array.isArray(savedData.savedInsights)
+          ? savedData.savedInsights
+          : Array.isArray(savedData.insights)
+            ? savedData.insights
+            : []
+
+        if (receivedSaved.length > 0) {
+          savedSnapshot = receivedSaved
+          setInsights(receivedSaved)
+          setCurrentIndex(0)
+          setInsightsStage('filling')
+        }
+      }
+
+      const fullRes = await fetch('/api/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ book, chapter, verse, count: 12, targetLanguage: 'en' }),
+      })
+
+      const fullData: InsightsApiResponse = await fullRes.json()
+
+      if (requestId !== insightsRequestIdRef.current) return
+
+      if (!fullRes.ok) {
+        if (savedSnapshot.length > 0) {
+          setInsightsStage('ready')
+          return
+        }
+
+        setInsightsError(fullData.error || 'API request failed.')
+        setRawOutput(fullData.raw || '')
+        setInsightsStage('failed')
+        return
+      }
+
+      const fullInsights = Array.isArray(fullData.insights) ? fullData.insights : []
+
+      if (fullInsights.length > 0) {
+        setInsights(fullInsights)
+        setInsightsStage('ready')
+      } else if (savedSnapshot.length > 0) {
+        setInsightsStage('ready')
+      } else {
+        setInsightsError(fullData.error || 'No insights returned.')
+        setRawOutput(fullData.raw || '')
+        setInsightsStage('failed')
+      }
+    } catch {
+      if (requestId !== insightsRequestIdRef.current) return
+
+      if (savedSnapshot.length > 0) {
+        setInsightsStage('ready')
+        return
+      }
+
+      setInsightsError('Error loading insights.')
+      setInsightsStage('failed')
+    }
+  }
+
+  useEffect(() => {
+    if (!book || !chapter || !verse || !verseText || verseError) return
+    void loadInsightsTwoPhase()
+  }, [book, chapter, verse, verseText, verseError])
+
+  useEffect(() => {
+    if (activeArticleKey && articleTopRef.current) {
+      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [activeArticleKey])
+
+  const formattedReference = useMemo(() => {
+    if (!book || !chapter || !verse) return ''
+    return `${formatBookLabel(book)} ${chapter}:${verse}`
+  }, [book, chapter, verse])
+
+  const verseTranslationKey = useMemo(() => {
+    if (!verseText) return ''
+    return `${book}:${chapter}:${verse}:${verseText}`
+  }, [book, chapter, verse, verseText])
+
+  const currentCards = useMemo(() => {
+    if (activeTab === 'lens' && selectedLens === 'phrase') {
+      return phraseLensCardsByLanguage[appLanguage] || []
+    }
+    return insights
+  }, [activeTab, selectedLens, appLanguage, phraseLensCardsByLanguage, insights])
+
+  const currentInsight = useMemo(() => currentCards[currentIndex], [currentCards, currentIndex])
+
+  const currentModeKey = useMemo(() => {
+    if (activeTab === 'lens') return `lens:${selectedLens ?? 'none'}`
+    if (activeTab === 'context') return `context:${selectedContext ?? 'none'}`
+    return activeTab
+  }, [activeTab, selectedLens, selectedContext])
+
+  const currentSourceMode = useMemo<SourceMode>(() => {
+    if (activeTab === 'lens' && selectedLens === 'word') return 'word'
+    if (activeTab === 'lens' && selectedLens === 'tension') return 'tension'
+    if (activeTab === 'lens' && selectedLens === 'phrase') return 'why_this_phrase'
+    return 'insights'
+  }, [activeTab, selectedLens])
+
+  const compareData = useMemo(() => compareByLanguage[appLanguage], [compareByLanguage, appLanguage])
+  const contextData = useMemo(() => contextByLanguage[appLanguage], [contextByLanguage, appLanguage])
+
+  const wordLensData = useMemo(() => wordLensDataByLanguage[appLanguage], [wordLensDataByLanguage, appLanguage])
+  const wordLensArticle = useMemo(
+    () => wordLensArticleByLanguage[appLanguage],
+    [wordLensArticleByLanguage, appLanguage]
+  )
+
+  const tensionLensData = useMemo(
+    () => tensionLensDataByLanguage[appLanguage],
+    [tensionLensDataByLanguage, appLanguage]
+  )
+  const tensionLensArticle = useMemo(
+    () => tensionLensArticleByLanguage[appLanguage],
+    [tensionLensArticleByLanguage, appLanguage]
+  )
+
+  const activeWordLensNode = useMemo(() => {
+    if (!wordLensData || !activeWordLensNodeId) return null
+    return wordLensData.nodes.find((item) => item.id === activeWordLensNodeId) ?? null
+  }, [wordLensData, activeWordLensNodeId])
+
+  const activeTensionNode = useMemo(() => {
+    if (!tensionLensData || !activeTensionNodeId) return null
+    return tensionLensData.nodes.find((item) => item.id === activeTensionNodeId) ?? null
+  }, [tensionLensData, activeTensionNodeId])
+
+  const activeNarrowDirection = useMemo(() => {
+    if (!narrowContextData || !activeNarrowDirectionId) return null
+    return narrowContextData.directions.find((item) => item.id === activeNarrowDirectionId) ?? null
+  }, [narrowContextData, activeNarrowDirectionId])
+
+  async function translateCard(
+    targetLanguage: 'ru' | 'es' | 'fr' | 'de',
+    card: InsightItem,
+    cardKey: string
+  ) {
+    const existingTranslation = translatedCards[`${targetLanguage}:${cardKey}`]
+    if (existingTranslation) return existingTranslation
+
+    const res = await fetch('/api/translate-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: card.title,
+        text: card.text,
+        targetLanguage,
+      }),
+    })
+
+    const data: TranslateCardApiResponse = await res.json()
+
+    if (!res.ok || !data.card) {
+      throw new Error(data.error || 'Translation failed.')
+    }
+
+    setTranslatedCards((prev) => ({
+      ...prev,
+      [`${targetLanguage}:${cardKey}`]: data.card as InsightItem,
+    }))
+
+    return data.card
+  }
+
+  async function translateVerseText(
+    targetLanguage: 'ru' | 'es' | 'fr' | 'de',
+    text: string,
+    key: string
+  ) {
+    const existing = translatedVerseTexts[`${targetLanguage}:${key}`]
+    if (existing) return existing
+
+    const res = await fetch('/api/translate-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Verse text',
+        text,
+        targetLanguage,
+      }),
+    })
+
+    const data: TranslateCardApiResponse = await res.json()
+    const translatedText = data?.card?.text?.trim()
+
+    if (!res.ok || !translatedText) {
+      throw new Error(data.error || 'Verse translation failed.')
+    }
+
+    setTranslatedVerseTexts((prev) => ({
+      ...prev,
+      [`${targetLanguage}:${key}`]: translatedText,
+    }))
+
+    return translatedText
+  }
+
+  async function loadWordLens(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText || !modesReady) return
+    if (!force && wordLensDataByLanguage[language]) return
+
+    const requestId = ++wordLensRequestIdRef.current
+
+    setWordLensLoading(true)
+    setWordLensError('')
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/word-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'map',
+        }),
+      })
+
+      const data: WordLensMapApiResponse = await res.json()
+
+      if (requestId !== wordLensRequestIdRef.current) return
+
+      if (!res.ok || !Array.isArray(data.nodes) || data.nodes.length === 0 || typeof data.lead !== 'string') {
+        setWordLensError(data.error || UI_TEXT[language].wordLensUnavailable)
+        setWordLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
+        return
+      }
+
+      setWordLensDataByLanguage((prev) => ({
+        ...prev,
+        [language]: {
+          lead: data.lead as string,
+          nodes: data.nodes as WordLensNode[],
+        },
+      }))
+    } catch {
+      if (requestId !== wordLensRequestIdRef.current) return
+      setWordLensError(UI_TEXT[language].wordLensUnavailable)
+      setWordLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
+    } finally {
+      if (requestId === wordLensRequestIdRef.current) {
+        setWordLensLoading(false)
+      }
+    }
+  }
+
+  async function loadWordLensDeepDive(
+    node: WordLensNode,
+    force = false,
+    language: AppLanguage = appLanguage
+  ) {
+    if (!formattedReference || !verseText) return
+    if (!force && wordLensArticle && activeWordLensNodeId === node.id) return
+
+    const requestId = ++wordLensArticleRequestIdRef.current
+
+    setWordLensArticleLoading(true)
+    setWordLensArticleError('')
+    setActiveWordLensNodeId(node.id)
+    setWordLensArticleCopyStatus('idle')
+    setWordLensArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/word-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'deep_dive',
+          node,
+        }),
+      })
+
+      const data: WordLensArticleApiResponse = await res.json()
+
+      if (requestId !== wordLensArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setWordLensArticleError(data.error || UI_TEXT[language].wordLensUnavailable)
+        return
+      }
+
+      setWordLensArticleByLanguage((prev) => ({
+        ...prev,
+        [language]: data.article as WordLensArticle,
+      }))
+    } catch {
+      if (requestId !== wordLensArticleRequestIdRef.current) return
+      setWordLensArticleError(UI_TEXT[language].wordLensUnavailable)
+    } finally {
+      if (requestId === wordLensArticleRequestIdRef.current) {
+        setWordLensArticleLoading(false)
+      }
+    }
+  }
+
+  async function loadWordLensCustomDig(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText) return
+    const prompt = wordLensCustomPrompt.trim()
+    if (!prompt) return
+    if (!force && wordLensArticle && activeWordLensNodeId === 'custom') return
+
+    const requestId = ++wordLensArticleRequestIdRef.current
+
+    setWordLensArticleLoading(true)
+    setWordLensArticleError('')
+    setActiveWordLensNodeId('custom')
+    setWordLensArticleCopyStatus('idle')
+    setWordLensArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/word-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'custom_dig',
+          prompt,
+        }),
+      })
+
+      const data: WordLensArticleApiResponse = await res.json()
+
+      if (requestId !== wordLensArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setWordLensArticleError(data.error || UI_TEXT[language].wordLensUnavailable)
+        return
+      }
+
+      setWordLensArticleByLanguage((prev) => ({
+        ...prev,
+        [language]: data.article as WordLensArticle,
+      }))
+    } catch {
+      if (requestId !== wordLensArticleRequestIdRef.current) return
+      setWordLensArticleError(UI_TEXT[language].wordLensUnavailable)
+    } finally {
+      if (requestId === wordLensArticleRequestIdRef.current) {
+        setWordLensArticleLoading(false)
+      }
+    }
+  }
+
+  async function loadTensionLens(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText || !modesReady) return
+    if (!force && tensionLensDataByLanguage[language]) return
+
+    const requestId = ++tensionLensRequestIdRef.current
+
+    setTensionLensLoading(true)
+    setTensionLensError('')
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/tension-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'map',
+        }),
+      })
+
+      const data: TensionLensMapApiResponse = await res.json()
+
+      if (requestId !== tensionLensRequestIdRef.current) return
+
+      if (!res.ok || !Array.isArray(data.nodes) || data.nodes.length === 0 || typeof data.lead !== 'string') {
+        setTensionLensError(data.error || UI_TEXT[language].tensionLensUnavailable)
+        setTensionLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
+        return
+      }
+
+      setTensionLensDataByLanguage((prev) => ({
+        ...prev,
+        [language]: {
+          lead: data.lead as string,
+          nodes: data.nodes as TensionLensNode[],
+        },
+      }))
+    } catch {
+      if (requestId !== tensionLensRequestIdRef.current) return
+      setTensionLensError(UI_TEXT[language].tensionLensUnavailable)
+      setTensionLensDataByLanguage((prev) => ({ ...prev, [language]: null }))
+    } finally {
+      if (requestId === tensionLensRequestIdRef.current) {
+        setTensionLensLoading(false)
+      }
+    }
+  }
+
+  async function loadTensionLensDeepDive(
+    node: TensionLensNode,
+    force = false,
+    language: AppLanguage = appLanguage
+  ) {
+    if (!formattedReference || !verseText) return
+    if (!force && tensionLensArticle && activeTensionNodeId === node.id) return
+
+    const requestId = ++tensionLensArticleRequestIdRef.current
+
+    setTensionLensArticleLoading(true)
+    setTensionLensArticleError('')
+    setActiveTensionNodeId(node.id)
+    setTensionLensArticleCopyStatus('idle')
+    setTensionLensArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/tension-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'deep_dive',
+          node,
+        }),
+      })
+
+      const data: TensionLensArticleApiResponse = await res.json()
+
+      if (requestId !== tensionLensArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setTensionLensArticleError(data.error || UI_TEXT[language].tensionLensUnavailable)
+        return
+      }
+
+      setTensionLensArticleByLanguage((prev) => ({
+        ...prev,
+        [language]: data.article as TensionLensArticle,
+      }))
+    } catch {
+      if (requestId !== tensionLensArticleRequestIdRef.current) return
+      setTensionLensArticleError(UI_TEXT[language].tensionLensUnavailable)
+    } finally {
+      if (requestId === tensionLensArticleRequestIdRef.current) {
+        setTensionLensArticleLoading(false)
+      }
+    }
+  }
+
+  async function loadTensionLensCustomDig(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText) return
+    const prompt = tensionLensCustomPrompt.trim()
+    if (!prompt) return
+    if (!force && tensionLensArticle && activeTensionNodeId === 'custom') return
+
+    const requestId = ++tensionLensArticleRequestIdRef.current
+
+    setTensionLensArticleLoading(true)
+    setTensionLensArticleError('')
+    setActiveTensionNodeId('custom')
+    setTensionLensArticleCopyStatus('idle')
+    setTensionLensArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/tension-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          mode: 'custom_dig',
+          prompt,
+        }),
+      })
+
+      const data: TensionLensArticleApiResponse = await res.json()
+
+      if (requestId !== tensionLensArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setTensionLensArticleError(data.error || UI_TEXT[language].tensionLensUnavailable)
+        return
+      }
+
+      setTensionLensArticleByLanguage((prev) => ({
+        ...prev,
+        [language]: data.article as TensionLensArticle,
+      }))
+    } catch {
+      if (requestId !== tensionLensArticleRequestIdRef.current) return
+      setTensionLensArticleError(UI_TEXT[language].tensionLensUnavailable)
+    } finally {
+      if (requestId === tensionLensArticleRequestIdRef.current) {
+        setTensionLensArticleLoading(false)
+      }
+    }
+  }
+
+  async function loadPhraseLens(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText || !modesReady) return
+    if (!force && phraseLensCardsByLanguage[language]?.length > 0) return
+
+    const requestId = ++phraseLensRequestIdRef.current
+
+    setPhraseLensLoading(true)
+    setPhraseLensError('')
+    setCurrentIndex(0)
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/phrase-lens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+        }),
+      })
+
+      const data = (await res.json()) as { cards?: InsightItem[]; error?: string }
+
+      if (requestId !== phraseLensRequestIdRef.current) return
+
+      if (!res.ok || !Array.isArray(data.cards) || data.cards.length === 0) {
+        setPhraseLensError(data.error || UI_TEXT[language].phraseLensUnavailable)
+        setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
+        return
+      }
+
+      setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: data.cards as InsightItem[] }))
+    } catch {
+      if (requestId !== phraseLensRequestIdRef.current) return
+      setPhraseLensError(UI_TEXT[language].phraseLensUnavailable)
+      setPhraseLensCardsByLanguage((prev) => ({ ...prev, [language]: [] }))
+    } finally {
+      if (requestId === phraseLensRequestIdRef.current) {
+        setPhraseLensLoading(false)
+      }
+    }
+  }
+
+  async function loadCompare(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText || !modesReady) return
+    if (!force && compareByLanguage[language]) return
+
+    const requestId = ++compareRequestIdRef.current
+
+    setCompareLoading(true)
+    setCompareError('')
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+        }),
+      })
+
+      const data: CompareApiResponse = await res.json()
+
+      if (requestId !== compareRequestIdRef.current) return
+
+      if (!res.ok || !data.compare || !Array.isArray(data.compare.points)) {
+        setCompareError(data.error || UI_TEXT[language].translationsUnavailable)
+        setCompareByLanguage((prev) => ({ ...prev, [language]: null }))
+        return
+      }
+
+      setCompareByLanguage((prev) => ({ ...prev, [language]: data.compare as ComparePayload }))
+    } catch {
+      if (requestId !== compareRequestIdRef.current) return
+      setCompareError(UI_TEXT[language].translationsUnavailable)
+      setCompareByLanguage((prev) => ({ ...prev, [language]: null }))
+    } finally {
+      if (requestId === compareRequestIdRef.current) {
+        setCompareLoading(false)
+      }
+    }
+  }
+
+  async function loadContext(force = false, language: AppLanguage = appLanguage) {
+    if (!formattedReference || !verseText || !modesReady || !selectedContext) return
+    if (!force && contextByLanguage[language]) return
+
+    const requestId = ++contextRequestIdRef.current
+
+    setContextLoading(true)
+    setContextError('')
+    setActiveArticleKey('')
+
+    const mappedMode = selectedContext === 'narrow' ? 'paragraph' : 'book'
+
+    try {
+      const res = await fetch('/api/context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          targetLanguage: language,
+          contextMode: mappedMode,
+        }),
+      })
+
+      const data: ContextApiResponse = await res.json()
+
+      if (requestId !== contextRequestIdRef.current) return
+
+      if (!res.ok || !data.context || !Array.isArray(data.context.points)) {
+        setContextError(data.error || UI_TEXT[language].contextUnavailable)
+        setContextByLanguage((prev) => ({ ...prev, [language]: null }))
+        return
+      }
+
+      setContextByLanguage((prev) => ({ ...prev, [language]: data.context as ContextPayload }))
+    } catch {
+      if (requestId !== contextRequestIdRef.current) return
+      setContextError(UI_TEXT[language].contextUnavailable)
+      setContextByLanguage((prev) => ({ ...prev, [language]: null }))
+    } finally {
+      if (requestId === contextRequestIdRef.current) {
+        setContextLoading(false)
+      }
+    }
+  }
+
+  async function loadNarrowContext(force = false, language: AppLanguage = appLanguage) {
+    if (!book || !chapter || !verse || !verseText || !modesReady) return
+    if (!force && narrowContextData) return
+
+    const requestId = ++narrowRequestIdRef.current
+
+    setNarrowContextLoading(true)
+    setNarrowContextError('')
+    setNarrowArticle(null)
+    setNarrowArticleError('')
+    setNarrowArticleLoading(false)
+    setActiveNarrowDirectionId('')
+    setNarrowArticleCopyStatus('idle')
+    setNarrowArticleShareStatus('')
+    setActiveArticleKey('')
+
+    try {
+      const res = await fetch('/api/narrow-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book,
+          chapter,
+          verse,
+          targetLanguage: language,
+        }),
+      })
+
+      const data: NarrowContextApiResponse = await res.json()
+
+      if (requestId !== narrowRequestIdRef.current) return
+
+      if (!res.ok || !data.paragraph || !Array.isArray(data.directions) || data.directions.length === 0) {
+        setNarrowContextError(data.error || UI_TEXT[language].narrowUnavailable)
+        setNarrowContextData(null)
+        return
+      }
+
+      setNarrowContextData({
+        verseText: String(data.verseText ?? ''),
+        paragraph: {
+          reference: String(data.paragraph.reference ?? ''),
+          full_text: String(data.paragraph.full_text ?? ''),
+          highlights: Array.isArray(data.paragraph.highlights) ? data.paragraph.highlights : [],
+        },
+        directions: data.directions,
+      })
+    } catch {
+      if (requestId !== narrowRequestIdRef.current) return
+      setNarrowContextError(UI_TEXT[language].narrowUnavailable)
+      setNarrowContextData(null)
+    } finally {
+      if (requestId === narrowRequestIdRef.current) {
+        setNarrowContextLoading(false)
+      }
+    }
+  }
+
+  async function loadNarrowArticle(
+    direction: NarrowContextDirection,
+    force = false,
+    language: AppLanguage = appLanguage
+  ) {
+    if (!book || !chapter || !verse || !narrowContextData) return
+    if (!force && narrowArticle && activeNarrowDirectionId === direction.id) return
+
+    const requestId = ++narrowArticleRequestIdRef.current
+
+    setNarrowArticleLoading(true)
+    setNarrowArticleError('')
+    setNarrowArticle(null)
+    setActiveNarrowDirectionId(direction.id)
+    setNarrowArticleCopyStatus('idle')
+    setNarrowArticleShareStatus('')
+
+    try {
+      const res = await fetch('/api/narrow-context/deep-dive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book,
+          chapter,
+          verse,
+          paragraphReference: narrowContextData.paragraph.reference,
+          paragraphText: narrowContextData.paragraph.full_text,
+          direction,
+          targetLanguage: language,
+        }),
+      })
+
+      const data: NarrowContextDeepDiveResponse = await res.json()
+
+      if (requestId !== narrowArticleRequestIdRef.current) return
+
+      if (!res.ok || !data.article) {
+        setNarrowArticleError(data.error || UI_TEXT[language].narrowArticleUnavailable)
+        return
+      }
+
+      setNarrowArticle({
+        title: String(data.article.title ?? ''),
+        lead: String(data.article.lead ?? ''),
+        body: Array.isArray(data.article.body) ? data.article.body : [],
+        highlight_line: String(data.article.highlight_line ?? ''),
+      })
+    } catch {
+      if (requestId !== narrowArticleRequestIdRef.current) return
+      setNarrowArticleError(UI_TEXT[language].narrowArticleUnavailable)
+    } finally {
+      if (requestId === narrowArticleRequestIdRef.current) {
+        setNarrowArticleLoading(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!formattedReference || !verseText || !modesReady) return
+
+    if (activeTab === 'context' && selectedContext === 'narrow') {
+      void loadNarrowContext(false, appLanguage)
+    }
+
+    if (activeTab === 'context' && selectedContext === 'wide') {
+      void loadContext(false, appLanguage)
+    }
+
+    if (activeTab === 'lens' && selectedLens === 'translation') void loadCompare(false, appLanguage)
+    if (activeTab === 'lens' && selectedLens === 'word') void loadWordLens(false, appLanguage)
+    if (activeTab === 'lens' && selectedLens === 'tension') void loadTensionLens(false, appLanguage)
+    if (activeTab === 'lens' && selectedLens === 'phrase') void loadPhraseLens(false, appLanguage)
+  }, [activeTab, selectedContext, selectedLens, appLanguage, formattedReference, verseText, modesReady])
+
+  async function handleSetLanguage(targetLanguage: AppLanguage) {
+    if (interactionsLocked) return
+
+    setTranslationError('')
+    setShareStatus('')
+    setArticleShareStatus('')
+    setArticleCopyStatus('idle')
+    setCompareCopyStatus('idle')
+    setCompareShareStatus('')
+    setContextCopyStatus('idle')
+    setContextShareStatus('')
+    setNarrowCopyStatus('idle')
+    setNarrowShareStatus('')
+    setNarrowArticleCopyStatus('idle')
+    setNarrowArticleShareStatus('')
+    setWordLensCopyStatus('idle')
+    setWordLensShareStatus('')
+    setWordLensArticleCopyStatus('idle')
+    setWordLensArticleShareStatus('')
+    setTensionLensCopyStatus('idle')
+    setTensionLensShareStatus('')
+    setTensionLensArticleCopyStatus('idle')
+    setTensionLensArticleShareStatus('')
+
+    if (targetLanguage === 'en') {
+      setAppLanguage('en')
+      return
+    }
+
+    if (activeTab === 'insights') {
+      if (!currentInsight) {
+        setAppLanguage(targetLanguage)
+        return
+      }
+
+      const baseCardKey = `${currentModeKey}:${currentIndex}:${currentInsight.title}:${currentInsight.text}`
+
+      setTranslationLoading(true)
+
+      try {
+        await Promise.all([
+          translateCard(targetLanguage, currentInsight, baseCardKey),
+          verseText && verseTranslationKey
+            ? translateVerseText(targetLanguage, verseText, verseTranslationKey)
+            : Promise.resolve(),
+        ])
+        setAppLanguage(targetLanguage)
+      } catch (err) {
+        setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+      } finally {
+        setTranslationLoading(false)
+      }
+
+      return
+    }
+
+    if (verseText && verseTranslationKey) {
+      setTranslationLoading(true)
+
+      try {
+        await translateVerseText(targetLanguage, verseText, verseTranslationKey)
+      } catch (err) {
+        setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+      } finally {
+        setTranslationLoading(false)
+      }
+    }
+
+    if (activeTab === 'context' && selectedContext === 'narrow') {
+      setNarrowContextData(null)
+      setNarrowContextError('')
+      setNarrowContextLoading(false)
+      setActiveNarrowDirectionId('')
+      setNarrowArticle(null)
+      setNarrowArticleError('')
+      setNarrowArticleLoading(false)
+      setNarrowCopyStatus('idle')
+      setNarrowShareStatus('')
+      setNarrowArticleCopyStatus('idle')
+      setNarrowArticleShareStatus('')
+    }
+
+    if (activeTab === 'lens' && selectedLens === 'word') {
+      setWordLensDataByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
+      setWordLensArticleByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
+      setActiveWordLensNodeId('')
+      setWordLensArticleError('')
+      setWordLensArticleLoading(false)
+      setWordLensCopyStatus('idle')
+      setWordLensShareStatus('')
+      setWordLensArticleCopyStatus('idle')
+      setWordLensArticleShareStatus('')
+    }
+
+    if (activeTab === 'lens' && selectedLens === 'tension') {
+      setTensionLensDataByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
+      setTensionLensArticleByLanguage((prev) => ({ ...prev, [targetLanguage]: null }))
+      setActiveTensionNodeId('')
+      setTensionLensArticleError('')
+      setTensionLensArticleLoading(false)
+      setTensionLensCopyStatus('idle')
+      setTensionLensShareStatus('')
+      setTensionLensArticleCopyStatus('idle')
+      setTensionLensArticleShareStatus('')
+    }
+
+    setAppLanguage(targetLanguage)
+  }
+
+  async function handleNext() {
+    if (currentCards.length === 0 || interactionsLocked) return
+    const nextIndex = (currentIndex + 1) % currentCards.length
+    setCurrentIndex(nextIndex)
+
+    if (activeTab === 'insights' && appLanguage !== 'en') {
+      const nextInsight = currentCards[nextIndex]
+      if (!nextInsight) return
+
+      const nextCardKey = `${currentModeKey}:${nextIndex}:${nextInsight.title}:${nextInsight.text}`
+
+      if (!translatedCards[`${appLanguage}:${nextCardKey}`]) {
+        try {
+          setTranslationLoading(true)
+          await translateCard(appLanguage, nextInsight, nextCardKey)
+        } catch (err) {
+          setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+        } finally {
+          setTranslationLoading(false)
+        }
+      }
+    }
+  }
+
+  async function handlePrev() {
+    if (currentCards.length === 0 || interactionsLocked) return
+    const prevIndex = (currentIndex - 1 + currentCards.length) % currentCards.length
+    setCurrentIndex(prevIndex)
+
+    if (activeTab === 'insights' && appLanguage !== 'en') {
+      const prevInsight = currentCards[prevIndex]
+      if (!prevInsight) return
+
+      const prevCardKey = `${currentModeKey}:${prevIndex}:${prevInsight.title}:${prevInsight.text}`
+
+      if (!translatedCards[`${appLanguage}:${prevCardKey}`]) {
+        try {
+          setTranslationLoading(true)
+          await translateCard(appLanguage, prevInsight, prevCardKey)
+        } catch (err) {
+          setTranslationError(err instanceof Error ? err.message : 'Translation failed.')
+        } finally {
+          setTranslationLoading(false)
+        }
+      }
+    }
+  }
+
+  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    touchStartXRef.current = e.touches[0]?.clientX ?? null
+    touchDeltaXRef.current = 0
+  }
+
+  function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    if (touchStartXRef.current === null) return
+    const currentX = e.touches[0]?.clientX ?? touchStartXRef.current
+    touchDeltaXRef.current = currentX - touchStartXRef.current
+  }
+
+  async function handleTouchEnd() {
+    const threshold = 50
+    const deltaX = touchDeltaXRef.current
+    touchStartXRef.current = null
+    touchDeltaXRef.current = 0
+
+    if (Math.abs(deltaX) < threshold || interactionsLocked) return
+    if (deltaX < 0) await handleNext()
+    else await handlePrev()
+  }
+
+  const displayedCard = useMemo(() => {
+    if (!currentInsight) return null
+
+    if (activeTab === 'insights' && appLanguage !== 'en') {
+      const baseKey = `${currentModeKey}:${currentIndex}:${currentInsight.title}:${currentInsight.text}`
+      return translatedCards[`${appLanguage}:${baseKey}`] || currentInsight
+    }
+
+    return currentInsight
+  }, [activeTab, appLanguage, currentInsight, currentIndex, currentModeKey, translatedCards])
+
+  const displayedVerseText = useMemo(() => {
+    if (appLanguage === 'en') return verseText
+    if (!verseTranslationKey) return verseText
+    return translatedVerseTexts[`${appLanguage}:${verseTranslationKey}`] || verseText
+  }, [appLanguage, verseText, verseTranslationKey, translatedVerseTexts])
+
+  const compareShareText = useMemo(() => {
+    if (!compareData || !formattedReference) return ''
+
+    return [
+      formattedReference,
+      '',
+      compareData.lead,
+      '',
+      ...compareData.points.flatMap((point) => [
+        point.title,
+        `${point.labelA}: "${point.quoteA}"`,
+        `${point.labelB}: "${point.quoteB}"`,
+        point.text,
+        '',
+      ]),
+      t.takeaway,
+      compareData.takeaway,
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [compareData, formattedReference, t.takeaway])
+
+  const contextShareText = useMemo(() => {
+    if (!contextData || !formattedReference) return ''
+
+    return [
+      formattedReference,
+      '',
+      contextData.lead,
+      '',
+      ...contextData.points.flatMap((point) => [point.title, point.text, '']),
+      t.takeaway,
+      contextData.takeaway,
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [contextData, formattedReference, t.takeaway])
+
+  const narrowShareText = useMemo(() => {
+    if (!narrowContextData) return ''
+    return [narrowContextData.paragraph.reference, '', narrowContextData.paragraph.full_text]
+      .filter(Boolean)
+      .join('\n')
+  }, [narrowContextData])
+
+  const narrowArticleShareText = useMemo(() => {
+    if (!narrowArticle || !narrowContextData) return ''
+    return [
+      narrowContextData.paragraph.reference,
+      '',
+      narrowArticle.title,
+      '',
+      narrowArticle.lead,
+      '',
+      ...narrowArticle.body,
+      ...(narrowArticle.highlight_line ? ['', narrowArticle.highlight_line] : []),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [narrowArticle, narrowContextData])
+
+  const wordLensShareText = useMemo(() => {
+    if (!wordLensData || !formattedReference) return ''
+    return [
+      formattedReference,
+      '',
+      wordLensData.lead,
+      '',
+      ...wordLensData.nodes.flatMap((node) => [
+        node.label,
+        `${node.original}${node.transliteration ? ` · ${node.transliteration}` : ''}`,
+        node.semantic_core,
+        node.why_it_matters,
+        node.dig_deeper,
+        '',
+      ]),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [wordLensData, formattedReference])
+
+  const wordLensArticleShareText = useMemo(() => {
+    if (!wordLensArticle || !formattedReference) return ''
+    return [
+      formattedReference,
+      '',
+      wordLensArticle.title,
+      '',
+      wordLensArticle.lead,
+      '',
+      ...wordLensArticle.body,
+      ...(wordLensArticle.highlight_line ? ['', wordLensArticle.highlight_line] : []),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [wordLensArticle, formattedReference])
+
+  const tensionLensShareText = useMemo(() => {
+    if (!tensionLensData || !formattedReference) return ''
+    return [
+      formattedReference,
+      '',
+      tensionLensData.lead,
+      '',
+      ...tensionLensData.nodes.flatMap((node) => [
+        node.label,
+        node.tension_line,
+        node.what_feels_strange,
+        node.why_it_matters,
+        node.dig_deeper,
+        '',
+      ]),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [tensionLensData, formattedReference])
+
+  const tensionLensArticleShareText = useMemo(() => {
+    if (!tensionLensArticle || !formattedReference) return ''
+    return [
+      formattedReference,
+      '',
+      tensionLensArticle.title,
+      '',
+      tensionLensArticle.lead,
+      '',
+      ...tensionLensArticle.body,
+      ...(tensionLensArticle.highlight_line ? ['', tensionLensArticle.highlight_line] : []),
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }, [tensionLensArticle, formattedReference])
+
+  const shareText = useMemo(() => {
+    if (!displayedCard || !formattedReference) return ''
+    const verseBlock = displayedVerseText ? `${displayedVerseText}\n\n` : ''
+    return `${formattedReference}\n\n${verseBlock}${displayedCard.title}\n\n${displayedCard.text}`
+  }, [displayedCard, formattedReference, displayedVerseText])
+
+  const articleJobKey = useMemo(() => {
+    if (!displayedCard || !formattedReference || !displayedVerseText) return ''
+    return `${appLanguage}:${currentModeKey}:${formattedReference}:${displayedCard.title}:${displayedCard.text}:${displayedVerseText}`
+  }, [appLanguage, currentModeKey, formattedReference, displayedCard, displayedVerseText])
+
+  const currentArticleJob = articleJobKey ? articleJobs[articleJobKey] : undefined
+  const activeArticleJob = activeArticleKey ? articleJobs[activeArticleKey] : undefined
+
+  async function handleUnfold() {
+    if (!displayedCard || !formattedReference || !displayedVerseText || !articleJobKey || interactionsLocked) return
+
+    const existingJob = articleJobs[articleJobKey]
+    if (existingJob?.status === 'ready' && existingJob.article) {
+      setActiveArticleKey(articleJobKey)
+      setArticleShareStatus('')
+      setArticleCopyStatus('idle')
+      return
+    }
+    if (existingJob?.status === 'generating') return
+
+    setArticleJobs((prev) => ({
+      ...prev,
+      [articleJobKey]: {
+        status: 'generating',
+        title: displayedCard.title,
+        reference: formattedReference,
+        verseText: displayedVerseText,
+        language: appLanguage,
+        createdAt: Date.now(),
+      },
+    }))
+
+    try {
+      const res = await fetch('/api/unfold-article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText: displayedVerseText,
+          insightTitle: displayedCard.title,
+          insightText: displayedCard.text,
+          targetLanguage: appLanguage,
+          sourceMode: currentSourceMode,
+          sourceAngleNote: null,
+          sourceInsightId: null,
+        }),
+      })
+
+      const data: UnfoldApiResponse = await res.json()
+
+      if (!res.ok || !data.article) {
+        throw new Error(data.error || 'Failed to generate article.')
+      }
+
+      setArticleJobs((prev) => ({
+        ...prev,
+        [articleJobKey]: {
+          status: 'ready',
+          article: data.article,
+          title: displayedCard.title,
+          reference: formattedReference,
+          verseText: displayedVerseText,
+          language: appLanguage,
+          createdAt: Date.now(),
+        },
+      }))
+    } catch (err) {
+      setArticleJobs((prev) => ({
+        ...prev,
+        [articleJobKey]: {
+          status: 'failed',
+          error: err instanceof Error ? err.message : 'Failed to generate article.',
+          title: displayedCard.title,
+          reference: formattedReference,
+          verseText: displayedVerseText,
+          language: appLanguage,
+          createdAt: Date.now(),
+        },
+      }))
+    }
+  }
+
+  async function handleCopyArticle() {
+    if (!activeArticleJob?.article) return
+
+    const text = [
+      activeArticleJob.reference,
+      '',
+      activeArticleJob.article.title,
+      '',
+      activeArticleJob.article.lead,
+      '',
+      ...activeArticleJob.article.body,
+      ...(activeArticleJob.article.quote ? ['', `“${activeArticleJob.article.quote}”`] : []),
+    ].join('\n\n')
+
+    try {
+      await navigator.clipboard.writeText(text)
+      setArticleCopyStatus('copied')
+      setArticleShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setArticleCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setArticleCopyStatus('failed')
+    }
+  }
+
+  async function handleShareArticle() {
+    if (!activeArticleJob?.article) return
+
+    const text = [
+      activeArticleJob.reference,
+      '',
+      activeArticleJob.article.title,
+      '',
+      activeArticleJob.article.lead,
+      '',
+      ...activeArticleJob.article.body,
+      ...(activeArticleJob.article.quote ? ['', `“${activeArticleJob.article.quote}”`] : []),
+    ].join('\n\n')
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text })
+        setArticleShareStatus(t.articleShared)
+      } else {
+        await navigator.clipboard.writeText(text)
+        setArticleShareStatus(t.shareUnavailableArticleCopied)
+      }
+    } catch {
+      setArticleShareStatus('')
+    }
+  }
+
+  async function handleShare() {
+    if (!displayedCard || !formattedReference || interactionsLocked) return
+    setShareStatus('')
+
+    try {
+      if (exportCardRef.current) {
+        const dataUrl = await toPng(exportCardRef.current, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: '#f2e7cf',
+        })
+
+        const blob = await (await fetch(dataUrl)).blob()
+        const file = new File([blob], `${formattedReference}.png`, {
+          type: 'image/png',
+        })
+
+        if (
+          navigator.share &&
+          'canShare' in navigator &&
+          navigator.canShare &&
+          navigator.canShare({ files: [file] })
+        ) {
+          await navigator.share({ files: [file] })
+          setShareStatus(t.sharedAsImage)
+          return
+        }
+      }
+
+      if (navigator.share) {
+        await navigator.share({ text: shareText })
+        setShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(shareText)
+        setShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setShareStatus('')
+    }
+  }
+
+  async function handleCopyNarrow() {
+    if (!narrowShareText) return
+
+    try {
+      await navigator.clipboard.writeText(narrowShareText)
+      setNarrowCopyStatus('copied')
+      setNarrowShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setNarrowCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setNarrowCopyStatus('failed')
+    }
+  }
+
+  async function handleShareNarrow() {
+    if (!narrowShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: narrowShareText })
+        setNarrowShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(narrowShareText)
+        setNarrowShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setNarrowShareStatus('')
+    }
+  }
+
+  async function handleCopyNarrowArticle() {
+    if (!narrowArticleShareText) return
+
+    try {
+      await navigator.clipboard.writeText(narrowArticleShareText)
+      setNarrowArticleCopyStatus('copied')
+      setNarrowArticleShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setNarrowArticleCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setNarrowArticleCopyStatus('failed')
+    }
+  }
+
+  async function handleShareNarrowArticle() {
+    if (!narrowArticleShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: narrowArticleShareText })
+        setNarrowArticleShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(narrowArticleShareText)
+        setNarrowArticleShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setNarrowArticleShareStatus('')
+    }
+  }
+
+  async function handleCopyWordLens() {
+    if (!wordLensShareText) return
+
+    try {
+      await navigator.clipboard.writeText(wordLensShareText)
+      setWordLensCopyStatus('copied')
+      setWordLensShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setWordLensCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setWordLensCopyStatus('failed')
+    }
+  }
+
+  async function handleShareWordLens() {
+    if (!wordLensShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: wordLensShareText })
+        setWordLensShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(wordLensShareText)
+        setWordLensShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setWordLensShareStatus('')
+    }
+  }
+
+  async function handleCopyWordLensArticle() {
+    if (!wordLensArticleShareText) return
+
+    try {
+      await navigator.clipboard.writeText(wordLensArticleShareText)
+      setWordLensArticleCopyStatus('copied')
+      setWordLensArticleShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setWordLensArticleCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setWordLensArticleCopyStatus('failed')
+    }
+  }
+
+  async function handleShareWordLensArticle() {
+    if (!wordLensArticleShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: wordLensArticleShareText })
+        setWordLensArticleShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(wordLensArticleShareText)
+        setWordLensArticleShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setWordLensArticleShareStatus('')
+    }
+  }
+
+  async function handleCopyTensionLens() {
+    if (!tensionLensShareText) return
+
+    try {
+      await navigator.clipboard.writeText(tensionLensShareText)
+      setTensionLensCopyStatus('copied')
+      setTensionLensShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setTensionLensCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setTensionLensCopyStatus('failed')
+    }
+  }
+
+  async function handleShareTensionLens() {
+    if (!tensionLensShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: tensionLensShareText })
+        setTensionLensShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(tensionLensShareText)
+        setTensionLensShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setTensionLensShareStatus('')
+    }
+  }
+
+  async function handleCopyTensionLensArticle() {
+    if (!tensionLensArticleShareText) return
+
+    try {
+      await navigator.clipboard.writeText(tensionLensArticleShareText)
+      setTensionLensArticleCopyStatus('copied')
+      setTensionLensArticleShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setTensionLensArticleCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setTensionLensArticleCopyStatus('failed')
+    }
+  }
+
+  async function handleShareTensionLensArticle() {
+    if (!tensionLensArticleShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: tensionLensArticleShareText })
+        setTensionLensArticleShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(tensionLensArticleShareText)
+        setTensionLensArticleShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setTensionLensArticleShareStatus('')
+    }
+  }
+
+  function handleCompareBackToTop() {
+    if (articleTopRef.current) {
+      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  async function handleCopyCompare() {
+    if (!compareShareText) return
+
+    try {
+      await navigator.clipboard.writeText(compareShareText)
+      setCompareCopyStatus('copied')
+      setCompareShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setCompareCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setCompareCopyStatus('failed')
+    }
+  }
+
+  async function handleShareCompare() {
+    if (!compareShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: compareShareText })
+        setCompareShareStatus(t.sharedAsText)
+        setCompareCopyStatus('idle')
+      } else {
+        await navigator.clipboard.writeText(compareShareText)
+        setCompareShareStatus(t.shareUnavailableCopiedInstead)
+        setCompareCopyStatus('idle')
+      }
+    } catch {
+      setCompareShareStatus('')
+    }
+  }
+
+  function handleContextBackToTop() {
+    if (articleTopRef.current) {
+      articleTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  async function handleCopyContext() {
+    if (!contextShareText) return
+
+    try {
+      await navigator.clipboard.writeText(contextShareText)
+      setContextCopyStatus('copied')
+      setContextShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setContextCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setContextCopyStatus('failed')
+    }
+  }
+
+  async function handleShareContext() {
+    if (!contextShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: contextShareText })
+        setContextShareStatus(t.sharedAsText)
+        setContextCopyStatus('idle')
+      } else {
+        await navigator.clipboard.writeText(contextShareText)
+        setContextShareStatus(t.shareUnavailableCopiedInstead)
+        setContextCopyStatus('idle')
+      }
+    } catch {
+      setContextShareStatus('')
+    }
+  }
+
+  async function handleSelectLens(lens: LensKind) {
+    if (!modesReady) return
+
+    setSelectedLens(lens)
+    setLensSheetOpen(false)
+    setActiveTab('lens')
+    setActiveArticleKey('')
+    setArticleShareStatus('')
+    setArticleCopyStatus('idle')
+    setCurrentIndex(0)
+
+    if (lens === 'word') {
+      setActiveWordLensNodeId('')
+      setWordLensArticleByLanguage(emptyWordLensArticleMap())
+      setWordLensArticleError('')
+      setWordLensCustomPrompt('')
+    }
+
+    if (lens === 'tension') {
+      setActiveTensionNodeId('')
+      setTensionLensArticleByLanguage(emptyTensionLensArticleMap())
+      setTensionLensArticleError('')
+      setTensionLensCustomPrompt('')
+    }
+
+    if (lens === 'translation') await loadCompare(false, appLanguage)
+    if (lens === 'word') await loadWordLens(false, appLanguage)
+    if (lens === 'tension') await loadTensionLens(false, appLanguage)
+    if (lens === 'phrase') await loadPhraseLens(false, appLanguage)
+  }
+
+  async function handleSelectContext(mode: ContextKind) {
+    if (!modesReady) return
+
+    setSelectedContext(mode)
+    setContextSheetOpen(false)
+    setActiveTab('context')
+    setActiveArticleKey('')
+    setArticleShareStatus('')
+    setArticleCopyStatus('idle')
+
+    if (mode === 'narrow') {
+      setNarrowContextData(null)
+      setNarrowContextError('')
+      setNarrowArticle(null)
+      setNarrowArticleError('')
+      setActiveNarrowDirectionId('')
+      await loadNarrowContext(true, appLanguage)
+      return
+    }
+
+    setContextByLanguage(emptyContextMap())
+    await loadContext(true, appLanguage)
+  }
+
+  function renderTabButton(label: string, isActive: boolean, onClick: () => void, disabled = false) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={`rounded-full border px-4 py-2 text-sm font-medium transition whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-45 ${
+          isActive
+            ? 'border-stone-400 bg-[#e8dcc0] text-stone-900'
+            : 'border-stone-300 bg-[#fffaf1] text-stone-700 hover:bg-[#f8efdc]'
+        }`}
+      >
+        {label}
+      </button>
+    )
+  }
+
+  function renderContextModeIntro() {
+    return renderStructuredPanel(
+      t.contextTitle,
+      t.contextLead,
+      t.contextPointLabel,
+      [t.contextPoint1, t.contextPoint2, t.contextPoint3],
+      t.takeaway,
+      t.contextTakeaway
+    )
+  }
+
+  function renderLensModeIntro() {
+    return renderStructuredPanel(
+      t.lens,
+      t.lensLeadDefault,
+      t.lensPointLabel,
+      [t.translation, t.word, t.tension, t.phrase],
+      t.takeaway,
+      t.lensTakeawayDefault
+    )
+  }
+
+  function renderSharedCardStack() {
+    return (
+      <CardStackView
+        activeArticle={activeArticleJob?.status === 'ready' ? activeArticleJob.article ?? null : null}
+        activeArticleReference={activeArticleJob?.reference ?? ''}
+        activeArticleShareStatus={articleShareStatus}
+        articleCopyStatus={articleCopyStatus}
+        onBackFromArticle={() => {
+          setActiveArticleKey('')
+          setArticleShareStatus('')
+          setArticleCopyStatus('idle')
+          articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }}
+        onCopyArticle={() => {
+          void handleCopyArticle()
+        }}
+        onShareArticle={() => {
+          void handleShareArticle()
+        }}
+        insightsBlockingLoad={insightsBlockingLoad}
+        insightsError={insightsError}
+        rawOutput={rawOutput}
+        currentCards={currentCards}
+        currentIndex={currentIndex}
+        insightsBackgroundFill={insightsBackgroundFill}
+        activeTab={activeTab}
+        displayedCard={displayedCard}
+        selectedLens={selectedLens}
+        selectedContext={selectedContext as any}
+        currentArticleStatus={currentArticleJob?.status ?? 'idle'}
+        currentArticleError={currentArticleJob?.error ?? ''}
+        copyStatus="idle"
+        shareStatus={shareStatus}
+        translationError={translationError}
+        onRetryInsights={() => {
+          void loadInsightsTwoPhase()
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={() => {
+          void handleTouchEnd()
+        }}
+        onUnfold={() => {
+          void handleUnfold()
+        }}
+        onShare={() => {
+          void handleShare()
+        }}
+        onPrev={() => {
+          void handlePrev()
+        }}
+        onNext={() => {
+          void handleNext()
+        }}
+        onOpenLensSheet={() => setLensSheetOpen(true)}
+        onOpenContextSheet={() => setContextSheetOpen(true)}
+        t={t as any}
+      />
+    )
+  }
+
+  function renderLensView() {
+    if (!modesReady) {
+      return renderLensModeIntro()
+    }
+
+    if (selectedLens === 'translation') {
+      return (
+        <CompareView
+          isReady={modesReady}
+          isLoading={compareLoading}
+          error={compareError}
+          data={compareData}
+          title={t.translations}
+          leadFallback={t.translationsLead}
+          takeawayFallback={t.translationsTakeaway}
+          diffLabel={t.translationsDiffLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.loadingTranslations}
+          loadingText={t.loadingTranslationsText}
+          unavailableLabel={t.translations}
+          point1={t.translationsPoint1}
+          point2={t.translationsPoint2}
+          point3={t.translationsPoint3}
+          tryAgainLabel={t.tryAgain}
+          backToTopLabel={t.backToTop}
+          copyLabel={t.copyAnalysis}
+          copiedLabel={t.copiedAnalysis}
+          copyFailedLabel={t.copyFailed}
+          shareLabel={t.shareAnalysis}
+          copyStatus={compareCopyStatus}
+          shareStatus={compareShareStatus}
+          onRetry={() => {
+            void loadCompare(true, appLanguage)
+          }}
+          onBackToTop={handleCompareBackToTop}
+          onCopy={() => {
+            void handleCopyCompare()
+          }}
+          onShare={() => {
+            void handleShareCompare()
+          }}
+        />
+      )
+    }
+
+    if (selectedLens === 'word') {
+      if (activeWordLensNodeId) {
+        return (
+          <WordLensArticleView
+            article={wordLensArticle}
+            isLoading={wordLensArticleLoading}
+            error={wordLensArticleError}
+            articleLabel={t.word}
+            loadingLabel={t.loadingWordLens}
+            loadingText={t.loadingWordLensText}
+            unavailableLabel={t.wordLensUnavailable}
+            backLabel={t.backToMeanings}
+            shareLabel={t.share}
+            copiedLabel={t.copied}
+            copyLabel={t.copy}
+            copyFailedLabel={t.copyFailed}
+            shareStatus={wordLensArticleShareStatus}
+            copyStatus={wordLensArticleCopyStatus}
+            tryAgainLabel={t.tryAgain}
+            onBack={() => {
+              setActiveWordLensNodeId('')
+              setWordLensArticleByLanguage((prev) => ({ ...prev, [appLanguage]: null }))
+              setWordLensArticleError('')
+              setWordLensArticleLoading(false)
+              setWordLensArticleCopyStatus('idle')
+              setWordLensArticleShareStatus('')
+              articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            onCopy={() => {
+              void handleCopyWordLensArticle()
+            }}
+            onShare={() => {
+              void handleShareWordLensArticle()
+            }}
+            onRetry={() => {
+              if (activeWordLensNode && activeWordLensNodeId !== 'custom') {
+                void loadWordLensDeepDive(activeWordLensNode, true, appLanguage)
+              } else if (activeWordLensNodeId === 'custom') {
+                void loadWordLensCustomDig(true, appLanguage)
+              }
+            }}
+          />
+        )
+      }
+
+      return (
+        <WordLensView
+          isReady={modesReady}
+          isLoading={wordLensLoading}
+          error={wordLensError}
+          data={wordLensData}
+          title={t.word}
+          leadFallback={t.wordHelper}
+          takeawayFallback={t.lensTakeawayDefault}
+          pointLabel={t.lensPointLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.loadingWordLens}
+          loadingText={t.loadingWordLensText}
+          unavailableLabel={t.wordLensUnavailable}
+          tryAgainLabel={t.tryAgain}
+          changeLabel={t.change}
+          copyLabel={t.copy}
+          copiedLabel={t.copied}
+          copyFailedLabel={t.copyFailed}
+          shareLabel={t.share}
+          shareStatus={wordLensShareStatus}
+          copyStatus={wordLensCopyStatus}
+          customPromptValue={wordLensCustomPrompt}
+          onCustomPromptChange={setWordLensCustomPrompt}
+          onRetry={() => {
+            void loadWordLens(true, appLanguage)
+          }}
+          onChangeMode={() => setLensSheetOpen(true)}
+          onCopy={() => {
+            void handleCopyWordLens()
+          }}
+          onShare={() => {
+            void handleShareWordLens()
+          }}
+          onNodeSelect={(nodeId) => {
+            const node = wordLensData?.nodes.find((item) => item.id === nodeId)
+            if (!node) return
+            void loadWordLensDeepDive(node, true, appLanguage)
+          }}
+          onCustomDig={() => {
+            void loadWordLensCustomDig(true, appLanguage)
+          }}
+        />
+      )
+    }
+
+    if (selectedLens === 'tension') {
+      if (activeTensionNodeId) {
+        return (
+          <TensionLensArticleView
+            article={tensionLensArticle}
+            isLoading={tensionLensArticleLoading}
+            error={tensionLensArticleError}
+            articleLabel={t.tension}
+            loadingLabel={t.loadingTensionLens}
+            loadingText={t.loadingTensionLensText}
+            unavailableLabel={t.tensionLensUnavailable}
+            backLabel={t.backToMeanings}
+            shareLabel={t.share}
+            copiedLabel={t.copied}
+            copyLabel={t.copy}
+            copyFailedLabel={t.copyFailed}
+            shareStatus={tensionLensArticleShareStatus}
+            copyStatus={tensionLensArticleCopyStatus}
+            tryAgainLabel={t.tryAgain}
+            onBack={() => {
+              setActiveTensionNodeId('')
+              setTensionLensArticleByLanguage((prev) => ({ ...prev, [appLanguage]: null }))
+              setTensionLensArticleError('')
+              setTensionLensArticleLoading(false)
+              setTensionLensArticleCopyStatus('idle')
+              setTensionLensArticleShareStatus('')
+              articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            onCopy={() => {
+              void handleCopyTensionLensArticle()
+            }}
+            onShare={() => {
+              void handleShareTensionLensArticle()
+            }}
+            onRetry={() => {
+              if (activeTensionNode && activeTensionNodeId !== 'custom') {
+                void loadTensionLensDeepDive(activeTensionNode, true, appLanguage)
+              } else if (activeTensionNodeId === 'custom') {
+                void loadTensionLensCustomDig(true, appLanguage)
+              }
+            }}
+          />
+        )
+      }
+
+      return (
+        <TensionLensView
+          isReady={modesReady}
+          isLoading={tensionLensLoading}
+          error={tensionLensError}
+          data={tensionLensData}
+          title={t.tension}
+          leadFallback={t.tensionHelper}
+          takeawayFallback={t.lensTakeawayDefault}
+          pointLabel={t.lensPointLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.loadingTensionLens}
+          loadingText={t.loadingTensionLensText}
+          unavailableLabel={t.tensionLensUnavailable}
+          tryAgainLabel={t.tryAgain}
+          changeLabel={t.change}
+          copyLabel={t.copy}
+          copiedLabel={t.copied}
+          copyFailedLabel={t.copyFailed}
+          shareLabel={t.share}
+          shareStatus={tensionLensShareStatus}
+          copyStatus={tensionLensCopyStatus}
+          customPromptValue={tensionLensCustomPrompt}
+          onCustomPromptChange={setTensionLensCustomPrompt}
+          onRetry={() => {
+            void loadTensionLens(true, appLanguage)
+          }}
+          onChangeMode={() => setLensSheetOpen(true)}
+          onCopy={() => {
+            void handleCopyTensionLens()
+          }}
+          onShare={() => {
+            void handleShareTensionLens()
+          }}
+          onNodeSelect={(nodeId) => {
+            const node = tensionLensData?.nodes.find((item) => item.id === nodeId)
+            if (!node) return
+            void loadTensionLensDeepDive(node, true, appLanguage)
+          }}
+          onCustomDig={() => {
+            void loadTensionLensCustomDig(true, appLanguage)
+          }}
+        />
+      )
+    }
+
+    if (selectedLens === 'phrase') {
+      return (
+        <PhraseLensView
+          isReady={modesReady}
+          isLoading={phraseLensLoading}
+          error={phraseLensError}
+          data={null}
+          title={t.phrase}
+          leadFallback={t.phraseHelper}
+          takeawayFallback={t.lensTakeawayDefault}
+          pointLabel={t.lensPointLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.loadingPhraseLens}
+          loadingText={t.loadingPhraseLensText}
+          unavailableLabel={t.phraseLensUnavailable}
+          tryAgainLabel={t.tryAgain}
+          changeLabel={t.change}
+          customPromptValue=""
+          onCustomPromptChange={() => {}}
+          onRetry={() => {
+            void loadPhraseLens(true, appLanguage)
+          }}
+          onChangeMode={() => setLensSheetOpen(true)}
+          onNodeSelect={() => {}}
+          onCustomDig={() => {}}
+        />
+      )
+    }
+
+    return renderLensModeIntro()
+  }
+
+  function renderContextView() {
+    if (!modesReady) {
+      return renderContextModeIntro()
+    }
+
+    if (!selectedContext) {
+      return renderContextModeIntro()
+    }
+
+    if (selectedContext === 'narrow') {
+      if (activeNarrowDirectionId) {
+        return (
+          <NarrowContextArticleView
+            article={narrowArticle}
+            isLoading={narrowArticleLoading}
+            error={narrowArticleError}
+            articleLabel={t.narrowArticleLabel}
+            loadingLabel={t.narrowArticleLoading}
+            loadingText={t.narrowArticleLoadingText}
+            unavailableLabel={t.narrowArticleUnavailable}
+            backLabel={t.backToMeanings}
+            shareLabel={t.share}
+            copiedLabel={t.copied}
+            copyLabel={t.copy}
+            copyFailedLabel={t.copyFailed}
+            shareStatus={narrowArticleShareStatus}
+            copyStatus={narrowArticleCopyStatus}
+            tryAgainLabel={t.tryAgain}
+            onBack={() => {
+              setActiveNarrowDirectionId('')
+              setNarrowArticle(null)
+              setNarrowArticleError('')
+              setNarrowArticleLoading(false)
+              setNarrowArticleCopyStatus('idle')
+              setNarrowArticleShareStatus('')
+              articleTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            onCopy={() => {
+              void handleCopyNarrowArticle()
+            }}
+            onShare={() => {
+              void handleShareNarrowArticle()
+            }}
+            onRetry={() => {
+              if (activeNarrowDirection) {
+                void loadNarrowArticle(activeNarrowDirection, true, appLanguage)
+              }
+            }}
+          />
+        )
+      }
+
+      return (
+        <NarrowContextView
+          isReady={modesReady}
+          isLoading={narrowContextLoading}
+          error={narrowContextError}
+          data={narrowContextData}
+          title={t.narrowContext}
+          introLead={t.narrowIntroLead}
+          introTakeaway={t.narrowIntroTakeaway}
+          pointLabel={t.contextPointLabel}
+          takeawayLabel={t.takeaway}
+          loadingLabel={t.narrowLoading}
+          loadingText={t.narrowLoadingText}
+          unavailableLabel={t.narrowUnavailable}
+          point1={t.narrowPoint1}
+          point2={t.narrowPoint2}
+          point3={t.narrowPoint3}
+          point4={t.narrowPoint4}
+          point5={t.narrowPoint5}
+          paragraphLabel={t.paragraphLabel}
+          highlightsLabel={t.highlightsLabel}
+          directionsLabel={t.directionsLabel}
+          whyItMattersLabel={t.whyItMattersLabel}
+          digDeeperLabel={t.digDeeperLabel}
+          tryAgainLabel={t.tryAgain}
+          shareLabel={t.share}
+          changeLabel={t.change}
+          copiedLabel={t.copied}
+          copyLabel={t.copy}
+          copyFailedLabel={t.copyFailed}
+          shareStatus={narrowShareStatus}
+          copyStatus={narrowCopyStatus}
+          targetVerseText={narrowContextData?.verseText || displayedVerseText}
+          onRetry={() => {
+            void loadNarrowContext(true, appLanguage)
+          }}
+          onDirectionSelect={(directionId) => {
+            const direction = narrowContextData?.directions.find((item) => item.id === directionId)
+            if (!direction) return
+            void loadNarrowArticle(direction, true, appLanguage)
+          }}
+          onChangeMode={() => setContextSheetOpen(true)}
+          onCopy={() => {
+            void handleCopyNarrow()
+          }}
+          onShare={() => {
+            void handleShareNarrow()
+          }}
+        />
+      )
+    }
+
+    return (
+      <ContextView
+        isReady={modesReady}
+        isLoading={contextLoading}
+        error={contextError}
+        data={contextData}
+        selectedMode={selectedContext}
+        title={t.context}
+        leadFallback={t.contextLead}
+        takeawayFallback={t.contextTakeaway}
+        pointLabel={t.contextPointLabel}
+        takeawayLabel={t.takeaway}
+        loadingLabel={t.loadingContext}
+        loadingText={t.loadingContextText}
+        unavailableLabel={t.context}
+        point1={t.contextPoint1}
+        point2={t.contextPoint2}
+        point3={t.contextPoint3}
+        narrowLabel={t.narrowContext}
+        wideLabel={t.wideContext}
+        changeLabel={t.change}
+        tryAgainLabel={t.tryAgain}
+        backToTopLabel={t.backToTop}
+        copyLabel={t.copyAnalysis}
+        copiedLabel={t.copiedAnalysis}
+        copyFailedLabel={t.copyFailed}
+        shareLabel={t.shareAnalysis}
+        copyStatus={contextCopyStatus}
+        shareStatus={contextShareStatus}
+        onRetry={() => {
+          void loadContext(true, appLanguage)
+        }}
+        onBackToTop={handleContextBackToTop}
+        onCopy={() => {
+          void handleCopyContext()
+        }}
+        onShare={() => {
+          void handleShareContext()
+        }}
+        onChangeMode={() => setContextSheetOpen(true)}
+      />
+    )
+  }
+
+  return (
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-neutral-900">
+      <div ref={articleTopRef} className="mx-auto flex w-full max-w-md flex-col">
+        <div className="mb-6 flex items-center gap-3 text-sm">
+          <Link href="/" className="text-neutral-500 transition hover:text-neutral-700">
+            {t.home}
+          </Link>
+        </div>
+
+        <h1 className="mb-2 text-4xl font-semibold tracking-tight text-stone-900">
+          {formattedReference || 'Loading...'}
+        </h1>
+
+        <div className="mb-5 flex gap-5 overflow-x-auto pb-1 text-[0.98rem] leading-6">
+          {(['en', 'es', 'fr', 'de', 'ru'] as AppLanguage[]).map((lang) => {
+            const isActive = appLanguage === lang
+            const label =
+              lang === 'en'
+                ? t.english
+                : lang === 'es'
+                  ? t.spanish
+                  : lang === 'fr'
+                    ? t.french
+                    : lang === 'de'
+                      ? t.german
+                      : t.russian
+
+            const isLoading =
+              translationLoading &&
+              activeTab === 'insights' &&
+              appLanguage !== lang &&
+              lang !== 'en'
+
+            return (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => void handleSetLanguage(lang)}
+                disabled={translationLoading || interactionsLocked}
+                className={`whitespace-nowrap border-b bg-transparent pb-1 transition disabled:opacity-45 ${
+                  isActive
+                    ? 'border-stone-500 text-stone-900'
+                    : 'border-transparent text-stone-500 hover:text-stone-700'
+                }`}
+              >
+                {isLoading ? t.translating : label}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          {renderTabButton(
+            t.insights,
+            activeTab === 'insights',
+            () => {
+              setActiveTab('insights')
+              setLensSheetOpen(false)
+              setContextSheetOpen(false)
+            },
+            false
+          )}
+          {renderTabButton(
+            t.context,
+            activeTab === 'context',
+            () => {
+              if (!modesReady) return
+              setContextSheetOpen(true)
+              setLensSheetOpen(false)
+              setActiveArticleKey('')
+            },
+            !modesReady
+          )}
+          {renderTabButton(
+            t.lens,
+            activeTab === 'lens',
+            () => {
+              if (!modesReady) return
+              setLensSheetOpen(true)
+              setContextSheetOpen(false)
+              setActiveArticleKey('')
+            },
+            !modesReady
+          )}
+        </div>
+
+        <VerseBlock
+          isLoading={verseLoading}
+          error={verseError}
+          reference={formattedReference}
+          verseText={displayedVerseText}
+          loadingLabel={t.verseLoading}
+          loadingText={t.verseLoadingText}
+          unavailableLabel={t.verseUnavailable}
+        />
+
+        {!verseLoading && !verseError && activeTab === 'insights' && renderSharedCardStack()}
+        {!verseLoading && !verseError && activeTab === 'context' && renderContextView()}
+        {!verseLoading && !verseError && activeTab === 'lens' && renderLensView()}
+      </div>
+
+      {displayedCard && !insightsBlockingLoad && !insightsError && (
+        <div className="pointer-events-none fixed -left-[9999px] top-0 z-[-1]">
+          <div
+            ref={exportCardRef}
+            style={{
+              width: 1080,
+              background: 'linear-gradient(180deg, #f6ecd6 0%, #efe2bf 100%)',
+              padding: '48px',
+              borderRadius: '44px',
+              color: '#1c1917',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div
+              style={{
+                borderRadius: '34px',
+                border: '1px solid rgba(120, 97, 61, 0.14)',
+                background: 'radial-gradient(circle at top, #fbf5e8 0%, #f2e7cf 55%, #ead9b6 100%)',
+                padding: '64px 72px',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
+              }}
+            >
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: '24px',
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: '#78716c',
+                  marginBottom: '34px',
+                }}
+              >
+                {formattedReference}
+              </div>
+
+              {displayedVerseText ? (
+                <div
+                  style={{
+                    marginBottom: '38px',
+                    padding: '24px 28px',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(120, 97, 61, 0.18)',
+                    background: 'rgba(251, 246, 234, 0.72)',
+                    fontSize: '30px',
+                    lineHeight: 1.8,
+                    color: '#44403c',
+                    fontStyle: 'italic',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {displayedVerseText}
+                </div>
+              ) : null}
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: '68px',
+                  lineHeight: 1.08,
+                  fontWeight: 700,
+                  letterSpacing: '-0.03em',
+                  color: '#1c1917',
+                  marginBottom: '42px',
+                }}
+              >
+                {displayedCard.title}
+              </div>
+
+              <div
+                style={{
+                  fontSize: '42px',
+                  lineHeight: 1.75,
+                  color: '#292524',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {displayedCard.text}
+              </div>
+
+              <div
+                style={{
+                  marginTop: '44px',
+                  textAlign: 'center',
+                  fontSize: '24px',
+                  fontWeight: 600,
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  color: '#78716c',
+                }}
+              >
+                Scriptura+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <LensSheet
+        isOpen={lensSheetOpen && modesReady}
+        title={t.lensTitle}
+        subtitle={t.chooseFocusedLens}
+        description={t.readThisVerseOneAngle}
+        closeLabel={t.close}
+        translationLabel={t.translation}
+        wordLabel={t.word}
+        tensionLabel={t.tension}
+        phraseLabel={t.phrase}
+        translationHelper={t.translationHelper}
+        wordHelper={t.wordHelper}
+        tensionHelper={t.tensionHelper}
+        phraseHelper={t.phraseHelper}
+        onClose={() => setLensSheetOpen(false)}
+        onSelect={(lens) => {
+          void handleSelectLens(lens)
+        }}
+      />
+
+      <ContextSheet
+        isOpen={contextSheetOpen && modesReady}
+        title={t.contextTitle}
+        subtitle={t.chooseContextMode}
+        description={t.readThisVerseThroughContext}
+        closeLabel={t.close}
+        narrowLabel={t.narrowContext}
+        wideLabel={t.wideContext}
+        narrowHelper={t.narrowHelper}
+        wideHelper={t.wideHelper}
+        onClose={() => setContextSheetOpen(false)}
+        onSelect={(mode) => {
+          void handleSelectContext(mode)
+        }}
+      />
+
+      <style jsx global>{`
+        @keyframes scriptura-fade-slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes scriptura-sheet-overlay {
+          from {
+            opacity: 0;
+            backdrop-filter: blur(0px);
+          }
+          to {
+            opacity: 1;
+            backdrop-filter: blur(10px);
+          }
+        }
+
+        @keyframes scriptura-sheet-up {
+          from {
+            opacity: 0;
+            transform: translateY(28px) scale(0.992);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes scriptura-card-pop {
+          from {
+            opacity: 0;
+            transform: translateY(8px) scale(0.992);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes scriptura-soft-fade {
+          from {
+            opacity: 0;
+            transform: translateY(4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes scriptura-skeleton {
+          0% {
+            opacity: 0.55;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0.55;
+          }
+        }
+
+        .tab-panel-enter {
+          animation: scriptura-fade-slide-up 220ms ease;
+        }
+
+        .sheet-overlay {
+          animation: scriptura-sheet-overlay 220ms ease;
+        }
+
+        .sheet-panel {
+          animation: scriptura-sheet-up 260ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .card-pop {
+          animation: scriptura-card-pop 240ms ease;
+        }
+
+        .verse-enter,
+        .title-fade,
+        .text-fade {
+          animation: scriptura-soft-fade 260ms ease;
+        }
+
+        .skeleton-line {
+          animation: scriptura-skeleton 1.45s ease-in-out infinite;
+        }
+      `}</style>
+    </main>
+  )
+}
