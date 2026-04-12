@@ -26,6 +26,7 @@ type PhraseLensPayload = {
 type LocaleCode = 'en' | 'ru' | 'es' | 'fr' | 'de'
 
 type PhraseLensViewProps = {
+  locale: LocaleCode
   isReady: boolean
   isLoading: boolean
   error: string
@@ -265,6 +266,7 @@ function renderIntroPanel(
 }
 
 export default function PhraseLensView({
+  locale,
   isReady,
   isLoading,
   error,
@@ -286,7 +288,6 @@ export default function PhraseLensView({
   onNodeSelect,
   onCustomDig,
 }: PhraseLensViewProps) {
-  const locale = detectLocale(changeLabel, title)
   const copy = UI_COPY[locale]
   const primaryNode = data?.nodes?.[0] ?? null
 
