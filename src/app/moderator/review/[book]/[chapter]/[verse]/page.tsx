@@ -168,6 +168,7 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
 
   const reference = formatReference(resolved.book, resolved.chapter, resolved.verse)
   const workspaceHref = `/moderator/workspace/${resolved.book}/${resolved.chapter}/${resolved.verse}`
+  const reviewHref = `/moderator/review/${resolved.book}/${resolved.chapter}/${resolved.verse}`
 
   let verseText = ''
   let verseError = ''
@@ -397,6 +398,7 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
                       </button>
 
                       <form action={`/api/moderator/candidates/${item.id}/reject`} method="POST">
+                        <input type="hidden" name="returnTo" value={reviewHref} />
                         <button
                           type="submit"
                           className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
