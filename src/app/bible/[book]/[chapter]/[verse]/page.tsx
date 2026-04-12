@@ -3479,7 +3479,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         currentCards={currentCards}
         currentIndex={currentIndex}
         insightsBackgroundFill={insightsBackgroundFill}
-        activeTab={activeTab}
+        activeTab={activeTab as any}
         displayedCard={displayedCard}
         selectedLens={selectedLens}
         selectedContext={selectedContext as any}
