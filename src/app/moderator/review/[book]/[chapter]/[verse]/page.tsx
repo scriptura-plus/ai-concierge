@@ -240,7 +240,6 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
     verseError = 'Не удалось загрузить текст стиха.'
   }
 
-  const featuredCandidates = candidates.filter((item) => item.candidate_status === 'featured')
   const newCandidates = candidates.filter((item) => item.candidate_status === 'new')
   const extendedCandidates = candidates.filter((item) =>
     ['extended', 'reserve', 'needs_repair'].includes(item.candidate_status)
@@ -398,10 +397,7 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
               <div className="space-y-4">
                 {newCandidates.map((item) => {
                   const repairHref =
-                    `${baseWorkspaceHref}?prefill=1` +
-                    `&candidateId=${encodeURIComponent(item.id)}` +
-                    `&exact=${encodeURIComponent(item.text_ru)}` +
-                    `&direction=${encodeURIComponent(item.angle_note ?? '')}`
+                    `${baseWorkspaceHref}?prefill=1&candidateId=${encodeURIComponent(item.id)}`
 
                   return (
                     <article
