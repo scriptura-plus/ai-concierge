@@ -15,6 +15,7 @@ import WordLensView from './components/WordLensView'
 import WordLensArticleView from './components/WordLensArticleView'
 import PhraseLensView from './components/PhraseLensView'
 import PhraseLensArticleView from './components/PhraseLensArticleView'
+import RefinementView from './components/RefinementView'
 import TensionLensView from './components/TensionLensView'
 import TensionLensArticleView from './components/TensionLensArticleView'
 
@@ -314,6 +315,12 @@ type PhraseLensArticleApiResponse = {
   reference?: string
   targetLanguage?: AppLanguage
   article?: PhraseLensArticle
+  error?: string
+  raw?: string
+}
+
+type RefinementApiResponse = {
+  result?: InsightItem
   error?: string
   raw?: string
 }
@@ -1210,6 +1217,10 @@ function emptyPhraseLensArticleMap(): Record<AppLanguage, PhraseLensArticle | nu
   return { en: null, ru: null, es: null, fr: null, de: null }
 }
 
+function emptyRefinementMap(): Record<AppLanguage, InsightItem | null> {
+  return { en: null, ru: null, es: null, fr: null, de: null }
+}
+
 function emptyCompareMap(): Record<AppLanguage, ComparePayload | null> {
   return { en: null, ru: null, es: null, fr: null, de: null }
 }
@@ -1383,6 +1394,15 @@ export default function VerseDetailPage({ params }: PageProps) {
     useState<'idle' | 'copied' | 'failed'>('idle')
   const [phraseLensArticleShareStatus, setPhraseLensArticleShareStatus] = useState('')
 
+  const [refinementInput, setRefinementInput] = useState('')
+  const [refinementResultByLanguage, setRefinementResultByLanguage] =
+    useState<Record<AppLanguage, InsightItem | null>>(emptyRefinementMap())
+  const [refinementLoading, setRefinementLoading] = useState(false)
+  const [refinementError, setRefinementError] = useState('')
+  const [refinementCopyStatus, setRefinementCopyStatus] =
+    useState<'idle' | 'copied' | 'failed'>('idle')
+  const [refinementShareStatus, setRefinementShareStatus] = useState('')
+
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('en')
   const [translationLoading, setTranslationLoading] = useState(false)
   const [translationError, setTranslationError] = useState('')
@@ -1487,6 +1507,13 @@ export default function VerseDetailPage({ params }: PageProps) {
       setPhraseLensArticleError('')
       setPhraseLensArticleCopyStatus('idle')
       setPhraseLensArticleShareStatus('')
+
+      setRefinementInput('')
+      setRefinementResultByLanguage(emptyRefinementMap())
+      setRefinementLoading(false)
+      setRefinementError('')
+      setRefinementCopyStatus('idle')
+      setRefinementShareStatus('')
 
       setWordLensDataByLanguage(emptyWordLensMap())
       setWordLensArticleByLanguage(emptyWordLensArticleMap())
@@ -1736,6 +1763,10 @@ export default function VerseDetailPage({ params }: PageProps) {
   const phraseLensArticle = useMemo(
     () => phraseLensArticleByLanguage[appLanguage],
     [phraseLensArticleByLanguage, appLanguage]
+  )
+  const refinementResult = useMemo(
+    () => refinementResultByLanguage[appLanguage],
+    [refinementResultByLanguage, appLanguage]
   )
 
   const activeWordLensNode = useMemo(() => {
@@ -2488,6 +2519,12 @@ export default function VerseDetailPage({ params }: PageProps) {
   useEffect(() => {
     if (!formattedReference || !verseText || !modesReady) return
 
+    if (activeTab === 'refine') {
+      setRefinementError('')
+      setRefinementCopyStatus('idle')
+      setRefinementShareStatus('')
+    }
+
     if (activeTab === 'context' && selectedContext === 'narrow') {
       void loadNarrowContext(false, appLanguage)
     }
@@ -2528,7 +2565,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
     const isEnglish = targetLanguage === 'en'
 
-    if (activeTab === 'insights' || activeTab === 'refine') {
+    if (activeTab === 'insights') {
       if (!currentInsight) {
         setAppLanguage(targetLanguage)
         return
@@ -2624,7 +2661,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     const nextIndex = (currentIndex + 1) % currentCards.length
     setCurrentIndex(nextIndex)
 
-    if ((activeTab === 'insights' || activeTab === 'refine') && appLanguage !== 'en') {
+    if (activeTab === 'insights' && appLanguage !== 'en') {
       const nextInsight = currentCards[nextIndex]
       if (!nextInsight) return
 
@@ -2648,7 +2685,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     const prevIndex = (currentIndex - 1 + currentCards.length) % currentCards.length
     setCurrentIndex(prevIndex)
 
-    if ((activeTab === 'insights' || activeTab === 'refine') && appLanguage !== 'en') {
+    if (activeTab === 'insights' && appLanguage !== 'en') {
       const prevInsight = currentCards[prevIndex]
       if (!prevInsight) return
 
@@ -2692,7 +2729,7 @@ export default function VerseDetailPage({ params }: PageProps) {
   const displayedCard = useMemo(() => {
     if (!currentInsight) return null
 
-    if ((activeTab === 'insights' || activeTab === 'refine') && appLanguage !== 'en') {
+    if (activeTab === 'insights' && appLanguage !== 'en') {
       const baseKey = `${currentModeKey}:${currentIndex}:${currentInsight.title}:${currentInsight.text}`
       return translatedCards[`${appLanguage}:${baseKey}`] || currentInsight
     }
@@ -3270,6 +3307,120 @@ export default function VerseDetailPage({ params }: PageProps) {
     }
   }
 
+
+  const refinementShareText = useMemo(() => {
+    if (!refinementResult || !formattedReference) return ''
+    const verseBlock = displayedVerseText ? `${displayedVerseText}
+
+` : ''
+    return `${formattedReference}
+
+${verseBlock}${refinementResult.title}
+
+${refinementResult.text}`
+  }, [refinementResult, formattedReference, displayedVerseText])
+
+  async function handleGenerateRefinement(force = false) {
+    const sourceText = refinementInput.trim()
+    if (!formattedReference || !sourceText || !verseText) return
+    if (!force && refinementLoading) return
+
+    setRefinementLoading(true)
+    setRefinementError('')
+    setRefinementCopyStatus('idle')
+    setRefinementShareStatus('')
+
+    try {
+      const res = await fetch('/api/refinement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference: formattedReference,
+          verseText,
+          sourceText,
+          targetLanguage: appLanguage,
+          mode: 'generate',
+        }),
+      })
+
+      const data: RefinementApiResponse = await res.json()
+
+      if (!res.ok || !data.result) {
+        setRefinementError(data.error || 'Unable to refine comment.')
+        return
+      }
+
+      setRefinementResultByLanguage((prev) => ({
+        ...prev,
+        [appLanguage]: data.result as InsightItem,
+      }))
+    } catch {
+      setRefinementError('Unable to refine comment.')
+    } finally {
+      setRefinementLoading(false)
+    }
+  }
+
+  async function handleCopyRefinement() {
+    if (!refinementShareText) return
+
+    try {
+      await navigator.clipboard.writeText(refinementShareText)
+      setRefinementCopyStatus('copied')
+      setRefinementShareStatus('')
+
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = window.setTimeout(() => {
+        setRefinementCopyStatus('idle')
+      }, 1600)
+    } catch {
+      setRefinementCopyStatus('failed')
+    }
+  }
+
+  async function handleShareRefinement() {
+    if (!refinementShareText) return
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: refinementShareText })
+        setRefinementShareStatus(t.sharedAsText)
+      } else {
+        await navigator.clipboard.writeText(refinementShareText)
+        setRefinementShareStatus(t.shareUnavailableCopiedInstead)
+      }
+    } catch {
+      setRefinementShareStatus('')
+    }
+  }
+
+  function renderRefinementView() {
+    return (
+      <RefinementView
+        locale={appLanguage}
+        isReady={modesReady}
+        isLoading={refinementLoading}
+        error={refinementError}
+        inputValue={refinementInput}
+        result={refinementResult}
+        copyStatus={refinementCopyStatus}
+        shareStatus={refinementShareStatus}
+        onInputChange={setRefinementInput}
+        onGenerate={() => {
+          void handleGenerateRefinement(false)
+        }}
+        onRegenerate={() => {
+          void handleGenerateRefinement(true)
+        }}
+        onCopy={() => {
+          void handleCopyRefinement()
+        }}
+        onShare={() => {
+          void handleShareRefinement()
+        }}
+      />
+    )
+  }
 
   function handleCompareBackToTop() {
     if (articleTopRef.current) {
@@ -4085,7 +4236,7 @@ export default function VerseDetailPage({ params }: PageProps) {
         {!verseLoading && !verseError && activeTab === 'insights' && renderSharedCardStack()}
         {!verseLoading && !verseError && activeTab === 'context' && renderContextView()}
         {!verseLoading && !verseError && activeTab === 'lens' && renderLensView()}
-        {!verseLoading && !verseError && activeTab === 'refine' && renderSharedCardStack()}
+        {!verseLoading && !verseError && activeTab === 'refine' && renderRefinementView()}
       </div>
 
       {displayedCard && !insightsBlockingLoad && !insightsError && (
