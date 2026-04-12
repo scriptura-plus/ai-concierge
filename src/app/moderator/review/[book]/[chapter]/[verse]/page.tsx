@@ -214,8 +214,8 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
               {reference}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-              Здесь ты просматриваешь кандидаты по стиху, выбираешь сильные углы, убираешь мусор и
-              решаешь, что оставить в активном наборе.
+              Здесь ты просматриваешь кандидаты по стиху, выбираешь сильные углы, отклоняешь
+              слабые и решаешь, что оставить в активном наборе.
             </p>
           </div>
 
@@ -396,12 +396,14 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
                         Сохранить
                       </button>
 
-                      <button
-                        type="button"
-                        className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                      >
-                        Мусор
-                      </button>
+                      <form action={`/api/moderator/candidates/${item.id}/reject`} method="POST">
+                        <button
+                          type="submit"
+                          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                        >
+                          Отклонить
+                        </button>
+                      </form>
 
                       <Link
                         href={workspaceHref}
