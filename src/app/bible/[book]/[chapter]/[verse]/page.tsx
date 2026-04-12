@@ -2520,10 +2520,7 @@ export default function VerseDetailPage({ params }: PageProps) {
     setTensionLensArticleCopyStatus('idle')
     setTensionLensArticleShareStatus('')
 
-    if (targetLanguage === 'en') {
-      setAppLanguage('en')
-      return
-    }
+    const isEnglish = targetLanguage === 'en'
 
     if (activeTab === 'insights') {
       if (!currentInsight) {
@@ -2552,7 +2549,7 @@ export default function VerseDetailPage({ params }: PageProps) {
       return
     }
 
-    if (verseText && verseTranslationKey) {
+    if (!isEnglish && verseText && verseTranslationKey) {
       setTranslationLoading(true)
 
       try {
@@ -3787,6 +3784,7 @@ export default function VerseDetailPage({ params }: PageProps) {
 
       return (
         <PhraseLensView
+          locale={appLanguage}
           isReady={modesReady}
           isLoading={phraseLensLoading}
           error={phraseLensError}
