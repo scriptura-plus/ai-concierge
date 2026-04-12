@@ -136,7 +136,7 @@ function getBookTone(title: string) {
 
 function BookGrid({ books }: { books: typeof BIBLE_BOOKS }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-7 lg:grid-cols-8">
       {books.map((book) => {
         const tone = getBookTone(book.title);
 
@@ -144,7 +144,9 @@ function BookGrid({ books }: { books: typeof BIBLE_BOOKS }) {
           <Link
             key={book.id}
             href={`/bible/${book.id}`}
-            className="group relative overflow-hidden rounded-[14px] border px-4 py-5 shadow-[0_10px_22px_rgba(15,23,42,0.08)] transition-all duration-300 ease-out hover:-translate-y-[2px] hover:shadow-[0_18px_34px_rgba(15,23,42,0.16)] active:translate-y-[1px] active:scale-[0.975] active:shadow-[0_8px_16px_rgba(15,23,42,0.12)]"
+            aria-label={book.title}
+            title={book.title}
+            className="group relative overflow-hidden rounded-[10px] border px-1.5 py-4 text-center shadow-[0_8px_18px_rgba(15,23,42,0.08)] transition-all duration-200 ease-out hover:-translate-y-[1px] hover:shadow-[0_12px_24px_rgba(15,23,42,0.14)] active:scale-[0.985] active:shadow-[0_6px_14px_rgba(15,23,42,0.10)]"
             style={{
               backgroundColor: tone.background,
               borderColor: tone.border,
@@ -157,14 +159,14 @@ function BookGrid({ books }: { books: typeof BIBLE_BOOKS }) {
               style={{ background: "rgba(255,255,255,0.34)" }}
             />
             <div
-              className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
               style={{
                 background:
                   "radial-gradient(circle at top left, rgba(255,255,255,0.10), transparent 42%)",
               }}
             />
-            <span className="relative block text-[0.98rem] font-medium leading-6 tracking-[0.01em]">
-              {book.title}
+            <span className="relative block text-[0.92rem] font-medium leading-5 tracking-[0.01em]">
+              {book.shortTitle}
             </span>
           </Link>
         );
@@ -176,13 +178,10 @@ function BookGrid({ books }: { books: typeof BIBLE_BOOKS }) {
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#f3f6fb_40%,#eef2f7_100%)]">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <section className="mb-14">
-          <div className="mb-6">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-              Section I
-            </p>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+      <div className="mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+        <section className="mb-8">
+          <div className="mb-4">
+            <h2 className="text-[1.55rem] font-semibold tracking-tight text-slate-950 sm:text-3xl">
               Hebrew-Aramaic Scriptures
             </h2>
           </div>
@@ -191,11 +190,8 @@ export default function HomePage() {
         </section>
 
         <section>
-          <div className="mb-6">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-              Section II
-            </p>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
+          <div className="mb-4">
+            <h2 className="text-[1.55rem] font-semibold tracking-tight text-slate-950 sm:text-3xl">
               Christian Greek Scriptures
             </h2>
           </div>
