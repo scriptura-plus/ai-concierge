@@ -19,6 +19,7 @@ type PageProps = {
     prefill?: string
     source?: string
     id?: string
+    flash?: string
   }>
 }
 
@@ -137,6 +138,16 @@ function looksRussian(text: string) {
   const sample = text.slice(0, 400)
   const cyrillicMatches = sample.match(/[А-Яа-яЁё]/g) ?? []
   return cyrillicMatches.length >= 12
+}
+
+function decodeFlashMessage(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  try {
+    return decodeURIComponent(trimmed)
+  } catch {
+    return trimmed
+  }
 }
 
 async function ensureRussianVerseText(reference: string, verseText: string): Promise<string> {
@@ -353,6 +364,8 @@ export default async function ModeratorVerseReviewPage({
       ? resolvedSearchParams.id.trim()
       : ''
 
+  const flashMessage = decodeFlashMessage(String(resolvedSearchParams?.flash ?? ''))
+
   let initialExactInput = ''
   let initialDirectionInput = ''
   let initialCandidateId = ''
@@ -426,6 +439,12 @@ export default async function ModeratorVerseReviewPage({
             </Link>
           </div>
         </div>
+
+        {flashMessage ? (
+          <section className="mb-5 rounded-[24px] border border-emerald-300/70 bg-emerald-50 px-5 py-4 text-emerald-900 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+            <p className="text-sm leading-6">{flashMessage}</p>
+          </section>
+        ) : null}
 
         <section className="mb-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
