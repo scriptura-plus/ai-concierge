@@ -16,7 +16,6 @@ export default function ActionSubmitButton({
   disabled = false,
 }: ActionSubmitButtonProps) {
   const [isPending, setIsPending] = useState(false)
-  const isDisabled = disabled || isPending
 
   const baseClassName =
     'rounded-full px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50'
@@ -31,13 +30,13 @@ export default function ActionSubmitButton({
   return (
     <button
       type="submit"
-      disabled={isDisabled}
+      disabled={disabled}
       onClick={() => {
         if (!disabled) {
           setIsPending(true)
         }
       }}
-      className={`${baseClassName} ${variantClassName}`}
+      className={`${baseClassName} ${variantClassName} ${isPending ? 'opacity-70' : ''}`}
     >
       {isPending ? pendingLabel : idleLabel}
     </button>
