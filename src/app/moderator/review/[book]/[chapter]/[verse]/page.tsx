@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { getVerseText } from '@/lib/bible/getVerseText'
 import { runModel } from '@/lib/ai/run-model'
 import WorkspaceClient from '@/app/moderator/workspace/[book]/[chapter]/[verse]/WorkspaceClient'
+import ActionSubmitButton from './ActionSubmitButton'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -20,6 +21,7 @@ type PageProps = {
     source?: string
     id?: string
     flash?: string
+    message?: string
   }>
 }
 
@@ -140,7 +142,7 @@ function looksRussian(text: string) {
   return cyrillicMatches.length >= 12
 }
 
-function decodeFlashMessage(value: string) {
+function decodeFlashValue(value: string) {
   const trimmed = value.trim()
   if (!trimmed) return ''
   try {
@@ -364,7 +366,8 @@ export default async function ModeratorVerseReviewPage({
       ? resolvedSearchParams.id.trim()
       : ''
 
-  const flashMessage = decodeFlashMessage(String(resolvedSearchParams?.flash ?? ''))
+  const flashType = decodeFlashValue(String(resolvedSearchParams?.flash ?? ''))
+  const flashMessage = decodeFlashValue(String(resolvedSearchParams?.message ?? ''))
 
   let initialExactInput = ''
   let initialDirectionInput = ''
@@ -412,6 +415,11 @@ export default async function ModeratorVerseReviewPage({
     }
   }
 
+  const flashClassName =
+    flashType === 'error'
+      ? 'border-red-300/70 bg-red-50 text-red-800'
+      : 'border-emerald-300/70 bg-emerald-50 text-emerald-900'
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#F7F5EF_0%,#F3F0E8_46%,#F6F3EC_100%)] text-stone-900">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -441,7 +449,7 @@ export default async function ModeratorVerseReviewPage({
         </div>
 
         {flashMessage ? (
-          <section className="mb-5 rounded-[24px] border border-emerald-300/70 bg-emerald-50 px-5 py-4 text-emerald-900 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+          <section className={`mb-5 rounded-[24px] border px-5 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)] ${flashClassName}`}>
             <p className="text-sm leading-6">{flashMessage}</p>
           </section>
         ) : null}
@@ -534,34 +542,28 @@ export default async function ModeratorVerseReviewPage({
                       <div className="mt-4 flex flex-wrap gap-3">
                         <form action={`/api/moderator/insights/${item.id}/move-up`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
-                          <button
-                            type="submit"
+                          <ActionSubmitButton
+                            idleLabel="Выше"
+                            pendingLabel="Поднимаем..."
                             disabled={index === 0}
-                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            Выше
-                          </button>
+                          />
                         </form>
 
                         <form action={`/api/moderator/insights/${item.id}/move-down`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
-                          <button
-                            type="submit"
+                          <ActionSubmitButton
+                            idleLabel="Ниже"
+                            pendingLabel="Опускаем..."
                             disabled={index === featuredSaved.length - 1}
-                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            Ниже
-                          </button>
+                          />
                         </form>
 
                         <form action={`/api/moderator/insights/${item.id}/send-to-reserve`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
-                          <button
-                            type="submit"
-                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                          >
-                            В запас
-                          </button>
+                          <ActionSubmitButton
+                            idleLabel="В запас"
+                            pendingLabel="Переносим..."
+                          />
                         </form>
 
                         <Link
@@ -647,22 +649,20 @@ export default async function ModeratorVerseReviewPage({
                       <div className="mt-4 flex flex-wrap gap-3">
                         <form action={`/api/moderator/candidates/${item.id}/promote`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
-                          <button
-                            type="submit"
-                            className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
-                          >
-                            Сохранить
-                          </button>
+                          <ActionSubmitButton
+                            idleLabel="Сохранить"
+                            pendingLabel="Сохраняем..."
+                            variant="primary"
+                          />
                         </form>
 
                         <form action={`/api/moderator/candidates/${item.id}/reject`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
-                          <button
-                            type="submit"
-                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                          >
-                            Отклонить
-                          </button>
+                          <ActionSubmitButton
+                            idleLabel="Отклонить"
+                            pendingLabel="Отклоняем..."
+                            variant="danger"
+                          />
                         </form>
 
                         <Link
@@ -720,22 +720,19 @@ export default async function ModeratorVerseReviewPage({
                       <div className="mt-4 flex flex-wrap gap-3">
                         <form action={`/api/moderator/insights/${item.id}/return-to-featured`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
-                          <button
-                            type="submit"
-                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                          >
-                            Вернуть в активные
-                          </button>
+                          <ActionSubmitButton
+                            idleLabel="Вернуть в активные"
+                            pendingLabel="Возвращаем..."
+                          />
                         </form>
 
                         <form action={`/api/moderator/insights/${item.id}/remove-from-reserve`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
-                          <button
-                            type="submit"
-                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                          >
-                            Убрать из запаса
-                          </button>
+                          <ActionSubmitButton
+                            idleLabel="Убрать из запаса"
+                            pendingLabel="Убираем..."
+                            variant="danger"
+                          />
                         </form>
 
                         <Link
