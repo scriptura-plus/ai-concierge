@@ -55,6 +55,8 @@ type PrefillPayload = {
   text: string
 }
 
+type RepairSourceType = 'candidate' | 'featured_insight' | 'reserve_insight' | ''
+
 function normalizeBookForDb(bookSlug: string) {
   return bookSlug.replace(/-/g, ' ').trim().toLowerCase()
 }
@@ -333,10 +335,19 @@ export default async function ModeratorVerseReviewPage({
   }))
 
   const prefillMode = resolvedSearchParams?.prefill === '1'
-  const prefillSource =
+
+  const prefillSourceRaw =
     typeof resolvedSearchParams?.source === 'string'
       ? resolvedSearchParams.source.trim()
       : ''
+
+  const prefillSource: RepairSourceType =
+    prefillSourceRaw === 'candidate' ||
+    prefillSourceRaw === 'featured_insight' ||
+    prefillSourceRaw === 'reserve_insight'
+      ? prefillSourceRaw
+      : ''
+
   const prefillId =
     typeof resolvedSearchParams?.id === 'string'
       ? resolvedSearchParams.id.trim()
@@ -346,6 +357,8 @@ export default async function ModeratorVerseReviewPage({
   let initialDirectionInput = ''
   let initialCandidateId = ''
   let prefillMessage = ''
+  let repairSourceType: RepairSourceType = ''
+  let repairSourceId = ''
 
   if (prefillMode && prefillId) {
     try {
@@ -355,15 +368,30 @@ export default async function ModeratorVerseReviewPage({
           initialExactInput = candidate.text
           initialCandidateId = candidate.id
           prefillMessage = `Кандидат загружен в мастерскую: ${candidate.title}`
+          repairSourceType = 'candidate'
+          repairSourceId = candidate.id
         }
       }
 
-      if (prefillSource === 'insight') {
+      if (prefillSource === 'featured_insight') {
         const insight = await loadPrefillInsight(prefillId)
         if (insight) {
           initialExactInput = insight.text
           initialCandidateId = insight.id
-          prefillMessage = `Карточка загружена в мастерскую для новой редакции: ${insight.title}`
+          prefillMessage = `Активная карточка загружена в мастерскую для новой редакции: ${insight.title}`
+          repairSourceType = 'featured_insight'
+          repairSourceId = insight.id
+        }
+      }
+
+      if (prefillSource === 'reserve_insight') {
+        const insight = await loadPrefillInsight(prefillId)
+        if (insight) {
+          initialExactInput = insight.text
+          initialCandidateId = insight.id
+          prefillMessage = `Карточка из запаса загружена в мастерскую для новой редакции: ${insight.title}`
+          repairSourceType = 'reserve_insight'
+          repairSourceId = insight.id
         }
       }
     } catch {
@@ -470,7 +498,7 @@ export default async function ModeratorVerseReviewPage({
                   const title = item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка'
                   const text = item.text_ru?.trim() || item.text_en?.trim() || ''
                   const repairHref =
-                    `${reviewHref}?prefill=1&source=insight&id=${encodeURIComponent(item.id)}#workshop`
+                    `${reviewHref}?prefill=1&source=featured_insight&id=${encodeURIComponent(item.id)}#workshop`
 
                   return (
                     <article
@@ -656,7 +684,7 @@ export default async function ModeratorVerseReviewPage({
                   const title = item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка'
                   const text = item.text_ru?.trim() || item.text_en?.trim() || ''
                   const repairHref =
-                    `${reviewHref}?prefill=1&source=insight&id=${encodeURIComponent(item.id)}#workshop`
+                    `${reviewHref}?prefill=1&source=reserve_insight&id=${encodeURIComponent(item.id)}#workshop`
 
                   return (
                     <article
@@ -678,6 +706,16 @@ export default async function ModeratorVerseReviewPage({
                             className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
                           >
                             Вернуть в активные
+                          </button>
+                        </form>
+
+                        <form action={`/api/moderator/insights/${item.id}/remove-from-reserve`} method="POST">
+                          <input type="hidden" name="returnTo" value={reviewHref} />
+                          <button
+                            type="submit"
+                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                          >
+                            Убрать из запаса
                           </button>
                         </form>
 
@@ -718,6 +756,8 @@ export default async function ModeratorVerseReviewPage({
             initialDirectionInput={initialDirectionInput}
             prefillMode={prefillMode}
             initialCandidateId={initialCandidateId}
+            repairSourceType={repairSourceType}
+            repairSourceId={repairSourceId}
           />
         </section>
       </div>
