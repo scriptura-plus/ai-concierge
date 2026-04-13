@@ -18,8 +18,9 @@ type InsightRow = {
   status: string
 }
 
-function redirectTo(path: string, req: Request) {
+function withFlash(path: string, message: string, req: Request) {
   const url = new URL(path, req.url)
+  url.searchParams.set('flash', message)
   return NextResponse.redirect(url, { status: 303 })
 }
 
@@ -39,7 +40,7 @@ export async function POST(req: Request, context: RouteContext) {
       .maybeSingle()
 
     if (currentError || !current) {
-      return redirectTo(returnTo, req)
+      return withFlash(returnTo, 'Не удалось вернуть карточку в активные.', req)
     }
 
     const currentRow = current as InsightRow
@@ -59,7 +60,7 @@ export async function POST(req: Request, context: RouteContext) {
 
     const nextOrder = Number(lastFeatured?.display_order ?? 0) + 10
 
-    await supabase
+    const { error: updateError } = await supabase
       .schema('private')
       .from('curated_insights')
       .update({
@@ -68,11 +69,15 @@ export async function POST(req: Request, context: RouteContext) {
       })
       .eq('id', id)
 
+    if (updateError) {
+      return withFlash(returnTo, 'Не удалось вернуть карточку в активные.', req)
+    }
+
     revalidatePath('/moderator')
     revalidatePath(returnTo)
 
-    return redirectTo(returnTo, req)
+    return withFlash(returnTo, 'Карточка возвращена в активные.', req)
   } catch {
-    return redirectTo(returnTo, req)
+    return withFlash(returnTo, 'Не удалось вернуть карточку в активные.', req)
   }
 }
