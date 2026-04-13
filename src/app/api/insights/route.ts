@@ -13,6 +13,8 @@ type InsightItem = {
 type CuratedInsightRow = {
   id: string;
   mode: "insights" | "word" | "tension" | "why_this_phrase";
+  title: string | null;
+  text: string | null;
   title_en: string | null;
   text_en: string | null;
   title_ru: string | null;
@@ -78,35 +80,53 @@ function pickLocalizedValue(
   row: CuratedInsightRow,
   targetLanguage: SupportedLanguage
 ): InsightItem | null {
+  const fallbackTitle =
+    row.title_en?.trim() ||
+    row.title?.trim() ||
+    row.title_ru?.trim() ||
+    row.title_es?.trim() ||
+    row.title_fr?.trim() ||
+    row.title_de?.trim() ||
+    "";
+
+  const fallbackText =
+    row.text_en?.trim() ||
+    row.text?.trim() ||
+    row.text_ru?.trim() ||
+    row.text_es?.trim() ||
+    row.text_fr?.trim() ||
+    row.text_de?.trim() ||
+    "";
+
   const title =
     targetLanguage === "ru"
-      ? row.title_ru
+      ? row.title_ru?.trim() || fallbackTitle
       : targetLanguage === "es"
-        ? row.title_es
+        ? row.title_es?.trim() || fallbackTitle
         : targetLanguage === "fr"
-          ? row.title_fr
+          ? row.title_fr?.trim() || fallbackTitle
           : targetLanguage === "de"
-            ? row.title_de
-            : row.title_en;
+            ? row.title_de?.trim() || fallbackTitle
+            : row.title_en?.trim() || row.title?.trim() || fallbackTitle;
 
   const text =
     targetLanguage === "ru"
-      ? row.text_ru
+      ? row.text_ru?.trim() || fallbackText
       : targetLanguage === "es"
-        ? row.text_es
+        ? row.text_es?.trim() || fallbackText
         : targetLanguage === "fr"
-          ? row.text_fr
+          ? row.text_fr?.trim() || fallbackText
           : targetLanguage === "de"
-            ? row.text_de
-            : row.text_en;
+            ? row.text_de?.trim() || fallbackText
+            : row.text_en?.trim() || row.text?.trim() || fallbackText;
 
-  if (!title?.trim() || !text?.trim()) {
+  if (!title || !text) {
     return null;
   }
 
   return {
-    title: title.trim(),
-    text: text.trim(),
+    title,
+    text,
   };
 }
 
@@ -122,6 +142,7 @@ You are generating the full set from scratch.
     .map((row, index) => {
       const baseTitle =
         row.title_en?.trim() ||
+        row.title?.trim() ||
         row.title_ru?.trim() ||
         row.title_es?.trim() ||
         row.title_fr?.trim() ||
@@ -130,6 +151,7 @@ You are generating the full set from scratch.
 
       const baseText =
         row.text_en?.trim() ||
+        row.text?.trim() ||
         row.text_ru?.trim() ||
         row.text_es?.trim() ||
         row.text_fr?.trim() ||
@@ -434,6 +456,8 @@ async function loadSavedInsights(params: {
       `
       id,
       mode,
+      title,
+      text,
       title_en,
       text_en,
       title_ru,
