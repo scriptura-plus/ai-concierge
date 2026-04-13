@@ -103,7 +103,7 @@ export default function WorkspaceClient({
     [book, chapter, verse]
   )
 
-  const [exactInput, setExactInput] = useState(() => initialExactInput)
+  const [exactInput, setExactInput] = useState('')
   const [exactOptions, setExactOptions] = useState<ExactBuilderOption[]>([])
   const [exactLoading, setExactLoading] = useState(false)
   const [exactError, setExactError] = useState('')
@@ -111,16 +111,10 @@ export default function WorkspaceClient({
 
   const [savingIndex, setSavingIndex] = useState<number | null>(null)
   const [savedIndexes, setSavedIndexes] = useState<number[]>([])
-  const [saveMessage, setSaveMessage] = useState(() =>
-    prefillMode
-      ? initialCandidateId
-        ? `Кандидат ${initialCandidateId.slice(0, 8)} загружен в режим доработки.`
-        : 'Кандидат загружен в режим доработки.'
-      : ''
-  )
+  const [saveMessage, setSaveMessage] = useState('')
   const [saveError, setSaveError] = useState('')
 
-  const [directionInput, setDirectionInput] = useState(() => initialDirectionInput)
+  const [directionInput, setDirectionInput] = useState('')
   const [directionArticle, setDirectionArticle] = useState<DirectionArticle | null>(null)
   const [directionLoading, setDirectionLoading] = useState(false)
   const [directionError, setDirectionError] = useState('')
@@ -134,6 +128,22 @@ export default function WorkspaceClient({
 
   useEffect(() => {
     if (prefillMode) {
+      setExactInput(initialExactInput)
+      setDirectionInput(initialDirectionInput)
+      setExactOptions([])
+      setExactRaw('')
+      setExactError('')
+      setSaveError('')
+      setSavedIndexes([])
+      setDirectionArticle(null)
+      setDirectionRaw('')
+      setDirectionError('')
+      setDirectionActionMessage('')
+      setSaveMessage(
+        initialCandidateId
+          ? `Материал ${initialCandidateId.slice(0, 8)} загружен в режим доработки.`
+          : 'Материал загружен в режим доработки.'
+      )
       setIsHydrated(true)
       return
     }
@@ -141,6 +151,8 @@ export default function WorkspaceClient({
     try {
       const raw = sessionStorage.getItem(storageKey)
       if (!raw) {
+        setExactInput('')
+        setDirectionInput('')
         setIsHydrated(true)
         return
       }
@@ -155,11 +167,18 @@ export default function WorkspaceClient({
       setDirectionArticle(parsed.directionArticle ?? null)
       setDirectionRaw(typeof parsed.directionRaw === 'string' ? parsed.directionRaw : '')
     } catch {
-      // ignore broken persisted state
+      setExactInput('')
+      setDirectionInput('')
     } finally {
       setIsHydrated(true)
     }
-  }, [storageKey, prefillMode])
+  }, [
+    storageKey,
+    prefillMode,
+    initialExactInput,
+    initialDirectionInput,
+    initialCandidateId,
+  ])
 
   useEffect(() => {
     if (!isHydrated || prefillMode) return
@@ -512,7 +531,10 @@ export default function WorkspaceClient({
 
                 <div className="mt-5 space-y-5">
                   {directionArticle.body.map((paragraph, index) => (
-                    <p key={`${index}-${paragraph.slice(0, 24)}`} className="text-[0.98rem] leading-8 text-stone-800">
+                    <p
+                      key={`${index}-${paragraph.slice(0, 24)}`}
+                      className="text-[0.98rem] leading-8 text-stone-800"
+                    >
                       {paragraph}
                     </p>
                   ))}
