@@ -138,26 +138,33 @@ export default async function ModeratorIndexPage() {
     })
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#F7F5EF_0%,#F3F0E8_46%,#F6F3EC_100%)] text-stone-900">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#faf7ff_0%,#f5f0fb_48%,#f8f4fc_100%)] text-stone-900">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-stone-500">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-violet-500">
               Moderator
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-stone-950">
               Очередь модератора
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-              Здесь показаны только стихи, по которым уже есть новые карточки на разбор. Открой
-              review, сохрани сильное, отклони слабое или доработай почти удачные варианты.
+              Здесь показаны стихи, по которым уже есть новые карточки на разбор. Открой review,
+              сохрани сильное, отклони слабое или доработай почти удачные варианты.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <Link
+              href="/moderator/open"
+              className="rounded-full border border-violet-300 bg-[linear-gradient(180deg,#7c3aed_0%,#6d28d9_100%)] px-4 py-2 text-sm font-medium text-white shadow-[0_12px_24px_rgba(109,40,217,0.22)] transition hover:brightness-[1.03]"
+            >
+              Открыть стих вручную
+            </Link>
+
+            <Link
               href="/"
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+              className="rounded-full border border-violet-200 bg-white/80 px-4 py-2 text-sm font-medium text-violet-800 transition hover:bg-violet-50"
             >
               Главная
             </Link>
@@ -165,13 +172,13 @@ export default async function ModeratorIndexPage() {
         </div>
 
         <section className="mb-6">
-          <div className="rounded-[28px] border border-stone-300/70 bg-[#fffaf1] px-5 py-5 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+          <div className="rounded-[28px] border border-violet-200/80 bg-[linear-gradient(180deg,#f5efff_0%,#efe5fb_100%)] px-5 py-5 shadow-[0_10px_24px_rgba(91,33,182,0.08)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
               В очереди сейчас
             </p>
             <p className="mt-2 text-3xl font-semibold text-stone-900">{queue.length}</p>
             <p className="mt-2 text-sm leading-6 text-stone-600">
-              Стихи автоматически отсортированы по количеству новых карточек, затем по свежести.
+              Стихи отсортированы по количеству новых карточек, затем по свежести обновления.
             </p>
           </div>
         </section>
@@ -182,7 +189,7 @@ export default async function ModeratorIndexPage() {
               {loadError}
             </div>
           ) : queue.length === 0 ? (
-            <div className="rounded-[28px] border border-stone-300/70 bg-[#fffaf1] px-5 py-6 text-stone-600 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+            <div className="rounded-[28px] border border-violet-200/80 bg-white/80 px-5 py-6 text-stone-600 shadow-[0_8px_20px_rgba(91,33,182,0.06)]">
               Сейчас в очереди нет новых карточек. Когда система сгенерирует новые предложения,
               они появятся здесь.
             </div>
@@ -191,12 +198,12 @@ export default async function ModeratorIndexPage() {
               {queue.map((item) => (
                 <article
                   key={item.href}
-                  className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]"
+                  className="rounded-[28px] border border-violet-200/70 bg-[linear-gradient(180deg,#f5efff_0%,#efe5fb_100%)] p-5 shadow-[0_16px_34px_rgba(91,33,182,0.10)]"
                 >
-                  <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
+                  <div className="rounded-[22px] border border-violet-300/20 bg-[radial-gradient(circle_at_top,#fbf8ff_0%,#f3ebfd_55%,#ecdefa_100%)] px-5 py-5 shadow-inner">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
                           Стих
                         </p>
                         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
@@ -206,22 +213,22 @@ export default async function ModeratorIndexPage() {
 
                       <Link
                         href={item.href}
-                        className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+                        className="rounded-full bg-[linear-gradient(180deg,#7c3aed_0%,#6d28d9_100%)] px-4 py-2 text-sm font-medium text-white shadow-[0_12px_24px_rgba(109,40,217,0.20)] transition hover:brightness-[1.03]"
                       >
                         Открыть review
                       </Link>
                     </div>
 
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                      <div className="rounded-[18px] border border-violet-200/70 bg-white/80 px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-500">
                           New
                         </p>
                         <p className="mt-2 text-xl font-semibold text-stone-900">{item.newCount}</p>
                       </div>
 
-                      <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                      <div className="rounded-[18px] border border-violet-200/70 bg-white/80 px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-500">
                           Updated
                         </p>
                         <p className="mt-2 text-base font-medium text-stone-900">
@@ -231,7 +238,7 @@ export default async function ModeratorIndexPage() {
                     </div>
 
                     <div className="mt-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-500">
                         Sources
                       </p>
 
@@ -240,7 +247,7 @@ export default async function ModeratorIndexPage() {
                           item.sources.map((source) => (
                             <span
                               key={source}
-                              className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1 text-xs font-medium text-stone-700"
+                              className="rounded-full border border-violet-200 bg-white/80 px-3 py-1 text-xs font-medium text-violet-800"
                             >
                               {sourceLabel(source)}
                             </span>
