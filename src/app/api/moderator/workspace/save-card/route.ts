@@ -3,6 +3,7 @@ import { runModel } from '@/lib/ai/run-model'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
 type SupportedLanguage = 'en' | 'es' | 'fr' | 'de'
+type RepairSourceType = 'candidate' | 'reserve_insight' | 'featured_insight' | ''
 
 type TranslationPayload = {
   title: string
@@ -99,6 +100,76 @@ async function translateCard(titleRu: string, textRu: string, targetLanguage: Su
   return parsed
 }
 
+function buildSafeAngleNote(params: {
+  angleNote: string | null
+  titleRu: string
+  repairSourceType: RepairSourceType
+}) {
+  if (params.angleNote?.trim()) {
+    return params.angleNote.trim().slice(0, 500)
+  }
+
+  const sourceLabel =
+    params.repairSourceType === 'candidate'
+      ? 'repair from candidate'
+      : params.repairSourceType === 'reserve_insight'
+        ? 'repair from reserve'
+        : params.repairSourceType === 'featured_insight'
+          ? 'repair from active'
+          : 'manual workspace save'
+
+  return `${sourceLabel}: ${params.titleRu}`.slice(0, 500)
+}
+
+async function resolveRepairSource(params: {
+  repairSourceType: RepairSourceType
+  repairSourceId: string
+  newInsightId: string
+}) {
+  if (!params.repairSourceType || !params.repairSourceId) {
+    return
+  }
+
+  const supabase = getSupabaseServerClient()
+
+  if (params.repairSourceType === 'candidate') {
+    const { error } = await supabase
+      .schema('private')
+      .from('generated_candidates')
+      .update({
+        candidate_status: 'extended',
+        review_note: `Used for repair and saved as curated insight ${params.newInsightId}`,
+      })
+      .eq('id', params.repairSourceId)
+
+    if (error) {
+      throw new Error(`Failed to close repaired candidate: ${error.message}`)
+    }
+
+    return
+  }
+
+  if (params.repairSourceType === 'reserve_insight') {
+    const { error } = await supabase
+      .schema('private')
+      .from('curated_insights')
+      .update({
+        status: 'hidden',
+      })
+      .eq('id', params.repairSourceId)
+
+    if (error) {
+      throw new Error(`Failed to remove repaired reserve card: ${error.message}`)
+    }
+
+    return
+  }
+
+  if (params.repairSourceType === 'featured_insight') {
+    return
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -111,10 +182,21 @@ export async function POST(req: Request) {
     const titleRu = String(body.titleRu ?? '').trim()
     const textRu = String(body.textRu ?? '').trim()
     const mode = String(body.mode ?? 'insights').trim()
+
     const angleNote =
       typeof body.angleNote === 'string' && body.angleNote.trim()
         ? body.angleNote.trim()
         : null
+
+    const repairSourceType =
+      body.repairSourceType === 'candidate' ||
+      body.repairSourceType === 'reserve_insight' ||
+      body.repairSourceType === 'featured_insight'
+        ? body.repairSourceType
+        : ''
+
+    const repairSourceId =
+      typeof body.repairSourceId === 'string' ? body.repairSourceId.trim() : ''
 
     if (!reference || !verseText || !book || !chapter || !verse || !titleRu || !textRu) {
       return NextResponse.json(
@@ -129,6 +211,12 @@ export async function POST(req: Request) {
       translateCard(titleRu, textRu, 'fr'),
       translateCard(titleRu, textRu, 'de'),
     ])
+
+    const safeAngleNote = buildSafeAngleNote({
+      angleNote,
+      titleRu,
+      repairSourceType,
+    })
 
     const supabase = getSupabaseServerClient()
 
@@ -150,10 +238,12 @@ export async function POST(req: Request) {
       text_fr: fr.text,
       title_de: de.title,
       text_de: de.text,
-      angle_note: angleNote,
+      angle_note: safeAngleNote,
       status: 'saved',
       unfold_count: 0,
       promoted_from_unfold: false,
+      bucket: 'featured',
+      source_language: 'ru',
     }
 
     const { data, error } = await supabase
@@ -170,15 +260,30 @@ export async function POST(req: Request) {
       )
     }
 
+    const savedId = data?.id ?? null
+
+    if (savedId && repairSourceType && repairSourceId) {
+      await resolveRepairSource({
+        repairSourceType,
+        repairSourceId,
+        newInsightId: savedId,
+      })
+    }
+
     return NextResponse.json({
       ok: true,
-      savedId: data?.id ?? null,
+      savedId,
     })
   } catch (error) {
     console.error('Workspace save card API error:', error)
 
     return NextResponse.json(
-      { error: 'Something went wrong while saving the card.' },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Something went wrong while saving the card.',
+      },
       { status: 500 }
     )
   }
