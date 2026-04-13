@@ -28,6 +28,13 @@ type CuratedInsightRow = {
   created_at: string;
 };
 
+type GeneratedCandidateRow = {
+  id: string;
+  title_ru: string | null;
+  text_ru: string | null;
+  candidate_status: string | null;
+};
+
 function languageInstruction(targetLanguage: SupportedLanguage) {
   if (targetLanguage === "ru") {
     return `
@@ -314,6 +321,35 @@ function extractJsonArray(raw: string): string | null {
   return raw.slice(start, end + 1);
 }
 
+function normalizeTextForKey(value: string) {
+  return value.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function buildCandidateSignature(title: string, text: string) {
+  return `${normalizeTextForKey(title)}|||${normalizeTextForKey(text)}`;
+}
+
+function dedupeInsights(items: InsightItem[]) {
+  const unique: InsightItem[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    const title = item.title.trim();
+    const text = item.text.trim();
+
+    if (!title || !text) continue;
+    if (text.length < 80) continue;
+
+    const key = buildCandidateSignature(title, text);
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    unique.push({ title, text });
+  }
+
+  return unique;
+}
+
 async function loadSavedInsights(params: {
   book: string;
   chapter: number;
@@ -361,6 +397,98 @@ async function loadSavedInsights(params: {
     .filter(Boolean) as InsightItem[];
 
   return { localized, rows };
+}
+
+async function loadExistingGeneratedCandidates(params: {
+  book: string;
+  chapter: number;
+  verse: number;
+}) {
+  const supabase = getSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .schema("private")
+    .from("generated_candidates")
+    .select("id, title_ru, text_ru, candidate_status")
+    .eq("book", params.book.toLowerCase())
+    .eq("chapter", params.chapter)
+    .eq("verse", params.verse)
+    .neq("candidate_status", "trashed");
+
+  if (error) {
+    throw new Error(`Failed to load generated candidates: ${error.message}`);
+  }
+
+  return (data ?? []) as GeneratedCandidateRow[];
+}
+
+async function saveGeneratedCandidates(params: {
+  book: string;
+  chapter: number;
+  verse: number;
+  reference: string;
+  focusWord?: string;
+  generatedInsights: InsightItem[];
+}) {
+  if (!params.generatedInsights.length) {
+    return { insertedCount: 0 };
+  }
+
+  const supabase = getSupabaseServerClient();
+  const existingRows = await loadExistingGeneratedCandidates({
+    book: params.book,
+    chapter: params.chapter,
+    verse: params.verse,
+  });
+
+  const existingKeys = new Set(
+    existingRows
+      .map((row) =>
+        row.title_ru?.trim() && row.text_ru?.trim()
+          ? buildCandidateSignature(row.title_ru, row.text_ru)
+          : null
+      )
+      .filter(Boolean) as string[]
+  );
+
+  const deduped = dedupeInsights(params.generatedInsights);
+
+  const freshItems = deduped.filter((item) => {
+    const key = buildCandidateSignature(item.title, item.text);
+    return !existingKeys.has(key);
+  });
+
+  if (!freshItems.length) {
+    return { insertedCount: 0 };
+  }
+
+  const angleNote = params.focusWord?.trim()
+    ? `Focus word: ${params.focusWord.trim()}`.slice(0, 500)
+    : null;
+
+  const insertPayload = freshItems.map((item) => ({
+    verse_ref: params.reference,
+    book: params.book.toLowerCase(),
+    chapter: params.chapter,
+    verse: params.verse,
+    source_type: "user_request",
+    candidate_status: "new",
+    title_ru: item.title,
+    text_ru: item.text,
+    angle_note: angleNote,
+    review_note: null,
+  }));
+
+  const { error } = await supabase
+    .schema("private")
+    .from("generated_candidates")
+    .insert(insertPayload);
+
+  if (error) {
+    throw new Error(`Failed to save generated candidates: ${error.message}`);
+  }
+
+  return { insertedCount: insertPayload.length };
 }
 
 export async function POST(req: Request) {
@@ -440,6 +568,7 @@ export async function POST(req: Request) {
     const remainingCount = Math.max(safeCount - savedInsights.length, 0);
 
     let generatedInsights: InsightItem[] = [];
+    let insertedCandidateCount = 0;
 
     if (remainingCount > 0) {
       const prompt = buildPrompt({
@@ -472,6 +601,7 @@ export async function POST(req: Request) {
             savedInsights,
             savedCount: savedInsights.length,
             generatedCount: 0,
+            insertedCandidateCount: 0,
           },
           { status: 500 }
         );
@@ -503,12 +633,51 @@ export async function POST(req: Request) {
             savedInsights,
             savedCount: savedInsights.length,
             generatedCount: 0,
+            insertedCandidateCount: 0,
           },
           { status: 500 }
         );
       }
 
-      generatedInsights = parsed.slice(0, remainingCount);
+      generatedInsights = dedupeInsights(parsed).slice(0, remainingCount);
+
+      if (safeLanguage === "ru" && generatedInsights.length > 0) {
+        try {
+          const intake = await saveGeneratedCandidates({
+            book: safeBook,
+            chapter: safeChapter,
+            verse: safeVerse,
+            reference,
+            focusWord,
+            generatedInsights,
+          });
+
+          insertedCandidateCount = intake.insertedCount;
+        } catch (error) {
+          return NextResponse.json(
+            {
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to save generated candidates.",
+              debug: {
+                stage: "saveGeneratedCandidates",
+                reference,
+                safeBook,
+                safeChapter,
+                safeVerse,
+                targetLanguage: safeLanguage,
+              },
+              savedInsights,
+              generatedInsights,
+              savedCount: savedInsights.length,
+              generatedCount: generatedInsights.length,
+              insertedCandidateCount: 0,
+            },
+            { status: 500 }
+          );
+        }
+      }
     }
 
     const insights = [...savedInsights, ...generatedInsights];
@@ -520,6 +689,7 @@ export async function POST(req: Request) {
       targetLanguage: safeLanguage,
       savedCount: savedInsights.length,
       generatedCount: generatedInsights.length,
+      insertedCandidateCount,
       count: insights.length,
       savedInsights,
       generatedInsights,
