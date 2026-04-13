@@ -8,8 +8,9 @@ type RouteContext = {
   }>
 }
 
-function redirectTo(path: string, req: Request) {
+function withFlash(path: string, message: string, req: Request) {
   const url = new URL(path, req.url)
+  url.searchParams.set('flash', message)
   return NextResponse.redirect(url, { status: 303 })
 }
 
@@ -29,10 +30,10 @@ export async function POST(req: Request, context: RouteContext) {
       .maybeSingle()
 
     if (currentError || !current) {
-      return redirectTo(returnTo, req)
+      return withFlash(returnTo, 'Не удалось убрать карточку из запаса.', req)
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .schema('private')
       .from('curated_insights')
       .update({
@@ -40,11 +41,15 @@ export async function POST(req: Request, context: RouteContext) {
       })
       .eq('id', id)
 
+    if (updateError) {
+      return withFlash(returnTo, 'Не удалось убрать карточку из запаса.', req)
+    }
+
     revalidatePath('/moderator')
     revalidatePath(returnTo)
 
-    return redirectTo(returnTo, req)
+    return withFlash(returnTo, 'Карточка убрана из запаса.', req)
   } catch {
-    return redirectTo(returnTo, req)
+    return withFlash(returnTo, 'Не удалось убрать карточку из запаса.', req)
   }
 }
