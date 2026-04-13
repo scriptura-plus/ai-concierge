@@ -288,6 +288,39 @@ Example:
 `.trim();
 }
 
+function buildRussianTranslationPrompt(items: InsightItem[]) {
+  const payload = items.map((item, index) => ({
+    index,
+    title: item.title,
+    text: item.text,
+  }));
+
+  return `
+Translate the following Bible explorer cards into natural Russian for moderator working-layer candidates.
+
+CRITICAL RULES:
+- Preserve the exact same angle and structure of thought.
+- Do not add new ideas.
+- Do not compress the meaning.
+- Keep the title sharp and readable.
+- Keep the text natural Russian, not robotic.
+- Return ONLY valid JSON.
+- Output must be an array with the same number of items and the same indexes.
+
+INPUT:
+${JSON.stringify(payload, null, 2)}
+
+OUTPUT FORMAT:
+[
+  {
+    "index": 0,
+    "title": "...",
+    "text": "..."
+  }
+]
+`.trim();
+}
+
 function parseInsights(raw: string): InsightItem[] | null {
   try {
     const parsed = JSON.parse(raw);
@@ -305,6 +338,42 @@ function parseInsights(raw: string): InsightItem[] | null {
       .filter((item) => item.title && item.text);
 
     return cleaned.length ? cleaned : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseTranslatedInsights(raw: string, expectedCount: number): InsightItem[] | null {
+  try {
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    const cleaned = parsed
+      .filter((item) => item && typeof item === "object")
+      .map((item) => ({
+        index: Number(item.index),
+        title: String(item.title ?? "").trim(),
+        text: String(item.text ?? "").trim(),
+      }))
+      .filter(
+        (item) =>
+          Number.isInteger(item.index) &&
+          item.index >= 0 &&
+          item.title &&
+          item.text
+      )
+      .sort((a, b) => a.index - b.index);
+
+    if (!cleaned.length) return null;
+    if (cleaned.length !== expectedCount) return null;
+
+    return cleaned.map((item) => ({
+      title: item.title,
+      text: item.text,
+    }));
   } catch {
     return null;
   }
@@ -420,6 +489,37 @@ async function loadExistingGeneratedCandidates(params: {
   }
 
   return (data ?? []) as GeneratedCandidateRow[];
+}
+
+async function translateInsightsToRussian(items: InsightItem[]) {
+  if (!items.length) return [];
+
+  const prompt = buildRussianTranslationPrompt(items);
+
+  const result = await runModel({
+    prompt,
+    model: "gpt-5.4-mini",
+    maxOutputTokens: 3000,
+  });
+
+  if (!result.ok) {
+    throw new Error(result.error || "Failed to translate generated insights to Russian.");
+  }
+
+  let parsed = parseTranslatedInsights(result.rawText, items.length);
+
+  if (!parsed) {
+    const extracted = extractJsonArray(result.rawText);
+    if (extracted) {
+      parsed = parseTranslatedInsights(extracted, items.length);
+    }
+  }
+
+  if (!parsed) {
+    throw new Error("Failed to parse Russian translations for generated insights.");
+  }
+
+  return dedupeInsights(parsed);
 }
 
 async function saveGeneratedCandidates(params: {
@@ -641,27 +741,37 @@ export async function POST(req: Request) {
 
       generatedInsights = dedupeInsights(parsed).slice(0, remainingCount);
 
-      if (safeLanguage === "ru" && generatedInsights.length > 0) {
+      if (generatedInsights.length > 0) {
         try {
-          const intake = await saveGeneratedCandidates({
-            book: safeBook,
-            chapter: safeChapter,
-            verse: safeVerse,
-            reference,
-            focusWord,
-            generatedInsights,
-          });
+          let russianWorkingLayer: InsightItem[] = [];
 
-          insertedCandidateCount = intake.insertedCount;
+          if (safeLanguage === "ru") {
+            russianWorkingLayer = generatedInsights;
+          } else if (safeLanguage === "en") {
+            russianWorkingLayer = await translateInsightsToRussian(generatedInsights);
+          }
+
+          if (russianWorkingLayer.length > 0) {
+            const intake = await saveGeneratedCandidates({
+              book: safeBook,
+              chapter: safeChapter,
+              verse: safeVerse,
+              reference,
+              focusWord,
+              generatedInsights: russianWorkingLayer,
+            });
+
+            insertedCandidateCount = intake.insertedCount;
+          }
         } catch (error) {
           return NextResponse.json(
             {
               error:
                 error instanceof Error
                   ? error.message
-                  : "Failed to save generated candidates.",
+                  : "Failed to create moderator candidates.",
               debug: {
-                stage: "saveGeneratedCandidates",
+                stage: "candidateIntake",
                 reference,
                 safeBook,
                 safeChapter,
