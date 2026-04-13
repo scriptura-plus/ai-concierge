@@ -17,7 +17,8 @@ type PageProps = {
   }>
   searchParams?: Promise<{
     prefill?: string
-    candidateId?: string
+    source?: string
+    id?: string
   }>
 }
 
@@ -48,11 +49,10 @@ type SavedRow = {
   display_order: number
 }
 
-type PrefillCandidateRow = {
+type PrefillPayload = {
   id: string
-  title_ru: string
-  text_ru: string
-  angle_note: string | null
+  title: string
+  text: string
 }
 
 function normalizeBookForDb(bookSlug: string) {
@@ -219,13 +219,13 @@ async function loadSavedInsights(book: string, chapter: number, verse: number) {
   return (data ?? []) as SavedRow[]
 }
 
-async function loadPrefillCandidate(candidateId: string): Promise<PrefillCandidateRow | null> {
+async function loadPrefillCandidate(candidateId: string): Promise<PrefillPayload | null> {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
     .schema('private')
     .from('generated_candidates')
-    .select('id, title_ru, text_ru, angle_note')
+    .select('id, title_ru, text_ru')
     .eq('id', candidateId)
     .maybeSingle()
 
@@ -233,7 +233,45 @@ async function loadPrefillCandidate(candidateId: string): Promise<PrefillCandida
     throw new Error(`Failed to load prefill candidate: ${error.message}`)
   }
 
-  return (data ?? null) as PrefillCandidateRow | null
+  if (!data) return null
+
+  return {
+    id: data.id,
+    title: String(data.title_ru ?? '').trim() || 'Без заголовка',
+    text: String(data.text_ru ?? '').trim(),
+  }
+}
+
+async function loadPrefillInsight(insightId: string): Promise<PrefillPayload | null> {
+  const supabase = getSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .schema('private')
+    .from('curated_insights')
+    .select('id, title_ru, text_ru, title_en, text_en')
+    .eq('id', insightId)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to load prefill insight: ${error.message}`)
+  }
+
+  if (!data) return null
+
+  const title =
+    String(data.title_ru ?? '').trim() ||
+    String(data.title_en ?? '').trim() ||
+    'Без заголовка'
+
+  const text =
+    String(data.text_ru ?? '').trim() ||
+    String(data.text_en ?? '').trim()
+
+  return {
+    id: data.id,
+    title,
+    text,
+  }
 }
 
 export default async function ModeratorVerseReviewPage({
@@ -295,18 +333,38 @@ export default async function ModeratorVerseReviewPage({
   }))
 
   const prefillMode = resolvedSearchParams?.prefill === '1'
-  const initialCandidateId =
-    typeof resolvedSearchParams?.candidateId === 'string' ? resolvedSearchParams.candidateId : ''
+  const prefillSource =
+    typeof resolvedSearchParams?.source === 'string'
+      ? resolvedSearchParams.source.trim()
+      : ''
+  const prefillId =
+    typeof resolvedSearchParams?.id === 'string'
+      ? resolvedSearchParams.id.trim()
+      : ''
 
   let initialExactInput = ''
   let initialDirectionInput = ''
+  let initialCandidateId = ''
+  let prefillMessage = ''
 
-  if (prefillMode && initialCandidateId) {
+  if (prefillMode && prefillId) {
     try {
-      const candidate = await loadPrefillCandidate(initialCandidateId)
-      if (candidate) {
-        initialExactInput = candidate.text_ru ?? ''
-        initialDirectionInput = ''
+      if (prefillSource === 'candidate') {
+        const candidate = await loadPrefillCandidate(prefillId)
+        if (candidate) {
+          initialExactInput = candidate.text
+          initialCandidateId = candidate.id
+          prefillMessage = `Кандидат загружен в мастерскую: ${candidate.title}`
+        }
+      }
+
+      if (prefillSource === 'insight') {
+        const insight = await loadPrefillInsight(prefillId)
+        if (insight) {
+          initialExactInput = insight.text
+          initialCandidateId = insight.id
+          prefillMessage = `Карточка загружена в мастерскую для новой редакции: ${insight.title}`
+        }
       }
     } catch {
       // keep empty if prefill load fails
@@ -411,6 +469,8 @@ export default async function ModeratorVerseReviewPage({
                 {featuredSaved.map((item, index) => {
                   const title = item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка'
                   const text = item.text_ru?.trim() || item.text_en?.trim() || ''
+                  const repairHref =
+                    `${reviewHref}?prefill=1&source=insight&id=${encodeURIComponent(item.id)}#workshop`
 
                   return (
                     <article
@@ -425,10 +485,7 @@ export default async function ModeratorVerseReviewPage({
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-3">
-                        <form
-                          action={`/api/moderator/insights/${item.id}/move-up`}
-                          method="POST"
-                        >
+                        <form action={`/api/moderator/insights/${item.id}/move-up`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
                           <button
                             type="submit"
@@ -439,10 +496,7 @@ export default async function ModeratorVerseReviewPage({
                           </button>
                         </form>
 
-                        <form
-                          action={`/api/moderator/insights/${item.id}/move-down`}
-                          method="POST"
-                        >
+                        <form action={`/api/moderator/insights/${item.id}/move-down`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
                           <button
                             type="submit"
@@ -453,10 +507,7 @@ export default async function ModeratorVerseReviewPage({
                           </button>
                         </form>
 
-                        <form
-                          action={`/api/moderator/insights/${item.id}/send-to-reserve`}
-                          method="POST"
-                        >
+                        <form action={`/api/moderator/insights/${item.id}/send-to-reserve`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
                           <button
                             type="submit"
@@ -465,6 +516,13 @@ export default async function ModeratorVerseReviewPage({
                             В запас
                           </button>
                         </form>
+
+                        <Link
+                          href={repairHref}
+                          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                        >
+                          Доработать
+                        </Link>
                       </div>
 
                       <p className="mt-4 text-[0.97rem] leading-7 text-stone-800">
@@ -498,7 +556,8 @@ export default async function ModeratorVerseReviewPage({
             ) : (
               <div className="space-y-4">
                 {newCandidates.map((item) => {
-                  const repairHref = `${reviewHref}?prefill=1&candidateId=${encodeURIComponent(item.id)}#workshop`
+                  const repairHref =
+                    `${reviewHref}?prefill=1&source=candidate&id=${encodeURIComponent(item.id)}#workshop`
 
                   return (
                     <article
@@ -596,6 +655,8 @@ export default async function ModeratorVerseReviewPage({
                 {reserveSaved.map((item) => {
                   const title = item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка'
                   const text = item.text_ru?.trim() || item.text_en?.trim() || ''
+                  const repairHref =
+                    `${reviewHref}?prefill=1&source=insight&id=${encodeURIComponent(item.id)}#workshop`
 
                   return (
                     <article
@@ -610,10 +671,7 @@ export default async function ModeratorVerseReviewPage({
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-3">
-                        <form
-                          action={`/api/moderator/insights/${item.id}/return-to-featured`}
-                          method="POST"
-                        >
+                        <form action={`/api/moderator/insights/${item.id}/return-to-featured`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
                           <button
                             type="submit"
@@ -622,6 +680,13 @@ export default async function ModeratorVerseReviewPage({
                             Вернуть в активные
                           </button>
                         </form>
+
+                        <Link
+                          href={repairHref}
+                          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                        >
+                          Доработать
+                        </Link>
                       </div>
 
                       <p className="mt-4 text-[0.97rem] leading-7 text-stone-800">
@@ -636,6 +701,12 @@ export default async function ModeratorVerseReviewPage({
         </section>
 
         <section id="workshop" className="scroll-mt-6">
+          {prefillMessage ? (
+            <section className="mb-5 rounded-[24px] border border-amber-300/70 bg-amber-50 px-5 py-4 text-stone-800 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+              <p className="text-sm leading-6">{prefillMessage}</p>
+            </section>
+          ) : null}
+
           <WorkspaceClient
             reference={reference}
             verseText={verseText}
