@@ -152,6 +152,14 @@ async function translateInsightCard(params: {
   return translations
 }
 
+function buildSafeAngleNote(row: CandidateRow) {
+  const raw = row.angle_note?.trim()
+  if (raw) return raw
+
+  const fallback = `Promoted from ${row.source_type || 'candidate'}: ${row.title_ru}`.trim()
+  return fallback.slice(0, 500)
+}
+
 export async function POST(req: Request, context: RouteContext) {
   try {
     const { id } = await context.params
@@ -182,6 +190,7 @@ export async function POST(req: Request, context: RouteContext) {
     }
 
     const row = candidate as CandidateRow
+    const safeAngleNote = buildSafeAngleNote(row)
 
     const translations = await translateInsightCard({
       reference: row.verse_ref,
@@ -195,7 +204,7 @@ export async function POST(req: Request, context: RouteContext) {
       chapter: row.chapter,
       verse: row.verse,
       mode: 'insights',
-      angle_note: row.angle_note,
+      angle_note: safeAngleNote,
       status: 'saved',
       unfold_count: 0,
       promoted_from_unfold: false,
@@ -253,7 +262,7 @@ export async function POST(req: Request, context: RouteContext) {
     revalidatePath('/moderator')
     revalidatePath(returnTo)
 
-    return NextResponse.redirect(new URL(returnTo, req.url))
+    return NextResponse.redirect(new URL(returnTo, req.url), { status: 303 })
   } catch (error) {
     console.error('Promote candidate API error:', error)
 
