@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import { getVerseText } from '@/lib/bible/getVerseText'
 import { runModel } from '@/lib/ai/run-model'
+import WorkspaceClient from '@/app/moderator/workspace/[book]/[chapter]/[verse]/WorkspaceClient'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -13,6 +14,10 @@ type PageProps = {
     book: string
     chapter: string
     verse: string
+  }>
+  searchParams?: Promise<{
+    prefill?: string
+    candidateId?: string
   }>
 }
 
@@ -39,6 +44,15 @@ type SavedRow = {
   title_en: string | null
   text_en: string | null
   created_at: string
+  bucket: 'featured' | 'reserve'
+  display_order: number
+}
+
+type PrefillCandidateRow = {
+  id: string
+  title_ru: string
+  text_ru: string
+  angle_note: string | null
 }
 
 function normalizeBookForDb(bookSlug: string) {
@@ -189,11 +203,13 @@ async function loadSavedInsights(book: string, chapter: number, verse: number) {
   const { data, error } = await supabase
     .schema('private')
     .from('curated_insights')
-    .select('id, title_ru, text_ru, title_en, text_en, created_at')
+    .select('id, title_ru, text_ru, title_en, text_en, created_at, bucket, display_order')
     .eq('book', book)
     .eq('chapter', chapter)
     .eq('verse', verse)
     .eq('status', 'saved')
+    .order('bucket', { ascending: true })
+    .order('display_order', { ascending: true })
     .order('created_at', { ascending: true })
 
   if (error) {
@@ -203,16 +219,37 @@ async function loadSavedInsights(book: string, chapter: number, verse: number) {
   return (data ?? []) as SavedRow[]
 }
 
-export default async function ModeratorVerseReviewPage({ params }: PageProps) {
+async function loadPrefillCandidate(candidateId: string): Promise<PrefillCandidateRow | null> {
+  const supabase = getSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .schema('private')
+    .from('generated_candidates')
+    .select('id, title_ru, text_ru, angle_note')
+    .eq('id', candidateId)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to load prefill candidate: ${error.message}`)
+  }
+
+  return (data ?? null) as PrefillCandidateRow | null
+}
+
+export default async function ModeratorVerseReviewPage({
+  params,
+  searchParams,
+}: PageProps) {
   noStore()
 
   const resolved = await params
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+
   const dbBook = normalizeBookForDb(resolved.book)
   const chapter = Number(resolved.chapter)
   const verse = Number(resolved.verse)
 
   const reference = formatReference(resolved.book, resolved.chapter, resolved.verse)
-  const baseWorkspaceHref = `/moderator/workspace/${resolved.book}/${resolved.chapter}/${resolved.verse}`
   const reviewHref = `/moderator/review/${resolved.book}/${resolved.chapter}/${resolved.verse}`
 
   let verseText = ''
@@ -240,12 +277,41 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
     verseError = 'Не удалось загрузить текст стиха.'
   }
 
+  const featuredSaved = saved.filter((item) => item.bucket === 'featured')
+  const reserveSaved = saved.filter((item) => item.bucket === 'reserve')
+
   const newCandidates = candidates.filter((item) => item.candidate_status === 'new')
   const extendedCandidates = candidates.filter((item) =>
     ['extended', 'reserve', 'needs_repair'].includes(item.candidate_status)
   )
 
   const workingPoolCount = newCandidates.length + extendedCandidates.length
+
+  const savedCards = featuredSaved.map((item) => ({
+    id: item.id,
+    title: item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка',
+    text: item.text_ru?.trim() || item.text_en?.trim() || '',
+    createdAt: item.created_at,
+  }))
+
+  const prefillMode = resolvedSearchParams?.prefill === '1'
+  const initialCandidateId =
+    typeof resolvedSearchParams?.candidateId === 'string' ? resolvedSearchParams.candidateId : ''
+
+  let initialExactInput = ''
+  let initialDirectionInput = ''
+
+  if (prefillMode && initialCandidateId) {
+    try {
+      const candidate = await loadPrefillCandidate(initialCandidateId)
+      if (candidate) {
+        initialExactInput = candidate.text_ru ?? ''
+        initialDirectionInput = ''
+      }
+    } catch {
+      // keep empty if prefill load fails
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#F7F5EF_0%,#F3F0E8_46%,#F6F3EC_100%)] text-stone-900">
@@ -259,8 +325,9 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
               {reference}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-              Здесь ты просматриваешь кандидаты по стиху, выбираешь сильные углы, отклоняешь
-              слабые и решаешь, что оставить в активном наборе.
+              Один рабочий экран по стиху: здесь ты читаешь сохранённые карточки, сортируешь их,
+              просматриваешь новые предложения и при необходимости сразу дорабатываешь мысль ниже на
+              этой же странице.
             </p>
           </div>
 
@@ -270,13 +337,6 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
               className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
             >
               Назад
-            </Link>
-
-            <Link
-              href={baseWorkspaceHref}
-              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-            >
-              Мастерская
             </Link>
           </div>
         </div>
@@ -301,9 +361,9 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
           <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-4">
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Curated
+                Active
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-900">{saved.length}/12</p>
+              <p className="mt-2 text-3xl font-semibold text-stone-900">{featuredSaved.length}/12</p>
             </div>
 
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
@@ -317,9 +377,7 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
                 Запас
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-900">
-                {extendedCandidates.length}
-              </p>
+              <p className="mt-2 text-3xl font-semibold text-stone-900">{reserveSaved.length}</p>
             </div>
 
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
@@ -344,13 +402,13 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
               </div>
             </div>
 
-            {saved.length === 0 ? (
+            {featuredSaved.length === 0 ? (
               <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 text-sm leading-6 text-stone-700">
-                По этому стиху пока нет сохранённых карточек.
+                По этому стиху пока нет активных карточек.
               </div>
             ) : (
               <div className="space-y-4">
-                {saved.map((item) => {
+                {featuredSaved.map((item, index) => {
                   const title = item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка'
                   const text = item.text_ru?.trim() || item.text_en?.trim() || ''
 
@@ -365,7 +423,51 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
                         </h3>
                         <span className="text-xs text-stone-500">{formatDate(item.created_at)}</span>
                       </div>
-                      <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">
+
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <form
+                          action={`/api/moderator/insights/${item.id}/move-up`}
+                          method="POST"
+                        >
+                          <input type="hidden" name="returnTo" value={reviewHref} />
+                          <button
+                            type="submit"
+                            disabled={index === 0}
+                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            Выше
+                          </button>
+                        </form>
+
+                        <form
+                          action={`/api/moderator/insights/${item.id}/move-down`}
+                          method="POST"
+                        >
+                          <input type="hidden" name="returnTo" value={reviewHref} />
+                          <button
+                            type="submit"
+                            disabled={index === featuredSaved.length - 1}
+                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            Ниже
+                          </button>
+                        </form>
+
+                        <form
+                          action={`/api/moderator/insights/${item.id}/send-to-reserve`}
+                          method="POST"
+                        >
+                          <input type="hidden" name="returnTo" value={reviewHref} />
+                          <button
+                            type="submit"
+                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                          >
+                            В запас
+                          </button>
+                        </form>
+                      </div>
+
+                      <p className="mt-4 text-[0.97rem] leading-7 text-stone-800">
                         {truncate(text, 340)}
                       </p>
                     </article>
@@ -391,13 +493,12 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
 
             {newCandidates.length === 0 ? (
               <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 text-sm leading-6 text-stone-700">
-                Сейчас нет новых кандидатов. Можно вернуться позже или открыть мастерскую.
+                Сейчас нет новых кандидатов. Можно сразу работать ниже в мастерской.
               </div>
             ) : (
               <div className="space-y-4">
                 {newCandidates.map((item) => {
-                  const repairHref =
-                    `${baseWorkspaceHref}?prefill=1&candidateId=${encodeURIComponent(item.id)}`
+                  const repairHref = `${reviewHref}?prefill=1&candidateId=${encodeURIComponent(item.id)}#workshop`
 
                   return (
                     <article
@@ -473,7 +574,7 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
+        <section className="mb-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
@@ -486,43 +587,67 @@ export default async function ModeratorVerseReviewPage({ params }: PageProps) {
               </div>
             </div>
 
-            {extendedCandidates.length === 0 ? (
+            {reserveSaved.length === 0 ? (
               <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 text-sm leading-6 text-stone-700">
-                Пока нет отложенных кандидатов по этому стиху.
+                Пока нет карточек в запасе по этому стиху.
               </div>
             ) : (
               <div className="space-y-4">
-                {extendedCandidates.map((item) => (
-                  <article
-                    key={item.id}
-                    className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses(item.candidate_status)}`}
-                      >
-                        {statusLabel(item.candidate_status)}
-                      </span>
+                {reserveSaved.map((item) => {
+                  const title = item.title_ru?.trim() || item.title_en?.trim() || 'Без заголовка'
+                  const text = item.text_ru?.trim() || item.text_en?.trim() || ''
 
-                      <span className="rounded-full border border-stone-300 bg-white px-3 py-1 text-xs font-medium text-stone-700">
-                        {sourceLabel(item.source_type)}
-                      </span>
+                  return (
+                    <article
+                      key={item.id}
+                      className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h3 className="text-xl font-semibold leading-tight text-stone-900">
+                          {title}
+                        </h3>
+                        <span className="text-xs text-stone-500">{formatDate(item.created_at)}</span>
+                      </div>
 
-                      <span className="text-xs text-stone-500">{formatDate(item.updated_at)}</span>
-                    </div>
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <form
+                          action={`/api/moderator/insights/${item.id}/return-to-featured`}
+                          method="POST"
+                        >
+                          <input type="hidden" name="returnTo" value={reviewHref} />
+                          <button
+                            type="submit"
+                            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                          >
+                            Вернуть в активные
+                          </button>
+                        </form>
+                      </div>
 
-                    <h3 className="mt-3 text-xl font-semibold leading-tight text-stone-900">
-                      {item.title_ru}
-                    </h3>
-
-                    <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">
-                      {truncate(item.text_ru, 320)}
-                    </p>
-                  </article>
-                ))}
+                      <p className="mt-4 text-[0.97rem] leading-7 text-stone-800">
+                        {truncate(text, 340)}
+                      </p>
+                    </article>
+                  )
+                })}
               </div>
             )}
           </div>
+        </section>
+
+        <section id="workshop" className="scroll-mt-6">
+          <WorkspaceClient
+            reference={reference}
+            verseText={verseText}
+            savedCards={savedCards}
+            book={resolved.book}
+            chapter={chapter}
+            verse={verse}
+            initialExactInput={initialExactInput}
+            initialDirectionInput={initialDirectionInput}
+            prefillMode={prefillMode}
+            initialCandidateId={initialCandidateId}
+          />
         </section>
       </div>
     </main>
