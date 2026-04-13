@@ -39,6 +39,8 @@ type DirectionSearchResponse = {
   raw?: string
 }
 
+type RepairSourceType = 'candidate' | 'reserve_insight' | 'featured_insight' | ''
+
 type WorkspaceClientProps = {
   reference: string
   verseText: string
@@ -50,6 +52,8 @@ type WorkspaceClientProps = {
   initialDirectionInput?: string
   prefillMode?: boolean
   initialCandidateId?: string
+  repairSourceType?: RepairSourceType
+  repairSourceId?: string
 }
 
 type PersistedWorkspaceState = {
@@ -97,6 +101,8 @@ export default function WorkspaceClient({
   initialDirectionInput = '',
   prefillMode = false,
   initialCandidateId = '',
+  repairSourceType = '',
+  repairSourceId = '',
 }: WorkspaceClientProps) {
   const storageKey = useMemo(
     () => `moderator-workspace-state:${book}:${chapter}:${verse}`,
@@ -319,6 +325,8 @@ export default function WorkspaceClient({
           textRu: option.text,
           mode: 'insights',
           angleNote: sacredPassage || null,
+          repairSourceType,
+          repairSourceId,
         }),
       })
 
