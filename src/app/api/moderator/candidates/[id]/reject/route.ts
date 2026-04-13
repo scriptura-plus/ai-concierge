@@ -1,5 +1,5 @@
-import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 
 type RouteContext = {
@@ -8,20 +8,38 @@ type RouteContext = {
   }>
 }
 
+function redirectWithFlash(
+  path: string,
+  req: Request,
+  flashType: 'success' | 'error',
+  flashMessage: string
+) {
+  const url = new URL(path, req.url)
+  url.searchParams.set('flash', flashType)
+  url.searchParams.set('message', flashMessage)
+  return NextResponse.redirect(url, { status: 303 })
+}
+
 export async function POST(req: Request, context: RouteContext) {
+  const { id } = await context.params
+  const formData = await req.formData()
+  const returnTo = String(formData.get('returnTo') || '/moderator')
+
   try {
-    const { id } = await context.params
-
-    if (!id) {
-      return NextResponse.json({ error: 'Candidate id is required.' }, { status: 400 })
-    }
-
-    const formData = await req.formData()
-    const returnTo = String(formData.get('returnTo') ?? '/moderator').trim() || '/moderator'
-
     const supabase = getSupabaseServerClient()
 
-    const { error } = await supabase
+    const { data: current, error: currentError } = await supabase
+      .schema('private')
+      .from('generated_candidates')
+      .select('id, title_ru, candidate_status')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (currentError || !current) {
+      return redirectWithFlash(returnTo, req, 'error', 'Не удалось найти кандидат.')
+    }
+
+    const { error: updateError } = await supabase
       .schema('private')
       .from('generated_candidates')
       .update({
@@ -30,23 +48,15 @@ export async function POST(req: Request, context: RouteContext) {
       })
       .eq('id', id)
 
-    if (error) {
-      return NextResponse.json(
-        { error: `Failed to reject candidate: ${error.message}` },
-        { status: 500 }
-      )
+    if (updateError) {
+      return redirectWithFlash(returnTo, req, 'error', 'Не удалось отклонить кандидат.')
     }
 
     revalidatePath('/moderator')
     revalidatePath(returnTo)
 
-    return NextResponse.redirect(new URL(returnTo, req.url))
-  } catch (error) {
-    console.error('Reject candidate API error:', error)
-
-    return NextResponse.json(
-      { error: 'Something went wrong while rejecting the candidate.' },
-      { status: 500 }
-    )
+    return redirectWithFlash(returnTo, req, 'success', 'Кандидат отклонён.')
+  } catch {
+    return redirectWithFlash(returnTo, req, 'error', 'Не удалось отклонить кандидат.')
   }
 }
