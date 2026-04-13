@@ -93,12 +93,6 @@ function formatDate(value: string) {
   }
 }
 
-function truncate(text: string, max = 280) {
-  const clean = text.replace(/\s+/g, ' ').trim()
-  if (clean.length <= max) return clean
-  return `${clean.slice(0, max).trim()}…`
-}
-
 function sourceLabel(source: string) {
   if (source === 'user_request') return 'user'
   if (source === 'background_fill') return 'background'
@@ -449,7 +443,9 @@ export default async function ModeratorVerseReviewPage({
         </div>
 
         {flashMessage ? (
-          <section className={`mb-5 rounded-[24px] border px-5 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)] ${flashClassName}`}>
+          <section
+            className={`mb-5 rounded-[24px] border px-5 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)] ${flashClassName}`}
+          >
             <p className="text-sm leading-6">{flashMessage}</p>
           </section>
         ) : null}
@@ -560,10 +556,7 @@ export default async function ModeratorVerseReviewPage({
 
                         <form action={`/api/moderator/insights/${item.id}/send-to-reserve`} method="POST">
                           <input type="hidden" name="returnTo" value={reviewHref} />
-                          <ActionSubmitButton
-                            idleLabel="В запас"
-                            pendingLabel="Переносим..."
-                          />
+                          <ActionSubmitButton idleLabel="В запас" pendingLabel="Переносим..." />
                         </form>
 
                         <Link
@@ -574,9 +567,9 @@ export default async function ModeratorVerseReviewPage({
                         </Link>
                       </div>
 
-                      <p className="mt-4 text-[0.97rem] leading-7 text-stone-800">
-                        {truncate(text, 340)}
-                      </p>
+                      <div className="mt-4 whitespace-pre-wrap text-[0.97rem] leading-7 text-stone-800">
+                        {text}
+                      </div>
                     </article>
                   )
                 })}
@@ -631,9 +624,9 @@ export default async function ModeratorVerseReviewPage({
                         {item.title_ru}
                       </h3>
 
-                      <p className="mt-3 whitespace-pre-wrap text-[0.98rem] leading-8 text-stone-800">
+                      <div className="mt-3 whitespace-pre-wrap text-[0.98rem] leading-8 text-stone-800">
                         {item.text_ru}
-                      </p>
+                      </div>
 
                       {item.angle_note ? (
                         <div className="mt-4 rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
@@ -743,9 +736,9 @@ export default async function ModeratorVerseReviewPage({
                         </Link>
                       </div>
 
-                      <p className="mt-4 text-[0.97rem] leading-7 text-stone-800">
-                        {truncate(text, 340)}
-                      </p>
+                      <div className="mt-4 whitespace-pre-wrap text-[0.97rem] leading-7 text-stone-800">
+                        {text}
+                      </div>
                     </article>
                   )
                 })}
