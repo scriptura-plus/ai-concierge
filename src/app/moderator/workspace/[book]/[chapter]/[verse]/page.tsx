@@ -13,6 +13,10 @@ type PageProps = {
     chapter: string
     verse: string
   }>
+  searchParams?: Promise<{
+    prefill?: string
+    candidateId?: string
+  }>
 }
 
 type SavedInsightRow = {
@@ -22,6 +26,13 @@ type SavedInsightRow = {
   title_en: string | null
   text_en: string | null
   created_at: string
+}
+
+type PrefillCandidateRow = {
+  id: string
+  title_ru: string
+  text_ru: string
+  angle_note: string | null
 }
 
 function formatBookLabel(bookSlug: string) {
@@ -142,8 +153,29 @@ async function loadPendingUnfoldCount(book: string, chapter: number, verse: numb
   return count ?? 0
 }
 
-export default async function ModeratorVerseWorkspacePage({ params }: PageProps) {
+async function loadPrefillCandidate(candidateId: string): Promise<PrefillCandidateRow | null> {
+  const supabase = getSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .schema('private')
+    .from('generated_candidates')
+    .select('id, title_ru, text_ru, angle_note')
+    .eq('id', candidateId)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to load prefill candidate: ${error.message}`)
+  }
+
+  return (data ?? null) as PrefillCandidateRow | null
+}
+
+export default async function ModeratorVerseWorkspacePage({
+  params,
+  searchParams,
+}: PageProps) {
   const resolved = await params
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
 
   const book = resolved.book
   const chapter = Number(resolved.chapter)
@@ -191,6 +223,25 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
     createdAt: item.created_at,
   }))
 
+  const prefillMode = resolvedSearchParams?.prefill === '1'
+  const initialCandidateId =
+    typeof resolvedSearchParams?.candidateId === 'string' ? resolvedSearchParams.candidateId : ''
+
+  let initialExactInput = ''
+  let initialDirectionInput = ''
+
+  if (prefillMode && initialCandidateId) {
+    try {
+      const candidate = await loadPrefillCandidate(initialCandidateId)
+      if (candidate) {
+        initialExactInput = candidate.text_ru ?? ''
+        initialDirectionInput = ''
+      }
+    } catch {
+      // keep empty if prefill load fails
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
       <div className="mx-auto w-full max-w-5xl">
@@ -218,6 +269,14 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
             </Link>
           </div>
         </div>
+
+        {prefillMode ? (
+          <section className="mb-5 rounded-[24px] border border-amber-300/70 bg-amber-50 px-5 py-4 text-stone-800 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+            <p className="text-sm leading-6">
+              Режим доработки активирован. Текст кандидата уже подставлен в Поле 1.
+            </p>
+          </section>
+        ) : null}
 
         <section className="mb-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
@@ -320,6 +379,10 @@ export default async function ModeratorVerseWorkspacePage({ params }: PageProps)
           book={book}
           chapter={chapter}
           verse={verse}
+          initialExactInput={initialExactInput}
+          initialDirectionInput={initialDirectionInput}
+          prefillMode={prefillMode}
+          initialCandidateId={initialCandidateId}
         />
       </div>
     </main>
