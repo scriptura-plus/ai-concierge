@@ -441,6 +441,20 @@ function dedupeInsights(items: InsightItem[]) {
   return unique;
 }
 
+function mergeUniqueInsights(existing: InsightItem[], incoming: InsightItem[]) {
+  const seen = new Set(existing.map((item) => buildCandidateSignature(item.title, item.text)));
+  const merged = [...existing];
+
+  for (const item of incoming) {
+    const key = buildCandidateSignature(item.title, item.text);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+
+  return merged;
+}
+
 async function loadSavedInsights(params: {
   book: string;
   chapter: number;
@@ -615,6 +629,73 @@ async function saveGeneratedCandidates(params: {
   return { insertedCount: insertPayload.length };
 }
 
+async function generateInsightsUntilFilled(params: {
+  reference: string;
+  verseText: string;
+  focusWord?: string;
+  targetLanguage: SupportedLanguage;
+  savedRows: CuratedInsightRow[];
+  targetCount: number;
+}) {
+  let collected: InsightItem[] = [];
+  let lastRaw = "";
+  const maxPasses = 3;
+
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    const remaining = params.targetCount - collected.length;
+    if (remaining <= 0) break;
+
+    const prompt = buildPrompt({
+      reference: params.reference,
+      verseText: params.verseText,
+      focusWord: params.focusWord,
+      count: remaining,
+      targetLanguage: params.targetLanguage,
+      savedRows: params.savedRows,
+    });
+
+    const result = await runModel({
+      prompt,
+      model: "gpt-5.4-mini",
+      maxOutputTokens: 3000,
+    });
+
+    if (!result.ok) {
+      throw new Error(result.error || "runModel failed.");
+    }
+
+    const rawText = result.rawText;
+    lastRaw = rawText;
+
+    let parsed = parseInsights(rawText);
+
+    if (!parsed) {
+      const extracted = extractJsonArray(rawText);
+      if (extracted) {
+        parsed = parseInsights(extracted);
+      }
+    }
+
+    if (!parsed) {
+      throw new Error("Failed to parse insights JSON.");
+    }
+
+    const cleaned = dedupeInsights(parsed);
+    const merged = mergeUniqueInsights(collected, cleaned);
+
+    if (merged.length === collected.length) {
+      break;
+    }
+
+    collected = merged.slice(0, params.targetCount);
+  }
+
+  return {
+    insights: collected.slice(0, params.targetCount),
+    raw: lastRaw,
+  };
+}
+
 export async function POST(req: Request) {
   try {
     const {
@@ -655,7 +736,7 @@ export async function POST(req: Request) {
     }
 
     const reference = `${safeBook} ${safeChapter}:${safeVerse}`;
-    const safeCount = Math.min(Math.max(Number(count ?? 12), 1), 20);
+    const safeCount = Math.min(Math.max(Number(count ?? 12), 0), 20);
 
     let savedInsights: InsightItem[] = [];
     let savedRows: CuratedInsightRow[] = [];
@@ -689,34 +770,49 @@ export async function POST(req: Request) {
       );
     }
 
+    if (safeCount === 0) {
+      return NextResponse.json({
+        reference,
+        verseText,
+        focusWord: focusWord ?? "",
+        targetLanguage: safeLanguage,
+        savedCount: savedInsights.length,
+        generatedCount: 0,
+        insertedCandidateCount: 0,
+        count: savedInsights.length,
+        savedInsights,
+        generatedInsights: [],
+        insights: savedInsights,
+      });
+    }
+
     const remainingCount = Math.max(safeCount - savedInsights.length, 0);
 
     let generatedInsights: InsightItem[] = [];
     let insertedCandidateCount = 0;
+    let generationRaw = "";
 
     if (remainingCount > 0) {
-      const prompt = buildPrompt({
-        reference,
-        verseText,
-        focusWord,
-        count: remainingCount,
-        targetLanguage: safeLanguage,
-        savedRows,
-      });
+      try {
+        const generated = await generateInsightsUntilFilled({
+          reference,
+          verseText,
+          focusWord,
+          targetLanguage: safeLanguage,
+          savedRows,
+          targetCount: remainingCount,
+        });
 
-      const result = await runModel({
-        prompt,
-        model: "gpt-5.4-mini",
-        maxOutputTokens: 3000,
-      });
-
-      if (!result.ok) {
+        generatedInsights = generated.insights;
+        generationRaw = generated.raw;
+      } catch (error) {
         return NextResponse.json(
           {
-            error: result.error || "runModel failed.",
-            raw: result.raw || "",
+            error:
+              error instanceof Error ? error.message : "Failed to generate insights.",
+            raw: generationRaw,
             debug: {
-              stage: "runModel",
+              stage: "generateInsightsUntilFilled",
               reference,
               savedCount: savedInsights.length,
               remainingCount,
@@ -730,40 +826,6 @@ export async function POST(req: Request) {
           { status: 500 }
         );
       }
-
-      const rawText = result.rawText;
-
-      let parsed = parseInsights(rawText);
-
-      if (!parsed) {
-        const extracted = extractJsonArray(rawText);
-        if (extracted) {
-          parsed = parseInsights(extracted);
-        }
-      }
-
-      if (!parsed) {
-        return NextResponse.json(
-          {
-            error: "Failed to parse insights JSON.",
-            raw: rawText || "Empty model response",
-            debug: {
-              stage: "parseInsights",
-              reference,
-              savedCount: savedInsights.length,
-              remainingCount,
-              targetLanguage: safeLanguage,
-            },
-            savedInsights,
-            savedCount: savedInsights.length,
-            generatedCount: 0,
-            insertedCandidateCount: 0,
-          },
-          { status: 500 }
-        );
-      }
-
-      generatedInsights = dedupeInsights(parsed).slice(0, remainingCount);
 
       if (generatedInsights.length > 0) {
         try {
