@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { unstable_noStore as noStore } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
 import ModeratorInboxAutoRefresh from './ModeratorInboxAutoRefresh'
+import ModeratorInboxRefreshButton from './ModeratorInboxRefreshButton'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -165,6 +166,8 @@ export default async function ModeratorIndexPage() {
               Открыть стих вручную
             </Link>
 
+            <ModeratorInboxRefreshButton />
+
             <Link
               href="/"
               className="rounded-full border border-violet-200 bg-white/80 px-4 py-2 text-sm font-medium text-violet-800 transition hover:bg-violet-50"
@@ -225,14 +228,14 @@ export default async function ModeratorIndexPage() {
                     <div className="mt-5 grid gap-3 sm:grid-cols-2">
                       <div className="rounded-[18px] border border-violet-200/70 bg-white/80 px-4 py-4">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-500">
-                          New
+                          К рассмотрению
                         </p>
                         <p className="mt-2 text-xl font-semibold text-stone-900">{item.newCount}</p>
                       </div>
 
                       <div className="rounded-[18px] border border-violet-200/70 bg-white/80 px-4 py-4">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-500">
-                          Updated
+                          Обновлено
                         </p>
                         <p className="mt-2 text-base font-medium text-stone-900">
                           {item.updatedLabel}
@@ -242,7 +245,7 @@ export default async function ModeratorIndexPage() {
 
                     <div className="mt-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-500">
-                        Sources
+                        Источники
                       </p>
 
                       <div className="mt-2 flex flex-wrap gap-2">
