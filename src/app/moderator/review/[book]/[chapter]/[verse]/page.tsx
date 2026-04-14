@@ -332,7 +332,7 @@ export default async function ModeratorVerseReviewPage({
     ['extended', 'reserve', 'needs_repair'].includes(item.candidate_status)
   )
 
-  const workingPoolCount = newCandidates.length + extendedCandidates.length
+  const totalCardsCount = featuredSaved.length + newCandidates.length + reserveSaved.length
 
   const savedCards = featuredSaved.map((item) => ({
     id: item.id,
@@ -470,30 +470,30 @@ export default async function ModeratorVerseReviewPage({
           <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-4">
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Active
+                Активные
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{featuredSaved.length}/12</p>
             </div>
 
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                New
+                К рассмотрению
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{newCandidates.length}</p>
             </div>
 
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Запас
+                В запасе
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{reserveSaved.length}</p>
             </div>
 
             <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Рабочий пул
+                Всего по стиху
               </p>
-              <p className="mt-2 text-3xl font-semibold text-stone-900">{workingPoolCount}</p>
+              <p className="mt-2 text-3xl font-semibold text-stone-900">{totalCardsCount}</p>
             </div>
           </div>
         </section>
