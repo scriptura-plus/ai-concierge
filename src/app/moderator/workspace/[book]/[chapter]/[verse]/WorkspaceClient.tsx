@@ -318,8 +318,14 @@ export default function WorkspaceClient({
 
   async function generateNewTitles(option: ExactBuilderOption, index: number) {
     setRetitlingIndex(index)
-    setRetitleErrorByIndex((prev) => ({ ...prev, [index]: '' }))
-    setRetitleRawByIndex((prev) => ({ ...prev, [index]: '' }))
+    setRetitleErrorByIndex((prev) => ({
+      ...prev,
+      [index]: '',
+    }))
+    setRetitleRawByIndex((prev) => ({
+      ...prev,
+      [index]: '',
+    }))
 
     try {
       const res = await fetch('/api/moderator/workspace/retitle', {
@@ -340,13 +346,16 @@ export default function WorkspaceClient({
           ...prev,
           [index]: data.error || 'Не удалось предложить новые заголовки.',
         }))
-        setRetitleRawByIndex((prev) => ({ ...prev, [index]: data.raw || '' }))
+        setRetitleRawByIndex((prev) => ({
+          ...prev,
+          [index]: data.raw || '',
+        }))
         return
       }
 
       setRetitleOptionsByIndex((prev) => ({
         ...prev,
-        [index]: data.titles,
+        [index]: data.titles ?? [],
       }))
     } catch {
       setRetitleErrorByIndex((prev) => ({
@@ -370,13 +379,23 @@ export default function WorkspaceClient({
       )
     )
 
-    setRetitleOptionsByIndex((prev) => ({
-      ...prev,
-      [index]: [],
-    }))
+    setRetitleOptionsByIndex((prev) => {
+      const next: Record<number, string[]> = { ...prev }
+      delete next[index]
+      return next
+    })
 
-    setRetitleErrorByIndex((prev) => ({ ...prev, [index]: '' }))
-    setRetitleRawByIndex((prev) => ({ ...prev, [index]: '' }))
+    setRetitleErrorByIndex((prev) => {
+      const next: Record<number, string> = { ...prev }
+      delete next[index]
+      return next
+    })
+
+    setRetitleRawByIndex((prev) => {
+      const next: Record<number, string> = { ...prev }
+      delete next[index]
+      return next
+    })
   }
 
   async function saveOption(option: ExactBuilderOption, index: number) {
