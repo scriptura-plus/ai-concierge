@@ -20,6 +20,12 @@ type ExactBuilderResponse = {
   raw?: string
 }
 
+type RetitleResponse = {
+  titles?: string[]
+  error?: string
+  raw?: string
+}
+
 type SaveCardResponse = {
   ok?: boolean
   savedId?: string
@@ -115,6 +121,11 @@ export default function WorkspaceClient({
   const [exactError, setExactError] = useState('')
   const [exactRaw, setExactRaw] = useState('')
 
+  const [retitlingIndex, setRetitlingIndex] = useState<number | null>(null)
+  const [retitleOptionsByIndex, setRetitleOptionsByIndex] = useState<Record<number, string[]>>({})
+  const [retitleErrorByIndex, setRetitleErrorByIndex] = useState<Record<number, string>>({})
+  const [retitleRawByIndex, setRetitleRawByIndex] = useState<Record<number, string>>({})
+
   const [savingIndex, setSavingIndex] = useState<number | null>(null)
   const [savedIndexes, setSavedIndexes] = useState<number[]>([])
   const [saveMessage, setSaveMessage] = useState('')
@@ -139,6 +150,9 @@ export default function WorkspaceClient({
       setExactOptions([])
       setExactRaw('')
       setExactError('')
+      setRetitleOptionsByIndex({})
+      setRetitleErrorByIndex({})
+      setRetitleRawByIndex({})
       setSaveError('')
       setSavedIndexes([])
       setDirectionArticle(null)
@@ -253,6 +267,9 @@ export default function WorkspaceClient({
     setExactLoading(true)
     setExactError('')
     setExactRaw('')
+    setRetitleOptionsByIndex({})
+    setRetitleErrorByIndex({})
+    setRetitleRawByIndex({})
     setSaveMessage('')
     setSaveError('')
     setSavedIndexes([])
@@ -297,6 +314,69 @@ export default function WorkspaceClient({
     } finally {
       setExactLoading(false)
     }
+  }
+
+  async function generateNewTitles(option: ExactBuilderOption, index: number) {
+    setRetitlingIndex(index)
+    setRetitleErrorByIndex((prev) => ({ ...prev, [index]: '' }))
+    setRetitleRawByIndex((prev) => ({ ...prev, [index]: '' }))
+
+    try {
+      const res = await fetch('/api/moderator/workspace/retitle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          verseText,
+          currentTitle: option.title,
+          cardText: option.text,
+        }),
+      })
+
+      const data: RetitleResponse = await res.json()
+
+      if (!res.ok || !Array.isArray(data.titles) || data.titles.length === 0) {
+        setRetitleErrorByIndex((prev) => ({
+          ...prev,
+          [index]: data.error || 'Не удалось предложить новые заголовки.',
+        }))
+        setRetitleRawByIndex((prev) => ({ ...prev, [index]: data.raw || '' }))
+        return
+      }
+
+      setRetitleOptionsByIndex((prev) => ({
+        ...prev,
+        [index]: data.titles,
+      }))
+    } catch {
+      setRetitleErrorByIndex((prev) => ({
+        ...prev,
+        [index]: 'Не удалось предложить новые заголовки.',
+      }))
+    } finally {
+      setRetitlingIndex(null)
+    }
+  }
+
+  function applyRetitle(index: number, newTitle: string) {
+    setExactOptions((prev) =>
+      prev.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              title: newTitle,
+            }
+          : item
+      )
+    )
+
+    setRetitleOptionsByIndex((prev) => ({
+      ...prev,
+      [index]: [],
+    }))
+
+    setRetitleErrorByIndex((prev) => ({ ...prev, [index]: '' }))
+    setRetitleRawByIndex((prev) => ({ ...prev, [index]: '' }))
   }
 
   async function saveOption(option: ExactBuilderOption, index: number) {
@@ -443,6 +523,10 @@ export default function WorkspaceClient({
                 {exactOptions.map((option, index) => {
                   const isSaving = savingIndex === index
                   const isSaved = savedIndexes.includes(index)
+                  const isRetitling = retitlingIndex === index
+                  const retitleOptions = retitleOptionsByIndex[index] ?? []
+                  const retitleError = retitleErrorByIndex[index] ?? ''
+                  const retitleRaw = retitleRawByIndex[index] ?? ''
 
                   return (
                     <article
@@ -457,7 +541,7 @@ export default function WorkspaceClient({
                       </h3>
                       <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{option.text}</p>
 
-                      <div className="mt-4 flex items-center gap-3">
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
                         <button
                           type="button"
                           onClick={() => void saveOption(option, index)}
@@ -471,10 +555,53 @@ export default function WorkspaceClient({
                               : 'Сохранить как карточку'}
                         </button>
 
+                        <button
+                          type="button"
+                          onClick={() => void generateNewTitles(option, index)}
+                          disabled={isRetitling || isSaved}
+                          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-60"
+                        >
+                          {isRetitling ? 'Ищем заголовки...' : 'Другой заголовок'}
+                        </button>
+
                         {isSaved ? (
                           <span className="text-sm text-emerald-700">Карточка уже сохранена</span>
                         ) : null}
                       </div>
+
+                      {retitleError ? <p className="mt-3 text-sm text-red-700">{retitleError}</p> : null}
+
+                      {retitleOptions.length > 0 ? (
+                        <div className="mt-4 rounded-[16px] border border-stone-300/60 bg-[#fdf9f1] px-4 py-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                            Новые заголовки
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {retitleOptions.map((titleOption) => (
+                              <button
+                                key={titleOption}
+                                type="button"
+                                onClick={() => applyRetitle(index, titleOption)}
+                                className="rounded-full border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                              >
+                                {titleOption}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {retitleRaw ? (
+                        <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                          <summary className="cursor-pointer text-sm font-medium text-stone-700">
+                            Показать raw output заголовков
+                          </summary>
+                          <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                            {retitleRaw}
+                          </pre>
+                        </details>
+                      ) : null}
                     </article>
                   )
                 })}
