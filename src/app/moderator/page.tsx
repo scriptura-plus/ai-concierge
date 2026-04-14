@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { unstable_noStore as noStore } from 'next/cache'
 import { getSupabaseServerClient } from '@/lib/supabase/server'
+import ModeratorInboxAutoRefresh from './ModeratorInboxAutoRefresh'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -139,6 +140,8 @@ export default async function ModeratorIndexPage() {
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#faf7ff_0%,#f5f0fb_48%,#f8f4fc_100%)] text-stone-900">
+      <ModeratorInboxAutoRefresh />
+
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
