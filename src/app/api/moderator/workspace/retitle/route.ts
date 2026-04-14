@@ -7,17 +7,21 @@ type RetitlePayload = {
   raw?: string
 }
 
+type ParsedTitlesShape = {
+  titles?: unknown
+}
+
 function parseTitles(raw: string): string[] | null {
   try {
-    const parsed = JSON.parse(raw)
+    const parsed: ParsedTitlesShape = JSON.parse(raw)
 
     if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.titles)) {
       return null
     }
 
     const cleaned = parsed.titles
-      .map((item) => String(item ?? '').trim())
-      .filter(Boolean)
+      .map((item: unknown) => String(item ?? '').trim())
+      .filter((item: string) => Boolean(item))
 
     if (!cleaned.length) return null
 
