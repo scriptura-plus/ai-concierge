@@ -24,7 +24,7 @@ function styleInstruction(styleMode: RepairStyle) {
   }
 
   if (styleMode === 'analytic') {
-    return 'Подача более аналитическая: чуть точнее, интеллектуальнее, логически собраннее, но всё ещё читаемо и живо.'
+    return 'Подача более аналитическая: точнее, интеллектуальнее, логически собраннее, но всё ещё читаемо и живо.'
   }
 
   return 'Подача нейтральная: спокойная, чистая, ясная, без стилевого перегиба.'
@@ -86,6 +86,10 @@ function countSentences(text: string): number {
   return matches ? matches.length : 1
 }
 
+function countChars(text: string): number {
+  return text.replace(/\s+/g, ' ').trim().length
+}
+
 function containsPreservedText(preservedText: string, candidateText: string) {
   const normalizedPreserved = normalizeForCompare(preservedText)
   if (!normalizedPreserved) return true
@@ -118,6 +122,7 @@ function looksChurchyOrTheological(text: string) {
     'это доказывает',
     'доказывает, что',
     'божествен',
+    'божественная истина',
     'истина о',
     'явлено',
     'открывает истину',
@@ -136,19 +141,8 @@ function looksChurchyOrTheological(text: string) {
   return banned.some((word) => sample.includes(word))
 }
 
-function optionsHaveNormalLength(options: RepairOption[]) {
-  return options.every((option) => {
-    const sentences = countSentences(option.text)
-    return sentences >= 4 && sentences <= 6
-  })
-}
-
 function textSimilarityKey(text: string) {
   return normalizeLoose(text)
-}
-
-function optionPairKey(option: RepairOption) {
-  return `${normalizeLoose(option.title)}|||${normalizeLoose(option.text)}`
 }
 
 function dedupeOptionsByText(options: RepairOption[]) {
@@ -176,7 +170,7 @@ function isTooCloseToOriginal(originalCardText: string, candidateText: string) {
   const candidateLen = candidate.length
   const lengthGap = Math.abs(candidateLen - originalLen)
 
-  if (lengthGap <= 20) {
+  if (lengthGap <= 40) {
     const overlap =
       original.includes(candidate) ||
       candidate.includes(original)
@@ -185,6 +179,24 @@ function isTooCloseToOriginal(originalCardText: string, candidateText: string) {
   }
 
   return false
+}
+
+function keepTextTooLarge(keepText: string) {
+  if (!keepText) return false
+
+  const sentenceCount = countSentences(keepText)
+  const charCount = countChars(keepText)
+
+  return sentenceCount > 2 || charCount > 260
+}
+
+function optionsHaveTargetLength(options: RepairOption[]) {
+  return options.every((option) => {
+    const sentences = countSentences(option.text)
+    const chars = countChars(option.text)
+
+    return sentences >= 6 && sentences <= 9 && chars >= 650 && chars <= 1800
+  })
 }
 
 function buildPrompt(params: {
@@ -203,11 +215,13 @@ ${params.keepText}
 
 Если этот блок задан, он должен сохраниться в каждом варианте без смысловой потери.
 Не выбрасывай его.
-Не замени его более общим пересказом.
+Не заменяй его более общим пересказом.
+Но не строй всю карточку вокруг механического повторения этого блока.
+Это ядро, а не вся карточка.
 `
     : `
 ЧТО ОБЯЗАТЕЛЬНО СОХРАНИТЬ:
-Специальный фрагмент не задан. Сохрани сильное ядро исходной карточки, но без дословного копирования всей карточки.
+Специальный фрагмент не задан. Сохрани сильное ядро исходной карточки, но не копируй всю карточку целиком.
 `
 
   const removeBlock = params.removeText
@@ -229,7 +243,7 @@ ${params.directionText}
 `
     : `
 КУДА ПОВЕСТИ МЫСЛЬ:
-Дополнительное направление не задано. Но всё равно усили мысль, сделай её точнее и законченнее.
+Дополнительное направление не задано. Но всё равно усили мысль, сделай её точнее, глубже и законченнее.
 `
 
   return `
@@ -237,7 +251,7 @@ ${params.directionText}
 
 ТВОЯ ЗАДАЧА:
 Нужно отремонтировать существующую карточку, а не придумать новый угол.
-Сохраняй тот же смысловой угол, но перепакуй карточку сильнее, глубже и чище.
+Сохраняй тот же смысловой угол, но перепакуй карточку сильнее, глубже, красивее и чище.
 
 ССЫЛКА:
 ${params.reference}
@@ -264,9 +278,11 @@ ${styleInstruction(params.styleMode)}
 Это улучшенная версия той же карточки:
 - точнее
 - плотнее
+- глубже
 - яснее
 - сильнее по формулировке
-- глубже по движению мысли
+- красивее по движению мысли
+- с более сильным завершением
 
 КРИТИЧЕСКИЕ ПРАВИЛА:
 - Сохраняй тот же угол мысли, а не уводи в другой.
@@ -282,12 +298,11 @@ ${styleInstruction(params.styleMode)}
 - Не используй церковно-богословский словарь.
 - Не используй язык, который звучит как комментарий священнослужителя.
 - Не навязывай доктринальный вывод.
-- Карточка должна быть finished insight, а не наброском.
 - Заголовок должен быть коротким и сильным.
-- Сам текст должен быть плотным, ясным и цельным.
-- Нормальный размер: примерно 4–5 предложений.
-- Если указано, что что-то нужно убрать, не повторяй это.
-- Если указано направление, реально поведи мысль туда.
+- Сам текст должен быть плотным, ясным, цельным и приятно читаемым.
+- Карточка должна ощущаться как finished insight, а не как короткая заметка ChatGPT.
+- Не делай мини-эссе и не лей воду.
+- Но и не сжимай мысль до 4 коротких предложений.
 
 ANTI-THEOLOGY / ANTI-CHURCH FILTER:
 Приложением будут пользоваться люди разных религий, конфессий и мировоззрений.
@@ -338,6 +353,17 @@ ANTI-THEOLOGY / ANTI-CHURCH FILTER:
 - Избегай газетного шума и напыщенности.
 - Каждая карточка должна звучать как finished insight, а не как черновик.
 
+ЦЕЛЕВОЙ ФОРМАТ:
+- Не короткая заметка.
+- Не мини-статья.
+- А плотная развернутая карточка среднего объёма.
+- Обычно это 6–8 предложений.
+- Карточка должна успеть:
+  1. открыть угол
+  2. показать его по тексту
+  3. усилить его
+  4. довести его до сильного завершения
+
 ВЫВОД:
 - Верни только валидный JSON
 - Без markdown
@@ -348,15 +374,15 @@ ANTI-THEOLOGY / ANTI-CHURCH FILTER:
 [
   {
     "title": "Короткий сильный заголовок",
-    "text": "Полноценная карточка из 4–5 предложений."
+    "text": "Плотная, красиво развернутая карточка среднего объёма."
   },
   {
     "title": "Короткий сильный заголовок",
-    "text": "Полноценная карточка из 4–5 предложений."
+    "text": "Плотная, красиво развернутая карточка среднего объёма."
   },
   {
     "title": "Короткий сильный заголовок",
-    "text": "Полноценная карточка из 4–5 предложений."
+    "text": "Плотная, красиво развернутая карточка среднего объёма."
   }
 ]
 `.trim()
@@ -376,10 +402,10 @@ function validateOptions(params: {
     }
   }
 
-  if (!optionsHaveNormalLength(dedupedByText)) {
+  if (!optionsHaveTargetLength(dedupedByText)) {
     return {
       ok: false as const,
-      error: 'Модель вернула слишком короткие или слишком длинные варианты.',
+      error: 'Модель вернула слишком короткие, слишком длинные или слишком пустые варианты.',
     }
   }
 
@@ -426,7 +452,7 @@ async function generateRepairOptions(params: {
   const result = await runModel({
     prompt,
     model: 'gpt-5.4-mini',
-    maxOutputTokens: 2600,
+    maxOutputTokens: 3200,
   })
 
   if (!result.ok) {
@@ -503,6 +529,16 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: 'Нужно указать хотя бы что оставить, что убрать или куда повести мысль.',
+        } satisfies RepairPayload,
+        { status: 400 }
+      )
+    }
+
+    if (keepTextTooLarge(keepText)) {
+      return NextResponse.json(
+        {
+          error:
+            'Блок «Что оставить» слишком большой. Оставь 1 ключевую фразу или максимум 1–2 коротких предложения.',
         } satisfies RepairPayload,
         { status: 400 }
       )
