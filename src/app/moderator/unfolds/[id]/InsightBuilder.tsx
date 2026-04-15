@@ -32,6 +32,19 @@ function optionLabel(index: number) {
   return 'Вариант 3'
 }
 
+function actionStatusLabel(params: {
+  loading: boolean
+  savingCandidates: boolean
+  optionsCount: number
+  selectedPassage: string
+}) {
+  if (params.savingCandidates) return 'Кандидаты отправляются в review…'
+  if (params.loading) return 'Генерируем 3 варианта из выбранного фрагмента…'
+  if (params.optionsCount === 3) return 'Варианты готовы. Можно отправить их в review.'
+  if (params.selectedPassage.trim()) return 'Фрагмент вставлен. Можно запускать генерацию.'
+  return 'Вставь 1–2 сильные фразы из статьи и запусти генерацию.'
+}
+
 export default function InsightBuilder({
   unfoldId,
   reference,
@@ -51,6 +64,13 @@ export default function InsightBuilder({
 
   const canGenerate = useMemo(() => selectedPassage.trim().length > 0, [selectedPassage])
   const canSendToReview = options.length === 3 && selectedPassage.trim().length > 0
+
+  const actionLabel = actionStatusLabel({
+    loading,
+    savingCandidates,
+    optionsCount: options.length,
+    selectedPassage,
+  })
 
   async function handleGenerate() {
     if (!canGenerate) return
@@ -80,7 +100,10 @@ export default function InsightBuilder({
         throw new Error(data.error || 'Не удалось сгенерировать варианты инсайта.')
       }
 
-      if (typeof data.normalizedSelectedPassage === 'string' && data.normalizedSelectedPassage.trim()) {
+      if (
+        typeof data.normalizedSelectedPassage === 'string' &&
+        data.normalizedSelectedPassage.trim()
+      ) {
         setSelectedPassage(data.normalizedSelectedPassage.trim())
       }
 
@@ -161,16 +184,21 @@ export default function InsightBuilder({
           </p>
         </div>
 
+        <div className="mb-4 rounded-[16px] border border-stone-300/60 bg-[#fffaf1] px-4 py-3">
+          <p className="text-sm leading-6 text-stone-700">{actionLabel}</p>
+        </div>
+
         <label className="block">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
             Выбранный фрагмент
           </span>
+
           <textarea
             value={selectedPassage}
             onChange={(e) => setSelectedPassage(e.target.value)}
-            rows={6}
+            rows={7}
             placeholder="Вставь сюда 1–2 точные фразы из unfold..."
-            className="mt-2 w-full rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.98rem] leading-7 text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-stone-500"
+            className="mt-2 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[1rem] leading-8 text-stone-900 outline-none transition focus:border-stone-500 focus:bg-white placeholder:text-stone-400"
           />
         </label>
 
@@ -179,9 +207,9 @@ export default function InsightBuilder({
             type="button"
             onClick={handleGenerate}
             disabled={!canGenerate || loading || savingCandidates}
-            className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-[48px] rounded-full bg-stone-900 px-5 py-3 text-sm font-medium text-stone-50 shadow-[0_10px_22px_rgba(28,25,23,0.18)] transition active:scale-[0.99] hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? 'Генерация...' : 'Сгенерировать 3 варианта'}
+            {loading ? 'Генерация…' : 'Сгенерировать 3 варианта'}
           </button>
 
           <button
@@ -193,7 +221,7 @@ export default function InsightBuilder({
               setSuccess('')
             }}
             disabled={loading || savingCandidates}
-            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-50"
+            className="min-h-[48px] rounded-full border border-stone-300 bg-[#fffaf1] px-5 py-3 text-sm font-medium text-stone-700 transition active:scale-[0.99] hover:bg-[#f8efdc] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Очистить
           </button>
@@ -203,33 +231,43 @@ export default function InsightBuilder({
               type="button"
               onClick={handleSendToReview}
               disabled={!canSendToReview || savingCandidates || loading}
-              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-[48px] rounded-full border border-emerald-300 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800 shadow-[0_10px_22px_rgba(16,185,129,0.08)] transition active:scale-[0.99] hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {savingCandidates ? 'Отправляем...' : 'Отправить 3 кандидата в review'}
+              {savingCandidates ? 'Отправляем в review…' : 'Отправить 3 кандидата в review'}
             </button>
           ) : null}
         </div>
 
-        {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
-        {success ? <p className="mt-3 text-sm text-emerald-700">{success}</p> : null}
+        {error ? (
+          <div className="mt-4 rounded-[16px] border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        {success ? (
+          <div className="mt-4 rounded-[16px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">
+            {success}
+          </div>
+        ) : null}
 
         {options.length > 0 ? (
           <div className="mt-6 space-y-4">
             {options.map((option, index) => (
               <article
                 key={`${option.title}-${index}`}
-                className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
+                className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 shadow-[0_6px_18px_rgba(94,72,37,0.05)]"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  <p className="rounded-full border border-stone-300 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
                     {optionLabel(index)}
                   </p>
                 </div>
 
-                <h3 className="mt-3 text-xl font-semibold leading-8 text-stone-900">
+                <h3 className="mt-3 text-[1.35rem] font-semibold leading-8 text-stone-900">
                   {option.title}
                 </h3>
-                <p className="mt-3 whitespace-pre-wrap text-[0.98rem] leading-8 text-stone-800">
+
+                <p className="mt-3 whitespace-pre-wrap text-[1rem] leading-8 text-stone-800">
                   {option.text}
                 </p>
               </article>
