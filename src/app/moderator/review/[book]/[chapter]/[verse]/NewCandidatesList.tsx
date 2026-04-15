@@ -157,7 +157,7 @@ export default function NewCandidatesList({ reference, verseText, items }: Props
         return (
           <article
             key={item.id}
-            className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
+            className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 shadow-[0_6px_16px_rgba(94,72,37,0.05)]"
           >
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -173,41 +173,31 @@ export default function NewCandidatesList({ reference, verseText, items }: Props
               <span className="text-xs text-stone-500">{item.updatedLabel}</span>
             </div>
 
-            <h3 className="mt-3 text-xl font-semibold leading-tight text-stone-900">
+            <h3 className="mt-3 text-[1.45rem] font-semibold leading-tight text-stone-900">
               {item.title}
             </h3>
 
-            <div className="mt-3 whitespace-pre-wrap text-[0.98rem] leading-8 text-stone-800">
+            <div className="mt-3 whitespace-pre-wrap text-[1rem] leading-8 text-stone-800">
               {item.text}
             </div>
 
             {item.angleNote ? (
               <div className="mt-4 rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Заметка
+                  Комментарий к углу
                 </p>
                 <p className="mt-2 text-[0.95rem] leading-7 text-stone-800">{item.angleNote}</p>
               </div>
             ) : null}
 
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3">
               <form action={item.promoteAction} method="POST">
                 <input type="hidden" name="returnTo" value={item.returnTo} />
                 <button
                   type="submit"
-                  className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+                  className="rounded-full bg-stone-900 px-5 py-2.5 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
                 >
                   Сохранить
-                </button>
-              </form>
-
-              <form action={item.rejectAction} method="POST">
-                <input type="hidden" name="returnTo" value={item.returnTo} />
-                <button
-                  type="submit"
-                  className="rounded-full border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
-                >
-                  Отклонить
                 </button>
               </form>
 
@@ -215,7 +205,7 @@ export default function NewCandidatesList({ reference, verseText, items }: Props
                 type="button"
                 onClick={() => void handleGenerateTitles(item)}
                 disabled={isLoadingTitles || isApplyingTitle}
-                className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-60"
+                className="rounded-full border border-stone-300 bg-[#fffaf1] px-5 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-60"
               >
                 {isLoadingTitles
                   ? 'Ищем...'
@@ -226,10 +216,20 @@ export default function NewCandidatesList({ reference, verseText, items }: Props
 
               <a
                 href={item.repairHref}
-                className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                className="rounded-full border border-stone-300 bg-[#fffaf1] px-5 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
               >
                 Доработать
               </a>
+
+              <form action={item.rejectAction} method="POST">
+                <input type="hidden" name="returnTo" value={item.returnTo} />
+                <button
+                  type="submit"
+                  className="rounded-full border border-red-300 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
+                >
+                  Отклонить
+                </button>
+              </form>
             </div>
 
             {retitleError ? <p className="mt-3 text-sm text-red-700">{retitleError}</p> : null}
