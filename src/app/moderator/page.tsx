@@ -34,6 +34,7 @@ function slugifyBook(book: string) {
 function formatDate(value: string) {
   try {
     return new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'America/New_York',
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
