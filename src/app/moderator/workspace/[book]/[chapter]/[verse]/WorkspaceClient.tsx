@@ -10,13 +10,13 @@ type SavedCard = {
   createdAt: string
 }
 
-type ExactBuilderOption = {
+type RepairOption = {
   title: string
   text: string
 }
 
-type ExactBuilderResponse = {
-  options?: ExactBuilderOption[]
+type RepairBuilderResponse = {
+  options?: RepairOption[]
   error?: string
   raw?: string
 }
@@ -31,19 +31,6 @@ type SaveCardResponse = {
   ok?: boolean
   savedId?: string
   error?: string
-}
-
-type DirectionArticle = {
-  title: string
-  lead: string
-  body: string[]
-  quote?: string
-}
-
-type DirectionSearchResponse = {
-  article?: DirectionArticle
-  error?: string
-  raw?: string
 }
 
 type RepairSourceType = 'candidate' | 'reserve_insight' | 'featured_insight' | ''
@@ -64,13 +51,16 @@ type WorkspaceClientProps = {
 }
 
 type PersistedWorkspaceState = {
-  exactInput: string
-  exactOptions: ExactBuilderOption[]
-  exactRaw: string
-  directionInput: string
-  directionArticle: DirectionArticle | null
-  directionRaw: string
+  originalCardText: string
+  keepText: string
+  removeText: string
+  directionText: string
+  styleMode: RepairStyle
+  options: RepairOption[]
+  raw: string
 }
+
+type RepairStyle = 'neutral' | 'aphoristic' | 'publicistic' | 'analytic'
 
 function normalizeText(value: string) {
   return value.replace(/\r/g, '').trim()
@@ -80,21 +70,19 @@ function normalizeForCompare(value: string) {
   return value.replace(/\s+/g, ' ').trim()
 }
 
-function containsVerbatimSacredPassage(sacredPassage: string, candidateText: string) {
-  const normalizedSacred = normalizeForCompare(sacredPassage)
+function containsPreservedText(preservedText: string, candidateText: string) {
+  const normalizedPreserved = normalizeForCompare(preservedText)
+  if (!normalizedPreserved) return true
+
   const normalizedCandidate = normalizeForCompare(candidateText)
-  return normalizedCandidate.includes(normalizedSacred)
+  return normalizedCandidate.includes(normalizedPreserved)
 }
 
-function buildDirectionArticleText(article: DirectionArticle) {
-  return [
-    article.title,
-    '',
-    article.lead,
-    '',
-    ...article.body,
-    ...(article.quote ? ['', `“${article.quote}”`] : []),
-  ].join('\n\n')
+function styleLabel(style: RepairStyle) {
+  if (style === 'aphoristic') return 'Афористично'
+  if (style === 'publicistic') return 'Публицистично'
+  if (style === 'analytic') return 'Аналитично'
+  return 'Нейтрально'
 }
 
 export default function WorkspaceClient({
@@ -118,11 +106,16 @@ export default function WorkspaceClient({
     [book, chapter, verse]
   )
 
-  const [exactInput, setExactInput] = useState('')
-  const [exactOptions, setExactOptions] = useState<ExactBuilderOption[]>([])
-  const [exactLoading, setExactLoading] = useState(false)
-  const [exactError, setExactError] = useState('')
-  const [exactRaw, setExactRaw] = useState('')
+  const [originalCardText, setOriginalCardText] = useState('')
+  const [keepText, setKeepText] = useState('')
+  const [removeText, setRemoveText] = useState('')
+  const [directionText, setDirectionText] = useState('')
+  const [styleMode, setStyleMode] = useState<RepairStyle>('neutral')
+
+  const [options, setOptions] = useState<RepairOption[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [raw, setRaw] = useState('')
 
   const [retitlingIndex, setRetitlingIndex] = useState<number | null>(null)
   const [retitleOptionsByIndex, setRetitleOptionsByIndex] = useState<Record<number, string[]>>({})
@@ -134,64 +127,74 @@ export default function WorkspaceClient({
   const [saveMessage, setSaveMessage] = useState('')
   const [saveError, setSaveError] = useState('')
 
-  const [directionInput, setDirectionInput] = useState('')
-  const [directionArticle, setDirectionArticle] = useState<DirectionArticle | null>(null)
-  const [directionLoading, setDirectionLoading] = useState(false)
-  const [directionError, setDirectionError] = useState('')
-  const [directionRaw, setDirectionRaw] = useState('')
-  const [directionActionMessage, setDirectionActionMessage] = useState('')
-
   const [isHydrated, setIsHydrated] = useState(false)
 
-  const sacredPassage = useMemo(() => normalizeText(exactInput), [exactInput])
-  const directionRequest = useMemo(() => normalizeText(directionInput), [directionInput])
+  const normalizedOriginalCardText = useMemo(() => normalizeText(originalCardText), [originalCardText])
+  const normalizedKeepText = useMemo(() => normalizeText(keepText), [keepText])
+  const normalizedRemoveText = useMemo(() => normalizeText(removeText), [removeText])
+  const normalizedDirectionText = useMemo(() => normalizeText(directionText), [directionText])
+
+  const canGenerate = Boolean(
+    normalizedOriginalCardText && (normalizedKeepText || normalizedDirectionText || normalizedRemoveText)
+  )
 
   useEffect(() => {
     if (prefillMode) {
-      setExactInput(initialExactInput)
-      setDirectionInput(initialDirectionInput)
-      setExactOptions([])
-      setExactRaw('')
-      setExactError('')
+      setOriginalCardText(initialExactInput)
+      setKeepText('')
+      setRemoveText('')
+      setDirectionText(initialDirectionInput)
+      setStyleMode('neutral')
+      setOptions([])
+      setRaw('')
+      setError('')
       setRetitleOptionsByIndex({})
       setRetitleErrorByIndex({})
       setRetitleRawByIndex({})
       setSaveError('')
       setSavedIndexes([])
-      setDirectionArticle(null)
-      setDirectionRaw('')
-      setDirectionError('')
-      setDirectionActionMessage('')
       setSaveMessage(
         initialCandidateId
-          ? `Материал ${initialCandidateId.slice(0, 8)} загружен в режим доработки.`
-          : 'Материал загружен в режим доработки.'
+          ? `Материал ${initialCandidateId.slice(0, 8)} загружен в ремонтный режим.`
+          : 'Материал загружен в ремонтный режим.'
       )
       setIsHydrated(true)
       return
     }
 
     try {
-      const raw = sessionStorage.getItem(storageKey)
-      if (!raw) {
-        setExactInput('')
-        setDirectionInput('')
+      const rawState = sessionStorage.getItem(storageKey)
+      if (!rawState) {
+        setOriginalCardText('')
+        setKeepText('')
+        setRemoveText('')
+        setDirectionText('')
+        setStyleMode('neutral')
         setIsHydrated(true)
         return
       }
 
-      const parsed = JSON.parse(raw) as Partial<PersistedWorkspaceState>
+      const parsed = JSON.parse(rawState) as Partial<PersistedWorkspaceState>
 
-      setExactInput(typeof parsed.exactInput === 'string' ? parsed.exactInput : '')
-      setExactOptions(Array.isArray(parsed.exactOptions) ? parsed.exactOptions : [])
-      setExactRaw(typeof parsed.exactRaw === 'string' ? parsed.exactRaw : '')
-
-      setDirectionInput(typeof parsed.directionInput === 'string' ? parsed.directionInput : '')
-      setDirectionArticle(parsed.directionArticle ?? null)
-      setDirectionRaw(typeof parsed.directionRaw === 'string' ? parsed.directionRaw : '')
+      setOriginalCardText(typeof parsed.originalCardText === 'string' ? parsed.originalCardText : '')
+      setKeepText(typeof parsed.keepText === 'string' ? parsed.keepText : '')
+      setRemoveText(typeof parsed.removeText === 'string' ? parsed.removeText : '')
+      setDirectionText(typeof parsed.directionText === 'string' ? parsed.directionText : '')
+      setStyleMode(
+        parsed.styleMode === 'aphoristic' ||
+          parsed.styleMode === 'publicistic' ||
+          parsed.styleMode === 'analytic'
+          ? parsed.styleMode
+          : 'neutral'
+      )
+      setOptions(Array.isArray(parsed.options) ? parsed.options : [])
+      setRaw(typeof parsed.raw === 'string' ? parsed.raw : '')
     } catch {
-      setExactInput('')
-      setDirectionInput('')
+      setOriginalCardText('')
+      setKeepText('')
+      setRemoveText('')
+      setDirectionText('')
+      setStyleMode('neutral')
     } finally {
       setIsHydrated(true)
     }
@@ -207,12 +210,13 @@ export default function WorkspaceClient({
     if (!isHydrated || prefillMode) return
 
     const payload: PersistedWorkspaceState = {
-      exactInput,
-      exactOptions,
-      exactRaw,
-      directionInput,
-      directionArticle,
-      directionRaw,
+      originalCardText,
+      keepText,
+      removeText,
+      directionText,
+      styleMode,
+      options,
+      raw,
     }
 
     try {
@@ -224,102 +228,94 @@ export default function WorkspaceClient({
     isHydrated,
     prefillMode,
     storageKey,
-    exactInput,
-    exactOptions,
-    exactRaw,
-    directionInput,
-    directionArticle,
-    directionRaw,
+    originalCardText,
+    keepText,
+    removeText,
+    directionText,
+    styleMode,
+    options,
+    raw,
   ])
 
-  async function copyDirectionArticle(article: DirectionArticle) {
-    try {
-      await navigator.clipboard.writeText(buildDirectionArticleText(article))
-      setDirectionActionMessage('Исследование скопировано.')
-    } catch {
-      setDirectionActionMessage('Не удалось скопировать исследование.')
-    }
-  }
-
-  async function shareDirectionArticle(article: DirectionArticle) {
-    const text = buildDirectionArticleText(article)
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: article.title,
-          text,
-        })
-        setDirectionActionMessage('Исследование отправлено в меню «Поделиться».')
-        return
-      }
-
-      await navigator.clipboard.writeText(text)
-      setDirectionActionMessage('Меню «Поделиться» недоступно. Текст скопирован.')
-    } catch {
-      setDirectionActionMessage('Не удалось поделиться исследованием.')
-    }
-  }
-
-  async function generateExactBuilder() {
-    if (!sacredPassage) {
-      setExactError('Вставь 1–2 предложения, которые нужно сохранить дословно.')
-      return
-    }
-
-    setExactLoading(true)
-    setExactError('')
-    setExactRaw('')
+  function clearRepairForm() {
+    setOriginalCardText('')
+    setKeepText('')
+    setRemoveText('')
+    setDirectionText('')
+    setStyleMode('neutral')
+    setOptions([])
+    setRaw('')
+    setError('')
     setRetitleOptionsByIndex({})
     setRetitleErrorByIndex({})
     setRetitleRawByIndex({})
-    setSaveMessage('')
     setSaveError('')
     setSavedIndexes([])
-    setDirectionActionMessage('')
+    setSaveMessage('')
+  }
+
+  async function generateRepairOptions() {
+    if (!canGenerate) {
+      setError('Нужно вставить текст карточки и указать хотя бы что оставить, что убрать или куда повести мысль.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setRaw('')
+    setOptions([])
+    setRetitleOptionsByIndex({})
+    setRetitleErrorByIndex({})
+    setRetitleRawByIndex({})
+    setSaveError('')
+    setSaveMessage('')
+    setSavedIndexes([])
 
     try {
-      const res = await fetch('/api/moderator/workspace/exact-builder', {
+      const res = await fetch('/api/moderator/workspace/repair-builder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reference,
           verseText,
-          sacredPassage,
-          mode: 'fresh',
+          originalCardText: normalizedOriginalCardText,
+          keepText: normalizedKeepText,
+          removeText: normalizedRemoveText,
+          directionText: normalizedDirectionText,
+          styleMode,
         }),
       })
 
-      const data: ExactBuilderResponse = await res.json()
+      const data: RepairBuilderResponse = await res.json()
 
       if (!res.ok || !Array.isArray(data.options) || data.options.length === 0) {
-        setExactError(data.error || 'Не удалось сгенерировать варианты.')
-        setExactRaw(data.raw || '')
-        setExactOptions([])
+        setError(data.error || 'Не удалось сгенерировать варианты ремонта.')
+        setRaw(data.raw || '')
+        setOptions([])
         return
       }
 
-      const strictlyValid = data.options.filter((item) =>
-        containsVerbatimSacredPassage(sacredPassage, item.text)
+      const validOptions = data.options.filter((item) =>
+        containsPreservedText(normalizedKeepText, item.text)
       )
 
-      if (strictlyValid.length === 0) {
-        setExactError('Модель не сохранила вставленный текст дословно. Попробуй ещё раз.')
-        setExactRaw(data.raw || '')
-        setExactOptions([])
+      if (normalizedKeepText && validOptions.length === 0) {
+        setError('Модель не сохранила указанный фрагмент. Попробуй ещё раз или сократи блок «Что оставить».')
+        setRaw(data.raw || '')
+        setOptions([])
         return
       }
 
-      setExactOptions(strictlyValid)
+      setOptions(normalizedKeepText ? validOptions : data.options)
     } catch {
-      setExactError('Не удалось сгенерировать варианты.')
-      setExactOptions([])
+      setError('Не удалось сгенерировать варианты ремонта.')
+      setOptions([])
     } finally {
-      setExactLoading(false)
+      setLoading(false)
     }
   }
 
-  async function generateNewTitles(option: ExactBuilderOption, index: number) {
+  async function generateNewTitles(option: RepairOption, index: number) {
     setRetitlingIndex(index)
     setRetitleErrorByIndex((prev) => ({
       ...prev,
@@ -371,7 +367,7 @@ export default function WorkspaceClient({
   }
 
   function applyRetitle(index: number, newTitle: string) {
-    setExactOptions((prev) =>
+    setOptions((prev) =>
       prev.map((item, itemIndex) =>
         itemIndex === index
           ? {
@@ -401,9 +397,9 @@ export default function WorkspaceClient({
     })
   }
 
-  async function saveOption(option: ExactBuilderOption, index: number) {
-    if (!containsVerbatimSacredPassage(sacredPassage, option.text)) {
-      setSaveError('Эту карточку нельзя сохранить: исходный фрагмент не сохранён дословно.')
+  async function saveOption(option: RepairOption, index: number) {
+    if (!containsPreservedText(normalizedKeepText, option.text)) {
+      setSaveError('Эту карточку нельзя сохранить: указанный фрагмент не сохранён.')
       return
     }
 
@@ -426,7 +422,7 @@ export default function WorkspaceClient({
           titleRu: option.title,
           textRu: option.text,
           mode: 'insights',
-          angleNote: sacredPassage || null,
+          angleNote: normalizedKeepText || normalizedDirectionText || null,
           repairSourceType,
           repairSourceId,
         }),
@@ -449,297 +445,243 @@ export default function WorkspaceClient({
     }
   }
 
-  async function generateDirectionArticle() {
-    if (!directionRequest) {
-      setDirectionError('Опиши, куда именно копать по этому стиху.')
-      return
-    }
-
-    setDirectionLoading(true)
-    setDirectionError('')
-    setDirectionRaw('')
-    setDirectionArticle(null)
-    setDirectionActionMessage('')
-
-    try {
-      const res = await fetch('/api/moderator/workspace/direction-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reference,
-          verseText,
-          directionRequest,
-        }),
-      })
-
-      const data: DirectionSearchResponse = await res.json()
-
-      if (!res.ok || !data.article) {
-        setDirectionError(data.error || 'Не удалось сгенерировать исследование.')
-        setDirectionRaw(data.raw || '')
-        return
-      }
-
-      setDirectionArticle(data.article)
-    } catch {
-      setDirectionError('Не удалось сгенерировать исследование.')
-    } finally {
-      setDirectionLoading(false)
-    }
-  }
-
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-2">
-        <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
+      <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
+        <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
+          <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-              Поле 1
+              Ремонт карточки
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-              Точная огранка
+              Доработать и пересобрать
             </h2>
             <p className="mt-2 text-sm leading-6 text-stone-600">
-              Сюда модератор вставляет 1–2 предложения, которые нельзя менять. AI должен только
-              достроить карточку вокруг них и предложить несколько вариантов упаковки.
+              Верх экрана отвечает за отбор. Здесь — ремонт: сохраняем сильное ядро, убираем слабое,
+              задаём направление и получаем 3 новых варианта карточки.
             </p>
-            <p className="mt-2 rounded-[14px] border border-stone-300/60 bg-[#fffaf1] px-3 py-2 text-sm leading-6 text-stone-700">
-              Вставленный фрагмент сохраняется дословно. AI не переписывает его, а только достраивает
-              карточку вокруг него.
-            </p>
-
-            <textarea
-              value={exactInput}
-              onChange={(e) => setExactInput(e.target.value)}
-              placeholder="Вставь 1–2 предложения, которые нужно сохранить дословно."
-              className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
-            />
-
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => void generateExactBuilder()}
-                disabled={exactLoading}
-                className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
-              >
-                {exactLoading ? 'Генерация...' : 'Сгенерировать 3 варианта'}
-              </button>
-            </div>
-
-            {exactError ? <p className="mt-3 text-sm text-red-700">{exactError}</p> : null}
-            {saveError ? <p className="mt-3 text-sm text-red-700">{saveError}</p> : null}
-            {saveMessage ? <p className="mt-3 text-sm text-emerald-700">{saveMessage}</p> : null}
-
-            {exactRaw ? (
-              <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <summary className="cursor-pointer text-sm font-medium text-stone-700">
-                  Показать raw output
-                </summary>
-                <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                  {exactRaw}
-                </pre>
-              </details>
-            ) : null}
-
-            {exactOptions.length > 0 ? (
-              <div className="mt-5 space-y-4">
-                {exactOptions.map((option, index) => {
-                  const isSaving = savingIndex === index
-                  const isSaved = savedIndexes.includes(index)
-                  const isRetitling = retitlingIndex === index
-                  const retitleOptions = retitleOptionsByIndex[index] ?? []
-                  const retitleError = retitleErrorByIndex[index] ?? ''
-                  const retitleRaw = retitleRawByIndex[index] ?? ''
-
-                  return (
-                    <article
-                      key={`${option.title}-${index}`}
-                      className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Вариант {index + 1}
-                      </p>
-                      <h3 className="mt-2 text-xl font-semibold leading-tight text-stone-900">
-                        {option.title}
-                      </h3>
-                      <p className="mt-3 text-[0.97rem] leading-7 text-stone-800">{option.text}</p>
-
-                      <div className="mt-4 flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => void saveOption(option, index)}
-                          disabled={isSaving || isSaved}
-                          className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
-                        >
-                          {isSaving
-                            ? 'Сохранение...'
-                            : isSaved
-                              ? 'Сохранено'
-                              : 'Сохранить как карточку'}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => void generateNewTitles(option, index)}
-                          disabled={isRetitling || isSaved}
-                          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-60"
-                        >
-                          {isRetitling ? 'Ищем заголовки...' : 'Другой заголовок'}
-                        </button>
-
-                        {isSaved ? (
-                          <span className="text-sm text-emerald-700">Карточка уже сохранена</span>
-                        ) : null}
-                      </div>
-
-                      {retitleError ? <p className="mt-3 text-sm text-red-700">{retitleError}</p> : null}
-
-                      {retitleOptions.length > 0 ? (
-                        <div className="mt-4 rounded-[16px] border border-stone-300/60 bg-[#fdf9f1] px-4 py-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                            Новые заголовки
-                          </p>
-
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {retitleOptions.map((titleOption) => (
-                              <button
-                                key={titleOption}
-                                type="button"
-                                onClick={() => applyRetitle(index, titleOption)}
-                                className="rounded-full border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                              >
-                                {titleOption}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {retitleRaw ? (
-                        <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                          <summary className="cursor-pointer text-sm font-medium text-stone-700">
-                            Показать raw output заголовков
-                          </summary>
-                          <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                            {retitleRaw}
-                          </pre>
-                        </details>
-                      ) : null}
-                    </article>
-                  )
-                })}
-              </div>
-            ) : null}
           </div>
-        </section>
 
-        <section className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
-          <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-              Поле 2
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-              Куда копать
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-stone-600">
-              При желании опиши, как именно хочешь доработать эту мысль. Это поле остаётся свободным:
-              ты сам задаёшь направление, если хочешь углубить или перестроить карточку.
-            </p>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div>
+              <label className="block">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Исходная карточка
+                </span>
+                <textarea
+                  value={originalCardText}
+                  onChange={(e) => setOriginalCardText(e.target.value)}
+                  placeholder="Сюда подставляется текст карточки, которую нужно доработать."
+                  className="mt-2 h-56 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] leading-7 text-stone-800 outline-none transition focus:border-stone-500"
+                />
+              </label>
 
-            <textarea
-              value={directionInput}
-              onChange={(e) => setDirectionInput(e.target.value)}
-              placeholder="При желании опиши, как именно хочешь доработать эту мысль."
-              className="mt-4 h-40 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
-            />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setKeepText(normalizedOriginalCardText)}
+                  className="rounded-full border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  Взять всё в «Что оставить»
+                </button>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => void generateDirectionArticle()}
-                disabled={directionLoading}
-                className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
-              >
-                {directionLoading ? 'Генерация...' : 'Сгенерировать исследование'}
-              </button>
+                <button
+                  type="button"
+                  onClick={clearRepairForm}
+                  className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                >
+                  Очистить всё
+                </button>
+              </div>
             </div>
 
-            {directionError ? <p className="mt-3 text-sm text-red-700">{directionError}</p> : null}
+            <div className="space-y-4">
+              <label className="block">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Что оставить
+                </span>
+                <textarea
+                  value={keepText}
+                  onChange={(e) => setKeepText(e.target.value)}
+                  placeholder="Вставь 1–2 сильные фразы, которые нельзя потерять."
+                  className="mt-2 h-28 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] leading-7 text-stone-800 outline-none transition focus:border-stone-500"
+                />
+              </label>
 
-            {directionRaw ? (
-              <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <summary className="cursor-pointer text-sm font-medium text-stone-700">
-                  Показать raw output
-                </summary>
-                <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
-                  {directionRaw}
-                </pre>
-              </details>
-            ) : null}
+              <label className="block">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Что убрать
+                </span>
+                <textarea
+                  value={removeText}
+                  onChange={(e) => setRemoveText(e.target.value)}
+                  placeholder="Например: убрать слабый хвост, убрать общие слова, не повторять вторую мысль."
+                  className="mt-2 h-24 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] leading-7 text-stone-800 outline-none transition focus:border-stone-500"
+                />
+              </label>
 
-            {directionArticle ? (
-              <article className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Исследование
-                </p>
-                <h3 className="mt-2 text-2xl font-semibold leading-tight text-stone-900">
-                  {directionArticle.title}
-                </h3>
-                <p className="mt-4 text-[1rem] leading-8 text-stone-900">{directionArticle.lead}</p>
+              <label className="block">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Куда повести мысль
+                </span>
+                <textarea
+                  value={directionText}
+                  onChange={(e) => setDirectionText(e.target.value)}
+                  placeholder="Например: сделать акцент на контрасте, усилить мысль о совести, связать сильнее с воскресением."
+                  className="mt-2 h-28 w-full resize-none rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-4 text-[0.97rem] leading-7 text-stone-800 outline-none transition focus:border-stone-500"
+                />
+              </label>
 
-                <div className="mt-5 space-y-5">
-                  {directionArticle.body.map((paragraph, index) => (
-                    <p
-                      key={`${index}-${paragraph.slice(0, 24)}`}
-                      className="text-[0.98rem] leading-8 text-stone-800"
-                    >
-                      {paragraph}
+              <label className="block">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                  Стиль упаковки
+                </span>
+
+                <select
+                  value={styleMode}
+                  onChange={(e) => setStyleMode(e.target.value as RepairStyle)}
+                  className="mt-2 w-full rounded-[18px] border border-stone-300 bg-[#fffaf1] px-4 py-3 text-[0.97rem] text-stone-800 outline-none transition focus:border-stone-500"
+                >
+                  <option value="neutral">{styleLabel('neutral')}</option>
+                  <option value="aphoristic">{styleLabel('aphoristic')}</option>
+                  <option value="publicistic">{styleLabel('publicistic')}</option>
+                  <option value="analytic">{styleLabel('analytic')}</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void generateRepairOptions()}
+              disabled={loading || !canGenerate}
+              className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
+            >
+              {loading ? 'Генерация...' : 'Сгенерировать 3 варианта'}
+            </button>
+          </div>
+
+          {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+          {saveError ? <p className="mt-3 text-sm text-red-700">{saveError}</p> : null}
+          {saveMessage ? <p className="mt-3 text-sm text-emerald-700">{saveMessage}</p> : null}
+
+          {raw ? (
+            <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+              <summary className="cursor-pointer text-sm font-medium text-stone-700">
+                Показать raw output
+              </summary>
+              <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                {raw}
+              </pre>
+            </details>
+          ) : null}
+
+          {options.length > 0 ? (
+            <div className="mt-6 space-y-4">
+              {options.map((option, index) => {
+                const isSaving = savingIndex === index
+                const isSaved = savedIndexes.includes(index)
+                const isRetitling = retitlingIndex === index
+                const retitleOptions = retitleOptionsByIndex[index] ?? []
+                const retitleError = retitleErrorByIndex[index] ?? ''
+                const retitleRaw = retitleRawByIndex[index] ?? ''
+
+                return (
+                  <article
+                    key={`${option.title}-${index}`}
+                    className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                      Вариант {index + 1}
                     </p>
-                  ))}
-                </div>
 
-                {directionArticle.quote ? (
-                  <blockquote className="mt-5 border-l-2 border-stone-300 pl-4 text-[0.98rem] italic leading-8 text-stone-700">
-                    {directionArticle.quote}
-                  </blockquote>
-                ) : null}
+                    <h3 className="mt-2 text-xl font-semibold leading-tight text-stone-900">
+                      {option.title}
+                    </h3>
 
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void copyDirectionArticle(directionArticle)}
-                    className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                  >
-                    Скопировать
-                  </button>
+                    <p className="mt-3 whitespace-pre-wrap text-[0.97rem] leading-7 text-stone-800">
+                      {option.text}
+                    </p>
 
-                  <button
-                    type="button"
-                    onClick={() => void shareDirectionArticle(directionArticle)}
-                    className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                  >
-                    Поделиться
-                  </button>
-                </div>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => void saveOption(option, index)}
+                        disabled={isSaving || isSaved}
+                        className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:opacity-60"
+                      >
+                        {isSaving
+                          ? 'Сохранение...'
+                          : isSaved
+                            ? 'Сохранено'
+                            : 'Сохранить как карточку'}
+                      </button>
 
-                {directionActionMessage ? (
-                  <p className="mt-3 text-sm text-stone-700">{directionActionMessage}</p>
-                ) : null}
-              </article>
-            ) : savedCards.length > 0 ? (
-              <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                  Уже сохранено по стиху
-                </p>
-                <p className="mt-2 text-sm leading-6 text-stone-700">
-                  Сначала можно посмотреть, какие формулировки уже существуют, а потом запускать
-                  новое исследование по другому углу.
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </section>
-      </div>
+                      <button
+                        type="button"
+                        onClick={() => void generateNewTitles(option, index)}
+                        disabled={isRetitling || isSaved}
+                        className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-60"
+                      >
+                        {isRetitling ? 'Ищем заголовки...' : 'Переделать заголовок'}
+                      </button>
+
+                      {isSaved ? (
+                        <span className="text-sm text-emerald-700">Карточка уже сохранена</span>
+                      ) : null}
+                    </div>
+
+                    {retitleError ? <p className="mt-3 text-sm text-red-700">{retitleError}</p> : null}
+
+                    {retitleOptions.length > 0 ? (
+                      <div className="mt-4 rounded-[16px] border border-stone-300/60 bg-[#fdf9f1] px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                          Новые заголовки
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {retitleOptions.map((titleOption) => (
+                            <button
+                              key={titleOption}
+                              type="button"
+                              onClick={() => applyRetitle(index, titleOption)}
+                              className="rounded-full border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                            >
+                              {titleOption}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {retitleRaw ? (
+                      <details className="mt-3 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                        <summary className="cursor-pointer text-sm font-medium text-stone-700">
+                          Показать raw output заголовков
+                        </summary>
+                        <pre className="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-stone-700">
+                          {retitleRaw}
+                        </pre>
+                      </details>
+                    ) : null}
+                  </article>
+                )
+              })}
+            </div>
+          ) : savedCards.length > 0 ? (
+            <div className="mt-5 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                Уже сохранено по стиху
+              </p>
+              <p className="mt-2 text-sm leading-6 text-stone-700">
+                Здесь мы ремонтируем только кандидатов. Сохранённые карточки выше остаются ориентиром
+                по уже собранному слою.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </section>
     </div>
   )
 }
