@@ -226,8 +226,12 @@ export async function POST(req: Request) {
       chapter,
       verse,
       mode,
-      title: titleRu,
-      text: textRu,
+
+      // canonical/base fields stay aligned with English,
+      // same as the unfold promote flow
+      title: en.title,
+      text: en.text,
+
       title_ru: titleRu,
       text_ru: textRu,
       title_en: en.title,
@@ -238,6 +242,7 @@ export async function POST(req: Request) {
       text_fr: fr.text,
       title_de: de.title,
       text_de: de.text,
+
       angle_note: safeAngleNote,
       status: 'saved',
       unfold_count: 0,
