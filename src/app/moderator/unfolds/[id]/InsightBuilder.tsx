@@ -10,6 +10,13 @@ type InsightOption = {
   text: string
 }
 
+type SaveCandidatesResponse = {
+  ok?: boolean
+  insertedCount?: number
+  reviewHref?: string
+  error?: string
+}
+
 type Props = {
   unfoldId: string
   reference: string
@@ -38,11 +45,12 @@ export default function InsightBuilder({
   const [selectedPassage, setSelectedPassage] = useState('')
   const [options, setOptions] = useState<InsightOption[]>([])
   const [loading, setLoading] = useState(false)
+  const [savingCandidates, setSavingCandidates] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [promotingIndex, setPromotingIndex] = useState<number | null>(null)
 
   const canGenerate = useMemo(() => selectedPassage.trim().length > 0, [selectedPassage])
+  const canSendToReview = options.length === 3 && selectedPassage.trim().length > 0
 
   async function handleGenerate() {
     if (!canGenerate) return
@@ -84,36 +92,56 @@ export default function InsightBuilder({
     }
   }
 
-  async function handlePromote(option: InsightOption, index: number) {
-    setPromotingIndex(index)
+  async function handleSendToReview() {
+    if (!canSendToReview) return
+
+    setSavingCandidates(true)
     setError('')
     setSuccess('')
 
     try {
-      const res = await fetch(`/api/moderator/unfolds/${unfoldId}/promote`, {
+      const res = await fetch(`/api/moderator/unfolds/${unfoldId}/save-candidates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reference,
           sourceMode,
           selectedPassage: selectedPassage.trim(),
-          title: option.title,
-          text: option.text,
+          options,
         }),
       })
 
-      const data = await res.json()
+      const data: SaveCandidatesResponse = await res.json()
 
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Не удалось сохранить выбранный инсайт.')
+        throw new Error(data.error || 'Не удалось отправить кандидатов в review.')
       }
 
-      setSuccess('Карточка сохранена в curated insights.')
+      const insertedCount = Number(data.insertedCount ?? 0)
+      const reviewHref = String(data.reviewHref ?? '').trim()
+
+      if (insertedCount > 0) {
+        setSuccess(`В review отправлено ${insertedCount} кандидата(ов).`)
+      } else {
+        setSuccess('Новых кандидатов не добавилось: такие варианты уже были в review.')
+      }
+
+      if (reviewHref) {
+        router.push(
+          `${reviewHref}?flash=success&message=${encodeURIComponent(
+            insertedCount > 0
+              ? `Из unfold добавлено ${insertedCount} кандидата(ов).`
+              : 'Новых кандидатов не добавилось: такие варианты уже были в review.'
+          )}`
+        )
+        return
+      }
+
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сохранить выбранный инсайт.')
+      setError(err instanceof Error ? err.message : 'Не удалось отправить кандидатов в review.')
     } finally {
-      setPromotingIndex(null)
+      setSavingCandidates(false)
     }
   }
 
@@ -122,14 +150,14 @@ export default function InsightBuilder({
       <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
         <div className="mb-4">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
-            Конструктор инсайта по фрагменту
+            Кандидаты из unfold
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-            Собрать карточку из выбранного фрагмента
+            Собрать карточки из выбранного фрагмента
           </h2>
           <p className="mt-2 text-sm leading-6 text-stone-600">
-            Вставь 1–2 «жемчужные» фразы из unfold. Выбранный фрагмент должен сохраниться дословно.
-            ИИ удержит тот же угол и предложит ровно 3 полноразмерных варианта карточки.
+            Вставь 1–2 «жемчужные» фразы из unfold. ИИ удержит тот же угол, создаст 3 сильных
+            варианта и отправит их в обычный review-поток как новые кандидаты.
           </p>
         </div>
 
@@ -150,7 +178,7 @@ export default function InsightBuilder({
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={!canGenerate || loading}
+            disabled={!canGenerate || loading || savingCandidates}
             className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? 'Генерация...' : 'Сгенерировать 3 варианта'}
@@ -164,10 +192,22 @@ export default function InsightBuilder({
               setError('')
               setSuccess('')
             }}
-            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            disabled={loading || savingCandidates}
+            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc] disabled:opacity-50"
           >
             Очистить
           </button>
+
+          {options.length === 3 ? (
+            <button
+              type="button"
+              onClick={handleSendToReview}
+              disabled={!canSendToReview || savingCandidates || loading}
+              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {savingCandidates ? 'Отправляем...' : 'Отправить 3 кандидата в review'}
+            </button>
+          ) : null}
         </div>
 
         {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
@@ -184,15 +224,6 @@ export default function InsightBuilder({
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
                     {optionLabel(index)}
                   </p>
-
-                  <button
-                    type="button"
-                    onClick={() => handlePromote(option, index)}
-                    disabled={promotingIndex !== null}
-                    className="rounded-full border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {promotingIndex === index ? 'Сохранение...' : 'Использовать'}
-                  </button>
                 </div>
 
                 <h3 className="mt-3 text-xl font-semibold leading-8 text-stone-900">
