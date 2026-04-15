@@ -12,6 +12,18 @@ type ArticlePayload = {
   quote?: string
 }
 
+type RussianAutoCandidateSource = {
+  sourceTitleRu: string
+  sourceTextRu: string
+  unfoldTitleRu: string
+  unfoldTextRu: string
+}
+
+type CandidateOption = {
+  title: string
+  text: string
+}
+
 function languageInstruction(targetLanguage: SupportedLanguage) {
   if (targetLanguage === 'ru') {
     return `
@@ -192,6 +204,14 @@ function extractJsonObject(raw: string): string | null {
   return raw.slice(start, end + 1)
 }
 
+function extractJsonArray(raw: string): string | null {
+  const start = raw.indexOf('[')
+  const end = raw.lastIndexOf(']')
+
+  if (start === -1 || end === -1 || end <= start) return null
+  return raw.slice(start, end + 1)
+}
+
 function parseArticle(raw: string): ArticlePayload | null {
   try {
     const parsed = JSON.parse(raw)
@@ -213,6 +233,46 @@ function parseArticle(raw: string): ArticlePayload | null {
       body,
       quote: typeof parsed.quote === 'string' ? parsed.quote.trim() : undefined,
     }
+  } catch {
+    return null
+  }
+}
+
+function parseRussianAutoCandidateSource(raw: string): RussianAutoCandidateSource | null {
+  try {
+    const parsed = JSON.parse(raw)
+
+    if (typeof parsed?.sourceTitleRu !== 'string') return null
+    if (typeof parsed?.sourceTextRu !== 'string') return null
+    if (typeof parsed?.unfoldTitleRu !== 'string') return null
+    if (typeof parsed?.unfoldTextRu !== 'string') return null
+
+    return {
+      sourceTitleRu: parsed.sourceTitleRu.trim(),
+      sourceTextRu: parsed.sourceTextRu.trim(),
+      unfoldTitleRu: parsed.unfoldTitleRu.trim(),
+      unfoldTextRu: parsed.unfoldTextRu.trim(),
+    }
+  } catch {
+    return null
+  }
+}
+
+function parseCandidateOptions(raw: string): CandidateOption[] | null {
+  try {
+    const parsed = JSON.parse(raw)
+
+    if (!Array.isArray(parsed)) return null
+
+    const cleaned = parsed
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => ({
+        title: String(item.title ?? '').trim(),
+        text: String(item.text ?? '').trim(),
+      }))
+      .filter((item) => item.title && item.text)
+
+    return cleaned.length ? cleaned.slice(0, 3) : null
   } catch {
     return null
   }
@@ -264,9 +324,7 @@ function parseReference(reference: string): {
 }
 
 function normalizeSourceMode(value: unknown): SourceMode {
-  return value === 'word' ||
-    value === 'tension' ||
-    value === 'why_this_phrase'
+  return value === 'word' || value === 'tension' || value === 'why_this_phrase'
     ? value
     : 'insights'
 }
@@ -282,6 +340,270 @@ function buildUnfoldText(article: ArticlePayload): string {
   ]
     .filter(Boolean)
     .join('\n\n')
+}
+
+function normalizeTextForKey(value: string) {
+  return value.replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function buildCandidateSignature(title: string, text: string) {
+  return `${normalizeTextForKey(title)}|||${normalizeTextForKey(text)}`
+}
+
+function dedupeCandidateOptions(items: CandidateOption[]) {
+  const unique: CandidateOption[] = []
+  const seen = new Set<string>()
+
+  for (const item of items) {
+    const title = item.title.trim()
+    const text = item.text.trim()
+
+    if (!title || !text) continue
+    if (text.length < 120) continue
+
+    const key = buildCandidateSignature(title, text)
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    unique.push({ title, text })
+  }
+
+  return unique
+}
+
+function buildRussianNormalizationPrompt(params: {
+  reference: string
+  sourceMode: SourceMode
+  sourceTitle: string
+  sourceText: string
+  unfoldTitle: string
+  unfoldText: string
+}) {
+  return `
+Ты подготавливаешь русский рабочий слой для автогенерации кандидатов из unfold в Scriptura+.
+
+ССЫЛКА:
+${params.reference}
+
+РЕЖИМ:
+${params.sourceMode}
+
+SOURCE TITLE:
+${params.sourceTitle}
+
+SOURCE TEXT:
+${params.sourceText}
+
+UNFOLD TITLE:
+${params.unfoldTitle}
+
+UNFOLD TEXT:
+${params.unfoldText}
+
+ЗАДАЧА:
+Преобразуй этот материал в естественный русский рабочий вариант для модератора.
+
+КРИТИЧЕСКИЕ ПРАВИЛА:
+- Сохрани тот же угол мысли.
+- Не выдумывай новых идей.
+- Не расширяй материал лишним.
+- Не упрощай смысл.
+- Не делай текст проповедническим.
+- Верни только валидный JSON.
+
+ФОРМАТ:
+{
+  "sourceTitleRu": "...",
+  "sourceTextRu": "...",
+  "unfoldTitleRu": "...",
+  "unfoldTextRu": "..."
+}
+`.trim()
+}
+
+async function normalizeAutoCandidateSourceToRussian(params: {
+  reference: string
+  sourceMode: SourceMode
+  sourceTitle: string
+  sourceText: string
+  unfoldTitle: string
+  unfoldText: string
+}): Promise<RussianAutoCandidateSource> {
+  const alreadyRussian =
+    looksRussian(params.sourceTitle) &&
+    looksRussian(params.sourceText) &&
+    looksRussian(params.unfoldTitle) &&
+    looksRussian(params.unfoldText)
+
+  if (alreadyRussian) {
+    return {
+      sourceTitleRu: params.sourceTitle.trim(),
+      sourceTextRu: params.sourceText.trim(),
+      unfoldTitleRu: params.unfoldTitle.trim(),
+      unfoldTextRu: params.unfoldText.trim(),
+    }
+  }
+
+  const prompt = buildRussianNormalizationPrompt(params)
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 2600,
+  })
+
+  if (!result.ok) {
+    throw new Error(result.error || 'Не удалось привести unfold к русскому рабочему слою.')
+  }
+
+  const rawText = result.rawText
+  let normalized = parseRussianAutoCandidateSource(rawText)
+
+  if (!normalized) {
+    const extracted = extractJsonObject(rawText)
+    if (extracted) {
+      normalized = parseRussianAutoCandidateSource(extracted)
+    }
+  }
+
+  if (!normalized) {
+    throw new Error('Не удалось распарсить русский рабочий слой для unfold.')
+  }
+
+  return normalized
+}
+
+function buildAutoCandidatePrompt(params: {
+  reference: string
+  sourceMode: SourceMode
+  sourceTitleRu: string
+  sourceTextRu: string
+  unfoldTitleRu: string
+  unfoldTextRu: string
+}) {
+  return `
+Ты — генератор сильных карточек-кандидатов для Scriptura+.
+
+Твоя задача — автоматически извлечь из unfold-статьи 3 сильные candidate-карточки,
+которые уже можно подать модератору в review.
+
+ССЫЛКА:
+${params.reference}
+
+РЕЖИМ:
+${params.sourceMode}
+
+ИСХОДНЫЙ ЗАГОЛОВОК:
+${params.sourceTitleRu}
+
+ИСХОДНЫЙ ТЕКСТ ИНСАЙТА:
+${params.sourceTextRu}
+
+UNFOLD ЗАГОЛОВОК:
+${params.unfoldTitleRu}
+
+UNFOLD ТЕКСТ:
+${params.unfoldTextRu}
+
+ОСНОВНОЙ ПРИНЦИП:
+- Найди 3 действительно сильных угла внутри unfold.
+- Каждый вариант должен быть отдельной полноценной short insight-card.
+- Не делай rough notes.
+- Не делай мини-статьи.
+- Не делай проповедь.
+- Не делай соседние варианты одной и той же мысли.
+
+КРИТИЧЕСКИЕ ПРАВИЛА:
+- Все 3 карточки должны быть на русском языке.
+- Каждая карточка должна иметь один ясный центр тяжести.
+- Карточка должна звучать как save-ready candidate.
+- Избегай банальностей, штампов и общих духовных фраз.
+- Избегай вежливой bland-прозы в стиле ChatGPT.
+- Не повторяй один и тот же угол другими словами.
+- Каждая карточка должна быть 4-5 предложений.
+- Заголовок должен быть коротким, сильным и пригодным для сохранения.
+- Красота должна идти через точность и вау-эффект формулировки, а не через театральность.
+
+СТАНДАРТ КАЧЕСТВА:
+- Карточка должна находить реальный угол, а не просто красиво пересказывать статью.
+- Карточка должна быть компактной, но плотной.
+- Карточка должна оставлять ощущение, что её уже хочется сохранить.
+- Каждая карточка должна быть достаточно самостоятельной, чтобы пройти в обычный review-поток.
+
+ПРАВИЛА ВЫВОДА:
+- Верни ТОЛЬКО валидный JSON
+- Без markdown
+- Без code fences
+- Без комментариев
+- Вывод должен быть JSON-массивом ровно из 3 элементов
+
+ФОРМАТ:
+[
+  {
+    "title": "Короткий сильный заголовок",
+    "text": "Четыре или пять предложений полноценной сильной карточки."
+  }
+]
+`.trim()
+}
+
+async function generateAutoCandidatesFromUnfold(params: {
+  reference: string
+  sourceMode: SourceMode
+  sourceTitle: string
+  sourceText: string
+  article: ArticlePayload
+}): Promise<CandidateOption[]> {
+  const unfoldText = buildUnfoldText(params.article)
+  const normalized = await normalizeAutoCandidateSourceToRussian({
+    reference: params.reference,
+    sourceMode: params.sourceMode,
+    sourceTitle: params.sourceTitle,
+    sourceText: params.sourceText,
+    unfoldTitle: params.article.title,
+    unfoldText,
+  })
+
+  const prompt = buildAutoCandidatePrompt({
+    reference: params.reference,
+    sourceMode: params.sourceMode,
+    sourceTitleRu: normalized.sourceTitleRu,
+    sourceTextRu: normalized.sourceTextRu,
+    unfoldTitleRu: normalized.unfoldTitleRu,
+    unfoldTextRu: normalized.unfoldTextRu,
+  })
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 2800,
+  })
+
+  if (!result.ok) {
+    throw new Error(result.error || 'Не удалось автоматически извлечь кандидатов из unfold.')
+  }
+
+  const rawText = result.rawText
+  let options = parseCandidateOptions(rawText)
+
+  if (!options) {
+    const extracted = extractJsonArray(rawText)
+    if (extracted) {
+      options = parseCandidateOptions(extracted)
+    }
+  }
+
+  if (!options || options.length !== 3) {
+    throw new Error('Не удалось распарсить ровно 3 auto-candidate варианта из unfold.')
+  }
+
+  const deduped = dedupeCandidateOptions(options)
+
+  if (deduped.length === 0) {
+    throw new Error('Автогенерация unfold не дала пригодных кандидатов.')
+  }
+
+  return deduped.slice(0, 3)
 }
 
 async function saveUnfoldEvent(params: {
@@ -342,6 +664,83 @@ async function saveUnfoldEvent(params: {
   return { ok: true, id: data.id as string }
 }
 
+async function saveAutoGeneratedCandidates(params: {
+  eventId: string
+  reference: string
+  sourceMode: SourceMode
+  sourceAngleNote?: unknown
+  options: CandidateOption[]
+}): Promise<{ insertedCount: number }> {
+  const parsedRef = parseReference(params.reference)
+
+  if (!parsedRef) {
+    throw new Error('Could not parse reference for auto-candidate intake.')
+  }
+
+  const supabase = getSupabaseServerClient()
+
+  const { data: existingRows, error: existingError } = await supabase
+    .schema('private')
+    .from('generated_candidates')
+    .select('title_ru, text_ru')
+    .eq('book', parsedRef.book)
+    .eq('chapter', parsedRef.chapter)
+    .eq('verse', parsedRef.verse)
+    .neq('candidate_status', 'trashed')
+
+  if (existingError) {
+    throw new Error(`Failed to load existing candidates: ${existingError.message}`)
+  }
+
+  const existingKeys = new Set(
+    (existingRows ?? [])
+      .map((row) => {
+        const title = String(row.title_ru ?? '').trim()
+        const text = String(row.text_ru ?? '').trim()
+        return title && text ? buildCandidateSignature(title, text) : null
+      })
+      .filter(Boolean) as string[]
+  )
+
+  const angleNoteBase =
+    typeof params.sourceAngleNote === 'string' && params.sourceAngleNote.trim()
+      ? params.sourceAngleNote.trim()
+      : 'Auto-derived from unfold'
+
+  const freshItems = params.options.filter((item) => {
+    const key = buildCandidateSignature(item.title, item.text)
+    return !existingKeys.has(key)
+  })
+
+  if (!freshItems.length) {
+    return { insertedCount: 0 }
+  }
+
+  const insertPayload = freshItems.map((item) => ({
+    verse_ref: parsedRef.verse_ref,
+    book: parsedRef.book,
+    chapter: parsedRef.chapter,
+    verse: parsedRef.verse,
+    source_type: 'unfold_derived',
+    candidate_status: 'new',
+    title_ru: item.title,
+    text_ru: item.text,
+    angle_note: `${angleNoteBase}`.slice(0, 500),
+    review_note: `Auto-derived from unfold ${params.eventId}`,
+  }))
+
+  const { error: insertError } = await supabase
+    .schema('private')
+    .from('generated_candidates')
+    .insert(insertPayload)
+
+  if (insertError) {
+    throw new Error(`Failed to save unfold-derived candidates: ${insertError.message}`)
+  }
+
+  return { insertedCount: insertPayload.length }
+}
+
 export async function POST(req: Request) {
   try {
     const {
@@ -374,6 +773,8 @@ export async function POST(req: Request) {
       targetLanguage === 'de'
         ? targetLanguage
         : 'en'
+
+    const normalizedSourceMode = normalizeSourceMode(sourceMode)
 
     const prompt = buildPrompt(
       safeReference,
@@ -437,11 +838,43 @@ export async function POST(req: Request) {
       article,
     })
 
+    let autoCandidatesInserted = 0
+    let autoCandidatesError: string | null = null
+
+    if (saveResult.ok) {
+      try {
+        const autoOptions = await generateAutoCandidatesFromUnfold({
+          reference: safeReference,
+          sourceMode: normalizedSourceMode,
+          sourceTitle: safeInsightTitle,
+          sourceText: safeInsightText,
+          article,
+        })
+
+        const autoSave = await saveAutoGeneratedCandidates({
+          eventId: saveResult.id,
+          reference: safeReference,
+          sourceMode: normalizedSourceMode,
+          sourceAngleNote,
+          options: autoOptions,
+        })
+
+        autoCandidatesInserted = autoSave.insertedCount
+      } catch (error) {
+        autoCandidatesError =
+          error instanceof Error
+            ? error.message
+            : 'Failed to auto-create unfold-derived candidates.'
+      }
+    }
+
     return NextResponse.json({
       article,
       eventSaved: saveResult.ok,
       eventId: saveResult.ok ? saveResult.id : null,
       eventError: saveResult.ok ? null : saveResult.error,
+      autoCandidatesInserted,
+      autoCandidatesError,
     })
   } catch (error) {
     console.error('Unfold article API error:', error)
