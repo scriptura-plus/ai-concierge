@@ -77,6 +77,10 @@ function textOnlyKey(text: string) {
   return normalizeLoose(text)
 }
 
+function sideKey(beforeText: string, afterText: string) {
+  return `${normalizeLoose(beforeText)}|||${normalizeLoose(afterText)}`
+}
+
 function looksChurchyOrTheological(text: string) {
   const sample = text.toLowerCase()
 
@@ -117,6 +121,14 @@ function looksChurchyOrTheological(text: string) {
   ]
 
   return banned.some((word) => sample.includes(word))
+}
+
+function sacredPassageTooLarge(sacredPassage: string) {
+  const clean = sacredPassage.replace(/\s+/g, ' ').trim()
+  const sentenceCount = countSentences(clean)
+  const charCount = clean.length
+
+  return sentenceCount > 2 || charCount > 260
 }
 
 function hasEnoughExpansion(params: {
@@ -170,6 +182,7 @@ function dedupeAndValidateOptions(params: {
 }) {
   const unique: FinalOption[] = []
   const seenBody = new Set<string>()
+  const seenSides = new Set<string>()
 
   for (const option of params.options) {
     const finalText = assembleCardText(option.before_text, params.sacredPassage, option.after_text)
@@ -191,9 +204,13 @@ function dedupeAndValidateOptions(params: {
     if (looksChurchyOrTheological(`${option.title} ${finalText}`)) continue
 
     const bodyKey = textOnlyKey(finalText)
+    const framingKey = sideKey(option.before_text, option.after_text)
 
     if (seenBody.has(bodyKey)) continue
+    if (seenSides.has(framingKey)) continue
+
     seenBody.add(bodyKey)
+    seenSides.add(framingKey)
 
     unique.push({
       title: option.title,
@@ -216,11 +233,13 @@ function buildPrompt(params: {
 Generate 3 NEW options that are noticeably different from a previous batch.
 They must differ not only in title, but in the actual development of the same core idea.
 Do not return the same card body under different titles.
+Do not return the same before_text/after_text logic under different titles.
 `
       : `
 Generate 3 strong initial options.
 They must already feel save-worthy, not rough notes.
 Do not return 3 copies of the same card with renamed headings.
+Do not return the same before_text/after_text logic under different titles.
 `
 
   return `
@@ -284,6 +303,7 @@ VERY IMPORTANT DIVERSITY RULE:
 The 3 final cards must be materially different from each other.
 Different title alone is NOT enough.
 If two options would produce almost the same final card text, rewrite one of them.
+If two options use almost the same framing logic, rewrite one of them.
 Do not return duplicate bodies with renamed headings.
 
 ANTI-THEOLOGY / ANTI-CHURCH FILTER:
@@ -459,6 +479,16 @@ export async function POST(req: Request) {
     if (!reference || !verseText || !sacredPassage) {
       return NextResponse.json(
         { error: 'reference, verseText, and sacredPassage are required.' },
+        { status: 400 }
+      )
+    }
+
+    if (sacredPassageTooLarge(sacredPassage)) {
+      return NextResponse.json(
+        {
+          error:
+            'Слишком большой фрагмент для точной огранки. Оставь 1–2 ключевых предложения или более короткое ядро мысли.',
+        },
         { status: 400 }
       )
     }
