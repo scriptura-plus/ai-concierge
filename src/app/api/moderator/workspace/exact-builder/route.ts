@@ -60,6 +60,139 @@ function assembleCardText(beforeText: string, sacredPassage: string, afterText: 
   return parts.join(' ')
 }
 
+function countSentences(text: string) {
+  const matches = text.match(/[.!?…]+/g)
+  return matches ? matches.length : 1
+}
+
+function normalizeKey(value: string) {
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/[«»"“”]/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function similarityKey(title: string, text: string) {
+  return `${normalizeKey(title)}|||${normalizeKey(text)}`
+}
+
+function looksChurchyOrTheological(text: string) {
+  const sample = text.toLowerCase()
+
+  const banned = [
+    'богослов',
+    'доктрин',
+    'догмат',
+    'троиц',
+    'триедин',
+    'ипостас',
+    'благодат',
+    'священн',
+    'церков',
+    'конфессион',
+    'православ',
+    'католич',
+    'протестант',
+    'евангел',
+    'стих учит',
+    'этот стих учит',
+    'доказывает',
+    'божествен',
+    'истина о',
+    'явлен',
+    'открывает истину',
+    'богословие',
+    'теология',
+    'theology',
+    'doctrine',
+    'dogma',
+    'trinity',
+    'triune',
+    'hypostasis',
+    'grace',
+    'divine truth',
+    'the verse teaches',
+    'this proves',
+  ]
+
+  return banned.some((word) => sample.includes(word))
+}
+
+function hasEnoughExpansion(params: {
+  sacredPassage: string
+  beforeText: string
+  afterText: string
+  finalText: string
+}) {
+  const before = params.beforeText.trim()
+  const after = params.afterText.trim()
+  const finalText = params.finalText.trim()
+  const sacred = params.sacredPassage.trim()
+
+  const nonSacredLength =
+    before.replace(/\s+/g, ' ').trim().length + after.replace(/\s+/g, ' ').trim().length
+
+  const finalNormalized = normalizeForCompare(finalText)
+  const sacredNormalized = normalizeForCompare(sacred)
+
+  if (finalNormalized === sacredNormalized) return false
+  if (nonSacredLength < 140) return false
+
+  const sentenceCount = countSentences(finalText)
+  if (sentenceCount < 4 || sentenceCount > 7) return false
+
+  const beforeSentences = countSentences(before)
+  const afterSentences = countSentences(after)
+
+  if (before && beforeSentences < 1) return false
+  if (after && afterSentences < 2) return false
+
+  return true
+}
+
+function isDistinctEnoughFromSacred(sacredPassage: string, finalText: string) {
+  const sacredLen = sacredPassage.replace(/\s+/g, ' ').trim().length
+  const finalLen = finalText.replace(/\s+/g, ' ').trim().length
+
+  if (finalLen <= sacredLen + 60) return false
+
+  return true
+}
+
+function dedupeAndValidateOptions(params: {
+  sacredPassage: string
+  options: RawFrameOption[]
+}) {
+  const unique: FinalOption[] = []
+  const seen = new Set<string>()
+
+  for (const option of params.options) {
+    const finalText = assembleCardText(option.before_text, params.sacredPassage, option.after_text)
+
+    if (!containsVerbatimSacredPassage(params.sacredPassage, finalText)) continue
+    if (!hasEnoughExpansion({
+      sacredPassage: params.sacredPassage,
+      beforeText: option.before_text,
+      afterText: option.after_text,
+      finalText,
+    })) continue
+    if (!isDistinctEnoughFromSacred(params.sacredPassage, finalText)) continue
+    if (looksChurchyOrTheological(`${option.title} ${finalText}`)) continue
+
+    const key = similarityKey(option.title, finalText)
+    if (seen.has(key)) continue
+    seen.add(key)
+
+    unique.push({
+      title: option.title,
+      text: finalText,
+    })
+  }
+
+  return unique
+}
+
 function buildPrompt(params: {
   reference: string
   verseText: string
@@ -68,11 +201,17 @@ function buildPrompt(params: {
 }) {
   const variationInstruction =
     params.mode === 'more'
-      ? 'Generate 3 NEW options that are noticeably different in packaging from a previous batch.'
-      : 'Generate 3 strong initial options.'
+      ? `
+Generate 3 NEW options that are noticeably different from a previous batch.
+They must differ not only in title, but in the way the same core idea is developed.
+`
+      : `
+Generate 3 strong initial options.
+They must already feel save-worthy, not rough notes.
+`
 
   return `
-You are an elite editor of short Russian Bible insight cards.
+You are an elite editor of short Russian Bible insight cards for Scriptura+.
 
 REFERENCE:
 ${params.reference}
@@ -84,19 +223,90 @@ SACRED PASSAGE:
 ${params.sacredPassage}
 
 TASK:
-Generate framing text around the sacred passage for 3 short Russian insight cards.
+Generate 3 strong Russian insight-card options around the sacred passage.
 
-IMPORTANT:
-You must NOT rewrite the sacred passage.
-You must NOT include the sacred passage inside before_text or after_text.
-The sacred passage will be inserted later by the server exactly as given.
+CRITICAL CORE RULE:
+The sacred passage is untouchable and must remain exactly as given.
+It will be inserted later by the server word-for-word.
+You must NOT rewrite it.
+You must NOT paraphrase it.
+You must NOT include it inside before_text or after_text.
 
 You are only generating:
-- a short title
-- before_text: 1-2 Russian sentences before the sacred passage
-- after_text: 1-3 Russian sentences after the sacred passage
+- a short strong Russian title
+- before_text: analytical framing before the sacred passage
+- after_text: analytical continuation after the sacred passage
 
-${variationInstruction}
+BUT VERY IMPORTANT:
+These are not cosmetic wrappers.
+Each option must feel like a real, complete, save-worthy card.
+The sacred passage is only the core.
+You must build real thought around it.
+
+EXPANSION REQUIREMENT:
+- before_text must add meaningful framing, not filler
+- after_text must continue and deepen the thought
+- the final assembled card must contain at least 4 sentences in total once the sacred passage is inserted
+- the final card must feel developed, not like the sacred passage plus one weak sentence
+- do NOT produce a card that is basically the sacred passage repeated under a new title
+
+SAME ANGLE, DIFFERENT PACKAGING:
+All 3 options must preserve the same central insight.
+Do not change the angle.
+Do not go into neighboring ideas.
+But do package the same insight differently:
+- one option may stress the rhetorical force
+- another the conceptual consequence
+- another the structural pressure of the wording
+All 3 must still belong to the same thought-center.
+
+ANTI-THEOLOGY / ANTI-CHURCH FILTER:
+This product must sound like a modern analytical AI reading tool for people from many religions and backgrounds.
+Therefore:
+- do not use church language
+- do not use confessional language
+- do not use sermon language
+- do not use devotional language
+- do not use doctrinal or theological jargon
+- do not make dogmatic claims
+- do not turn the wording into a creed
+- do not sound like a preacher, priest, commentator, apologist, or catechist
+
+FORBIDDEN VOCABULARY / TONE:
+Avoid words and phrases equivalent to:
+- богословие
+- доктрина
+- догмат
+- троица
+- триединый
+- ипостась
+- благодать in church-jargon tone
+- священная тайна
+- стих учит
+- это доказывает
+- явлено здесь
+- divine truth
+- theology
+- doctrine
+- dogma
+- trinity
+- triune
+- hypostasis
+- the verse teaches
+- this proves
+
+LANGUAGE STANDARD:
+Write in modern, neutral, analytical Russian.
+The tone must be:
+- clear
+- precise
+- contemporary
+- intellectually serious
+- compact but rich
+- non-preachy
+- non-churchy
+- non-academic-jargon-heavy
+- elegant without sounding theatrical
 
 QUALITY GOAL:
 Each option should feel like a ready short comment card:
@@ -104,10 +314,24 @@ Each option should feel like a ready short comment card:
 - clear
 - elegant
 - thoughtful
-- suitable for a strong meeting comment
-- not preachy
+- save-worthy
+- analytically honest
+- based on the wording of the verse
 - not bloated
-- each option should package the same insight differently
+- not generic
+- not moralizing
+
+STRUCTURAL GOAL:
+The final assembled card should read like:
+- strong framing
+- sacred core
+- meaningful continuation
+not like:
+- title
+- same inserted text
+- nothing else
+
+${variationInstruction}
 
 OUTPUT RULES:
 - Return ONLY valid JSON
@@ -116,9 +340,9 @@ OUTPUT RULES:
 - No commentary outside JSON
 - Output must be a JSON array of exactly 3 objects
 - Each object must have:
-  - "title": short Russian title
-  - "before_text": brief framing text before the sacred passage
-  - "after_text": brief continuation after the sacred passage
+  - "title": short strong Russian title
+  - "before_text": 1-2 strong Russian sentences before the sacred passage
+  - "after_text": 2-4 strong Russian sentences after the sacred passage
 - Do not include the sacred passage itself in either field
 
 FORMAT:
@@ -143,7 +367,7 @@ async function generateOptions(params: {
   const result = await runModel({
     prompt,
     model: 'gpt-5.4-mini',
-    maxOutputTokens: 2200,
+    maxOutputTokens: 2600,
   })
 
   if (!result.ok) {
@@ -174,19 +398,15 @@ async function generateOptions(params: {
     }
   }
 
-  const finalOptions: FinalOption[] = rawOptions.map((option) => ({
-    title: option.title,
-    text: assembleCardText(option.before_text, params.sacredPassage, option.after_text),
-  }))
-
-  const strictOptions = finalOptions.filter((option) =>
-    containsVerbatimSacredPassage(params.sacredPassage, option.text)
-  )
+  const strictOptions = dedupeAndValidateOptions({
+    sacredPassage: params.sacredPassage,
+    options: rawOptions,
+  })
 
   if (strictOptions.length === 0) {
     return {
       ok: false as const,
-      error: 'Model did not produce valid framing around the sacred passage.',
+      error: 'Model did not produce valid developed framing around the sacred passage.',
       raw: rawText || '',
       options: null,
     }
@@ -237,10 +457,10 @@ export async function POST(req: Request) {
     if (retryPass.ok && retryPass.options && retryPass.options.length > 0) {
       const merged = [...(firstPass.options ?? []), ...retryPass.options]
       const unique: FinalOption[] = []
-      const seen = new Set()
+      const seen = new Set<string>()
 
       for (const option of merged) {
-        const key = `${option.title}|||${option.text}`
+        const key = similarityKey(option.title, option.text)
         if (seen.has(key)) continue
         seen.add(key)
         unique.push(option)
