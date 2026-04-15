@@ -60,8 +60,10 @@ type PrefillPayload = {
 
 type RepairSourceType = 'candidate' | 'featured_insight' | 'reserve_insight' | ''
 
-function normalizeBookForDb(bookSlug: string) {
-  return bookSlug.replace(/-/g, ' ').trim().toLowerCase()
+function getBookVariants(bookSlug: string) {
+  const slug = bookSlug.trim().toLowerCase()
+  const spaced = slug.replace(/-/g, ' ').trim()
+  return Array.from(new Set([slug, spaced]))
 }
 
 function formatBookLabel(bookSlug: string) {
@@ -82,6 +84,7 @@ function formatReference(book: string, chapter: string, verse: string) {
 function formatDate(value: string) {
   try {
     return new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'America/New_York',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -184,7 +187,7 @@ RULES:
   return translated || clean
 }
 
-async function loadCandidates(book: string, chapter: number, verse: number) {
+async function loadCandidates(bookVariants: string[], chapter: number, verse: number) {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
@@ -193,7 +196,7 @@ async function loadCandidates(book: string, chapter: number, verse: number) {
     .select(
       'id, verse_ref, book, chapter, verse, candidate_status, source_type, title_ru, text_ru, angle_note, review_note, updated_at, created_at'
     )
-    .eq('book', book)
+    .in('book', bookVariants)
     .eq('chapter', chapter)
     .eq('verse', verse)
     .neq('candidate_status', 'trashed')
@@ -206,14 +209,14 @@ async function loadCandidates(book: string, chapter: number, verse: number) {
   return (data ?? []) as CandidateRow[]
 }
 
-async function loadSavedInsights(book: string, chapter: number, verse: number) {
+async function loadSavedInsights(bookVariants: string[], chapter: number, verse: number) {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
     .schema('private')
     .from('curated_insights')
     .select('id, title_ru, text_ru, title_en, text_en, created_at, bucket, display_order')
-    .eq('book', book)
+    .in('book', bookVariants)
     .eq('chapter', chapter)
     .eq('verse', verse)
     .eq('status', 'saved')
@@ -292,7 +295,7 @@ export default async function ModeratorVerseReviewPage({
   const resolved = await params
   const resolvedSearchParams = searchParams ? await searchParams : undefined
 
-  const dbBook = normalizeBookForDb(resolved.book)
+  const bookVariants = getBookVariants(resolved.book)
   const chapter = Number(resolved.chapter)
   const verse = Number(resolved.verse)
 
@@ -308,8 +311,8 @@ export default async function ModeratorVerseReviewPage({
   try {
     const [rawVerse, candidateRows, savedRows] = await Promise.all([
       getVerseText(resolved.book, chapter, verse),
-      loadCandidates(dbBook, chapter, verse),
-      loadSavedInsights(dbBook, chapter, verse),
+      loadCandidates(bookVariants, chapter, verse),
+      loadSavedInsights(bookVariants, chapter, verse),
     ])
 
     verseText = await ensureRussianVerseText(reference, rawVerse ?? '')
