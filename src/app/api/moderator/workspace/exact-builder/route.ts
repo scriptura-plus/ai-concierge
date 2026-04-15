@@ -49,6 +49,14 @@ function normalizeForCompare(value: string) {
   return value.replace(/\s+/g, ' ').trim()
 }
 
+function normalizeLoose(value: string) {
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/[«»"“”]/g, '')
+    .trim()
+    .toLowerCase()
+}
+
 function containsVerbatimSacredPassage(sacredPassage: string, candidateText: string) {
   const normalizedSacred = normalizeForCompare(sacredPassage)
   const normalizedCandidate = normalizeForCompare(candidateText)
@@ -65,16 +73,8 @@ function countSentences(text: string) {
   return matches ? matches.length : 1
 }
 
-function normalizeKey(value: string) {
-  return value
-    .replace(/\s+/g, ' ')
-    .replace(/[«»"“”]/g, '')
-    .trim()
-    .toLowerCase()
-}
-
-function similarityKey(title: string, text: string) {
-  return `${normalizeKey(title)}|||${normalizeKey(text)}`
+function textOnlyKey(text: string) {
+  return normalizeLoose(text)
 }
 
 function looksChurchyOrTheological(text: string) {
@@ -97,10 +97,11 @@ function looksChurchyOrTheological(text: string) {
     'евангел',
     'стих учит',
     'этот стих учит',
-    'доказывает',
+    'это доказывает',
+    'доказывает, что',
     'божествен',
     'истина о',
-    'явлен',
+    'явлено',
     'открывает истину',
     'богословие',
     'теология',
@@ -110,7 +111,6 @@ function looksChurchyOrTheological(text: string) {
     'trinity',
     'triune',
     'hypostasis',
-    'grace',
     'divine truth',
     'the verse teaches',
     'this proves',
@@ -130,14 +130,19 @@ function hasEnoughExpansion(params: {
   const finalText = params.finalText.trim()
   const sacred = params.sacredPassage.trim()
 
-  const nonSacredLength =
-    before.replace(/\s+/g, ' ').trim().length + after.replace(/\s+/g, ' ').trim().length
+  const beforeLength = before.replace(/\s+/g, ' ').trim().length
+  const afterLength = after.replace(/\s+/g, ' ').trim().length
+  const nonSacredLength = beforeLength + afterLength
 
   const finalNormalized = normalizeForCompare(finalText)
   const sacredNormalized = normalizeForCompare(sacred)
 
+  if (!before) return false
+  if (!after) return false
   if (finalNormalized === sacredNormalized) return false
-  if (nonSacredLength < 140) return false
+  if (beforeLength < 45) return false
+  if (afterLength < 90) return false
+  if (nonSacredLength < 170) return false
 
   const sentenceCount = countSentences(finalText)
   if (sentenceCount < 4 || sentenceCount > 7) return false
@@ -145,8 +150,8 @@ function hasEnoughExpansion(params: {
   const beforeSentences = countSentences(before)
   const afterSentences = countSentences(after)
 
-  if (before && beforeSentences < 1) return false
-  if (after && afterSentences < 2) return false
+  if (beforeSentences < 1) return false
+  if (afterSentences < 2) return false
 
   return true
 }
@@ -155,8 +160,7 @@ function isDistinctEnoughFromSacred(sacredPassage: string, finalText: string) {
   const sacredLen = sacredPassage.replace(/\s+/g, ' ').trim().length
   const finalLen = finalText.replace(/\s+/g, ' ').trim().length
 
-  if (finalLen <= sacredLen + 60) return false
-
+  if (finalLen <= sacredLen + 100) return false
   return true
 }
 
@@ -165,24 +169,31 @@ function dedupeAndValidateOptions(params: {
   options: RawFrameOption[]
 }) {
   const unique: FinalOption[] = []
-  const seen = new Set<string>()
+  const seenBody = new Set<string>()
 
   for (const option of params.options) {
     const finalText = assembleCardText(option.before_text, params.sacredPassage, option.after_text)
 
     if (!containsVerbatimSacredPassage(params.sacredPassage, finalText)) continue
-    if (!hasEnoughExpansion({
-      sacredPassage: params.sacredPassage,
-      beforeText: option.before_text,
-      afterText: option.after_text,
-      finalText,
-    })) continue
+
+    if (
+      !hasEnoughExpansion({
+        sacredPassage: params.sacredPassage,
+        beforeText: option.before_text,
+        afterText: option.after_text,
+        finalText,
+      })
+    ) {
+      continue
+    }
+
     if (!isDistinctEnoughFromSacred(params.sacredPassage, finalText)) continue
     if (looksChurchyOrTheological(`${option.title} ${finalText}`)) continue
 
-    const key = similarityKey(option.title, finalText)
-    if (seen.has(key)) continue
-    seen.add(key)
+    const bodyKey = textOnlyKey(finalText)
+
+    if (seenBody.has(bodyKey)) continue
+    seenBody.add(bodyKey)
 
     unique.push({
       title: option.title,
@@ -203,11 +214,13 @@ function buildPrompt(params: {
     params.mode === 'more'
       ? `
 Generate 3 NEW options that are noticeably different from a previous batch.
-They must differ not only in title, but in the way the same core idea is developed.
+They must differ not only in title, but in the actual development of the same core idea.
+Do not return the same card body under different titles.
 `
       : `
 Generate 3 strong initial options.
 They must already feel save-worthy, not rough notes.
+Do not return 3 copies of the same card with renamed headings.
 `
 
   return `
@@ -243,10 +256,17 @@ Each option must feel like a real, complete, save-worthy card.
 The sacred passage is only the core.
 You must build real thought around it.
 
+MANDATORY SHAPE OF EACH OPTION:
+- before_text must be present
+- after_text must be present
+- before_text must contain at least 1 strong sentence
+- after_text must contain at least 2 strong sentences
+- the final assembled card must read like one developed card, not a pasted fragment
+
 EXPANSION REQUIREMENT:
 - before_text must add meaningful framing, not filler
 - after_text must continue and deepen the thought
-- the final assembled card must contain at least 4 sentences in total once the sacred passage is inserted
+- the final assembled card must contain 4-7 sentences in total once the sacred passage is inserted
 - the final card must feel developed, not like the sacred passage plus one weak sentence
 - do NOT produce a card that is basically the sacred passage repeated under a new title
 
@@ -259,6 +279,12 @@ But do package the same insight differently:
 - another the conceptual consequence
 - another the structural pressure of the wording
 All 3 must still belong to the same thought-center.
+
+VERY IMPORTANT DIVERSITY RULE:
+The 3 final cards must be materially different from each other.
+Different title alone is NOT enough.
+If two options would produce almost the same final card text, rewrite one of them.
+Do not return duplicate bodies with renamed headings.
 
 ANTI-THEOLOGY / ANTI-CHURCH FILTER:
 This product must sound like a modern analytical AI reading tool for people from many religions and backgrounds.
@@ -403,10 +429,11 @@ async function generateOptions(params: {
     options: rawOptions,
   })
 
-  if (strictOptions.length === 0) {
+  if (strictOptions.length < 3) {
     return {
       ok: false as const,
-      error: 'Model did not produce valid developed framing around the sacred passage.',
+      error:
+        'Model did not produce 3 sufficiently developed and materially different cards around the sacred passage.',
       raw: rawText || '',
       options: null,
     }
@@ -416,7 +443,7 @@ async function generateOptions(params: {
     ok: true as const,
     error: '',
     raw: rawText || '',
-    options: strictOptions,
+    options: strictOptions.slice(0, 3),
   }
 }
 
@@ -454,21 +481,8 @@ export async function POST(req: Request) {
       mode,
     })
 
-    if (retryPass.ok && retryPass.options && retryPass.options.length > 0) {
-      const merged = [...(firstPass.options ?? []), ...retryPass.options]
-      const unique: FinalOption[] = []
-      const seen = new Set<string>()
-
-      for (const option of merged) {
-        const key = similarityKey(option.title, option.text)
-        if (seen.has(key)) continue
-        seen.add(key)
-        unique.push(option)
-      }
-
-      if (unique.length > 0) {
-        return NextResponse.json({ options: unique.slice(0, 3) })
-      }
+    if (retryPass.ok && retryPass.options && retryPass.options.length >= 3) {
+      return NextResponse.json({ options: retryPass.options.slice(0, 3) })
     }
 
     return NextResponse.json(
