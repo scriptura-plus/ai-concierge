@@ -157,6 +157,10 @@ export default async function ModeratorIndexPage() {
               Здесь показаны стихи, по которым уже есть новые карточки на разбор. Открой review,
               сохрани сильное, отклони слабое или доработай почти удачные варианты.
             </p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
+              Для отдельной работы с длинными статьями и извлечения кандидатов из Unfold используй
+              вспомогательный режим ниже.
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -165,6 +169,13 @@ export default async function ModeratorIndexPage() {
               className="rounded-full border border-violet-300 bg-[linear-gradient(180deg,#7c3aed_0%,#6d28d9_100%)] px-4 py-2 text-sm font-medium text-white shadow-[0_12px_24px_rgba(109,40,217,0.22)] transition hover:brightness-[1.03]"
             >
               Открыть стих вручную
+            </Link>
+
+            <Link
+              href="/moderator/unfolds"
+              className="rounded-full border border-violet-200 bg-white/80 px-4 py-2 text-sm font-medium text-violet-800 transition hover:bg-violet-50"
+            >
+              Работа с Unfold
             </Link>
 
             <ModeratorInboxRefreshButton />
