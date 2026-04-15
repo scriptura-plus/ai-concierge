@@ -330,11 +330,7 @@ export default async function ModeratorVerseReviewPage({
 
   const featuredSaved = saved.filter((item) => item.bucket === 'featured')
   const reserveSaved = saved.filter((item) => item.bucket === 'reserve')
-
   const newCandidates = candidates.filter((item) => item.candidate_status === 'new')
-  const extendedCandidates = candidates.filter((item) =>
-    ['extended', 'reserve', 'needs_repair'].includes(item.candidate_status)
-  )
 
   const totalCardsCount = featuredSaved.length + newCandidates.length + reserveSaved.length
 
@@ -445,9 +441,8 @@ export default async function ModeratorVerseReviewPage({
               {reference}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
-              Один рабочий экран по стиху: здесь ты читаешь сохранённые карточки, сортируешь их,
-              просматриваешь новые предложения и при необходимости сразу дорабатываешь мысль ниже на
-              этой же странице.
+              Один рабочий экран по стиху: здесь ты читаешь активные карточки, быстро разбираешь
+              новые предложения и при необходимости сразу спускаешься в ремонтную мастерскую ниже.
             </p>
           </div>
 
@@ -519,15 +514,13 @@ export default async function ModeratorVerseReviewPage({
 
         <section className="mb-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                  Уже утверждено
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                  Active / Saved
-                </h2>
-              </div>
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Активные карточки
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
+                Уже сохранено
+              </h2>
             </div>
 
             {featuredSaved.length === 0 ? (
@@ -599,15 +592,13 @@ export default async function ModeratorVerseReviewPage({
 
         <section className="mb-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                  Новые предложения
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                  К рассмотрению
-                </h2>
-              </div>
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Новые предложения
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
+                К рассмотрению
+              </h2>
             </div>
 
             <NewCandidatesList
@@ -620,15 +611,13 @@ export default async function ModeratorVerseReviewPage({
 
         <section className="mb-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                  Запас
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                  Extended / Reserve
-                </h2>
-              </div>
+            <div className="mb-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Запас
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
+                Резервные карточки
+              </h2>
             </div>
 
             {reserveSaved.length === 0 ? (
