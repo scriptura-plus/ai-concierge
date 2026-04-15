@@ -16,18 +16,175 @@ type RepairPayload = {
 
 function styleInstruction(styleMode: RepairStyle) {
   if (styleMode === 'aphoristic') {
-    return 'Подача чуть более афористичная: формулировки компактнее, острее, запоминаемее, но без потери смысла.'
+    return 'Подача чуть более афористичная: формулировки компактнее, острее и запоминаемее, но без потери точности.'
   }
 
   if (styleMode === 'publicistic') {
-    return 'Подача более публицистическая: ясная, собранная, энергичная, но без крикливости.'
+    return 'Подача более публицистическая: ясная, собранная, энергичная, но без крикливости и без газетного пафоса.'
   }
 
   if (styleMode === 'analytic') {
-    return 'Подача более аналитическая: чуть точнее, интеллектуальнее, логически собраннее.'
+    return 'Подача более аналитическая: чуть точнее, интеллектуальнее, логически собраннее, но всё ещё читаемо и живо.'
   }
 
-  return 'Подача нейтральная: спокойная, чистая, ясная, без перегиба в стиль.'
+  return 'Подача нейтральная: спокойная, чистая, ясная, без стилевого перегиба.'
+}
+
+function normalizeStyleMode(value: unknown): RepairStyle {
+  return value === 'aphoristic' ||
+    value === 'publicistic' ||
+    value === 'analytic'
+    ? value
+    : 'neutral'
+}
+
+function normalizeForCompare(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function normalizeLoose(value: string) {
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/[«»"“”]/g, '')
+    .trim()
+    .toLowerCase()
+}
+
+function extractJsonArray(raw: string): string | null {
+  const start = raw.indexOf('[')
+  const end = raw.lastIndexOf(']')
+
+  if (start === -1 || end === -1 || end <= start) {
+    return null
+  }
+
+  return raw.slice(start, end + 1)
+}
+
+function parseOptions(raw: string): RepairOption[] | null {
+  try {
+    const parsed = JSON.parse(raw)
+
+    if (!Array.isArray(parsed)) return null
+
+    const cleaned = parsed
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => ({
+        title: String(item.title ?? '').trim(),
+        text: String(item.text ?? '').trim(),
+      }))
+      .filter((item) => item.title && item.text)
+
+    return cleaned.length ? cleaned.slice(0, 3) : null
+  } catch {
+    return null
+  }
+}
+
+function countSentences(text: string): number {
+  const matches = text.match(/[.!?…]+/g)
+  return matches ? matches.length : 1
+}
+
+function containsPreservedText(preservedText: string, candidateText: string) {
+  const normalizedPreserved = normalizeForCompare(preservedText)
+  if (!normalizedPreserved) return true
+
+  const normalizedCandidate = normalizeForCompare(candidateText)
+  return normalizedCandidate.includes(normalizedPreserved)
+}
+
+function looksChurchyOrTheological(text: string) {
+  const sample = text.toLowerCase()
+
+  const banned = [
+    'богослов',
+    'богословие',
+    'доктрин',
+    'догмат',
+    'троиц',
+    'триедин',
+    'ипостас',
+    'благодат',
+    'священн',
+    'церков',
+    'конфессион',
+    'православ',
+    'католич',
+    'протестант',
+    'евангел',
+    'стих учит',
+    'этот стих учит',
+    'это доказывает',
+    'доказывает, что',
+    'божествен',
+    'истина о',
+    'явлено',
+    'открывает истину',
+    'теология',
+    'theology',
+    'doctrine',
+    'dogma',
+    'trinity',
+    'triune',
+    'hypostasis',
+    'divine truth',
+    'the verse teaches',
+    'this proves',
+  ]
+
+  return banned.some((word) => sample.includes(word))
+}
+
+function optionsHaveNormalLength(options: RepairOption[]) {
+  return options.every((option) => {
+    const sentences = countSentences(option.text)
+    return sentences >= 4 && sentences <= 6
+  })
+}
+
+function textSimilarityKey(text: string) {
+  return normalizeLoose(text)
+}
+
+function optionPairKey(option: RepairOption) {
+  return `${normalizeLoose(option.title)}|||${normalizeLoose(option.text)}`
+}
+
+function dedupeOptionsByText(options: RepairOption[]) {
+  const unique: RepairOption[] = []
+  const seenText = new Set<string>()
+
+  for (const option of options) {
+    const textKey = textSimilarityKey(option.text)
+    if (seenText.has(textKey)) continue
+    seenText.add(textKey)
+    unique.push(option)
+  }
+
+  return unique
+}
+
+function isTooCloseToOriginal(originalCardText: string, candidateText: string) {
+  const original = normalizeForCompare(originalCardText)
+  const candidate = normalizeForCompare(candidateText)
+
+  if (!original || !candidate) return false
+  if (original === candidate) return true
+
+  const originalLen = original.length
+  const candidateLen = candidate.length
+  const lengthGap = Math.abs(candidateLen - originalLen)
+
+  if (lengthGap <= 20) {
+    const overlap =
+      original.includes(candidate) ||
+      candidate.includes(original)
+
+    if (overlap) return true
+  }
+
+  return false
 }
 
 function buildPrompt(params: {
@@ -39,12 +196,48 @@ function buildPrompt(params: {
   directionText: string
   styleMode: RepairStyle
 }) {
+  const keepBlock = params.keepText
+    ? `
+ЧТО ОБЯЗАТЕЛЬНО СОХРАНИТЬ ДОСЛОВНО:
+${params.keepText}
+
+Если этот блок задан, он должен сохраниться в каждом варианте без смысловой потери.
+Не выбрасывай его.
+Не замени его более общим пересказом.
+`
+    : `
+ЧТО ОБЯЗАТЕЛЬНО СОХРАНИТЬ:
+Специальный фрагмент не задан. Сохрани сильное ядро исходной карточки, но без дословного копирования всей карточки.
+`
+
+  const removeBlock = params.removeText
+    ? `
+ЧТО НУЖНО УБРАТЬ, НЕ ПОВТОРЯТЬ ИЛИ ОСЛАБИТЬ:
+${params.removeText}
+`
+    : `
+ЧТО НУЖНО УБРАТЬ, НЕ ПОВТОРЯТЬ ИЛИ ОСЛАБИТЬ:
+Специальный список не задан, но всё равно убери слабые хвосты, лишние повторения, общие слова и банальные связки.
+`
+
+  const directionBlock = params.directionText
+    ? `
+КУДА ПОВЕСТИ МЫСЛЬ:
+${params.directionText}
+
+Это указание обязательно учитывай. Не игнорируй его.
+`
+    : `
+КУДА ПОВЕСТИ МЫСЛЬ:
+Дополнительное направление не задано. Но всё равно усили мысль, сделай её точнее и законченнее.
+`
+
   return `
-Ты — редактор карточек-инсайтов для Scriptura+.
+Ты — старший редактор карточек-инсайтов для Scriptura+.
 
 ТВОЯ ЗАДАЧА:
 Нужно отремонтировать существующую карточку, а не придумать новый угол.
-Сохраняй тот же смысловой угол, но перепакуй карточку сильнее и чище.
+Сохраняй тот же смысловой угол, но перепакуй карточку сильнее, глубже и чище.
 
 ССЫЛКА:
 ${params.reference}
@@ -55,30 +248,95 @@ ${params.verseText}
 ИСХОДНАЯ КАРТОЧКА:
 ${params.originalCardText}
 
-ЧТО ОБЯЗАТЕЛЬНО СОХРАНИТЬ:
-${params.keepText || 'Ничего не задано'}
+${keepBlock}
 
-ЧТО НУЖНО УБРАТЬ ИЛИ НЕ ПОВТОРЯТЬ:
-${params.removeText || 'Ничего не задано'}
+${removeBlock}
 
-КУДА ПОВЕСТИ МЫСЛЬ:
-${params.directionText || 'Ничего не задано'}
+${directionBlock}
 
 СТИЛЬ:
 ${styleInstruction(params.styleMode)}
 
+ГЛАВНЫЙ ПРИНЦИП:
+Это не новый инсайт рядом.
+Это не соседняя мысль.
+Это не свободное вдохновение.
+Это улучшенная версия той же карточки:
+- точнее
+- плотнее
+- яснее
+- сильнее по формулировке
+- глубже по движению мысли
+
 КРИТИЧЕСКИЕ ПРАВИЛА:
-- Это тот же угол мысли, а не новый.
-- Если блок "Что оставить" задан, сохрани его в каждом варианте.
+- Сохраняй тот же угол мысли, а не уводи в другой.
+- Не делай вид, что просто переписал карточку другими словами.
+- Реально отремонтируй её.
+- Если блок «Что оставить» задан, сохрани его в каждом варианте.
 - Не уходи в соседнюю идею.
 - Не делай текст проповедническим.
 - Не делай текст пустым или банальным.
+- Не делай текст церковным.
+- Не делай текст конфессиональным.
+- Не делай текст богословским.
+- Не используй церковно-богословский словарь.
+- Не используй язык, который звучит как комментарий священнослужителя.
+- Не навязывай доктринальный вывод.
 - Карточка должна быть finished insight, а не наброском.
 - Заголовок должен быть коротким и сильным.
 - Сам текст должен быть плотным, ясным и цельным.
 - Нормальный размер: примерно 4–5 предложений.
 - Если указано, что что-то нужно убрать, не повторяй это.
 - Если указано направление, реально поведи мысль туда.
+
+ANTI-THEOLOGY / ANTI-CHURCH FILTER:
+Приложением будут пользоваться люди разных религий, конфессий и мировоззрений.
+Поэтому язык должен быть современным, нейтральным и аналитическим.
+
+ЗАПРЕЩЕНО:
+- богословие
+- доктрина
+- догмат
+- троица
+- триединый
+- ипостась
+- благодать в церковном тоне
+- священная тайна
+- стих учит
+- это доказывает
+- божественная истина
+- церковные формулы
+- конфессиональные выводы
+- проповеднический тон
+- devotional / sermon / church language
+
+РАЗРЕШЁННЫЙ ЯЗЫК:
+- современный
+- нейтральный
+- аналитический
+- точный
+- насыщенный
+- читаемый
+- без церковной окраски
+- без богословского жаргона
+
+ДОПОЛНИТЕЛЬНОЕ ТРЕБОВАНИЕ К 3 ВАРИАНТАМ:
+Все 3 варианта должны сохранять тот же угол, но реально различаться по упаковке.
+Нельзя выдавать один и тот же текст под тремя разными заголовками.
+Нельзя выдавать почти одинаковые версии с косметической правкой.
+Каждый вариант должен по-разному развивать ту же мысль:
+- один может сделать акцент на формулировке
+- другой на смысловом следствии
+- третий на том, что это меняет в чтении стиха
+Но это всё ещё должен быть тот же угол.
+
+ТРЕБОВАНИЕ К КАЧЕСТВУ:
+- Вариант должен быть достаточно хорошим, чтобы модератор захотел его сохранить.
+- Избегай рыхлости.
+- Избегай повтора одной и той же мысли разными словами.
+- Избегай безопасной bland-прозы в стиле ChatGPT.
+- Избегай газетного шума и напыщенности.
+- Каждая карточка должна звучать как finished insight, а не как черновик.
 
 ВЫВОД:
 - Верни только валидный JSON
@@ -104,55 +362,120 @@ ${styleInstruction(params.styleMode)}
 `.trim()
 }
 
-function parseOptions(raw: string): RepairOption[] | null {
-  try {
-    const parsed = JSON.parse(raw)
+function validateOptions(params: {
+  options: RepairOption[]
+  originalCardText: string
+  keepText: string
+}) {
+  const dedupedByText = dedupeOptionsByText(params.options)
 
-    if (!Array.isArray(parsed)) return null
+  if (dedupedByText.length < 3) {
+    return {
+      ok: false as const,
+      error: 'Модель вернула одинаковые или почти одинаковые варианты ремонта.',
+    }
+  }
 
-    const cleaned = parsed
-      .filter((item) => item && typeof item === 'object')
-      .map((item) => ({
-        title: String(item.title ?? '').trim(),
-        text: String(item.text ?? '').trim(),
-      }))
-      .filter((item) => item.title && item.text)
+  if (!optionsHaveNormalLength(dedupedByText)) {
+    return {
+      ok: false as const,
+      error: 'Модель вернула слишком короткие или слишком длинные варианты.',
+    }
+  }
 
-    return cleaned.length ? cleaned.slice(0, 3) : null
-  } catch {
-    return null
+  for (const option of dedupedByText) {
+    if (looksChurchyOrTheological(`${option.title} ${option.text}`)) {
+      return {
+        ok: false as const,
+        error: 'Модель вернула вариант с богословским или церковным языком.',
+      }
+    }
+
+    if (params.keepText && !containsPreservedText(params.keepText, option.text)) {
+      return {
+        ok: false as const,
+        error: 'Модель не сохранила указанный фрагмент.',
+      }
+    }
+
+    if (isTooCloseToOriginal(params.originalCardText, option.text)) {
+      return {
+        ok: false as const,
+        error: 'Модель почти не отремонтировала карточку и вернула слишком близкий к исходному текст.',
+      }
+    }
+  }
+
+  return {
+    ok: true as const,
+    options: dedupedByText.slice(0, 3),
   }
 }
 
-function extractJsonArray(raw: string): string | null {
-  const start = raw.indexOf('[')
-  const end = raw.lastIndexOf(']')
+async function generateRepairOptions(params: {
+  reference: string
+  verseText: string
+  originalCardText: string
+  keepText: string
+  removeText: string
+  directionText: string
+  styleMode: RepairStyle
+}) {
+  const prompt = buildPrompt(params)
 
-  if (start === -1 || end === -1 || end <= start) {
-    return null
-  }
-
-  return raw.slice(start, end + 1)
-}
-
-function normalizeStyleMode(value: unknown): RepairStyle {
-  return value === 'aphoristic' ||
-    value === 'publicistic' ||
-    value === 'analytic'
-    ? value
-    : 'neutral'
-}
-
-function countSentences(text: string): number {
-  const matches = text.match(/[.!?…]+/g)
-  return matches ? matches.length : 1
-}
-
-function optionsHaveNormalLength(options: RepairOption[]) {
-  return options.every((option) => {
-    const sentences = countSentences(option.text)
-    return sentences >= 3 && sentences <= 6
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 2600,
   })
+
+  if (!result.ok) {
+    return {
+      ok: false as const,
+      error: result.error || 'Failed to generate repaired card options.',
+      raw: result.rawText || result.raw || '',
+      options: null,
+    }
+  }
+
+  let options = parseOptions(result.rawText)
+
+  if (!options) {
+    const extracted = extractJsonArray(result.rawText)
+    if (extracted) {
+      options = parseOptions(extracted)
+    }
+  }
+
+  if (!options || options.length !== 3) {
+    return {
+      ok: false as const,
+      error: 'Не удалось распарсить ровно 3 варианта ремонта.',
+      raw: result.rawText || '',
+      options: null,
+    }
+  }
+
+  const validated = validateOptions({
+    options,
+    originalCardText: params.originalCardText,
+    keepText: params.keepText,
+  })
+
+  if (!validated.ok) {
+    return {
+      ok: false as const,
+      error: validated.error,
+      raw: result.rawText || '',
+      options: null,
+    }
+  }
+
+  return {
+    ok: true as const,
+    options: validated.options,
+    raw: result.rawText || '',
+  }
 }
 
 export async function POST(req: Request) {
@@ -179,13 +502,13 @@ export async function POST(req: Request) {
     if (!keepText && !removeText && !directionText) {
       return NextResponse.json(
         {
-          error: 'At least one of keepText, removeText, or directionText is required.',
+          error: 'Нужно указать хотя бы что оставить, что убрать или куда повести мысль.',
         } satisfies RepairPayload,
         { status: 400 }
       )
     }
 
-    const prompt = buildPrompt({
+    const firstPass = await generateRepairOptions({
       reference,
       verseText,
       originalCardText,
@@ -195,54 +518,36 @@ export async function POST(req: Request) {
       styleMode,
     })
 
-    const result = await runModel({
-      prompt,
-      model: 'gpt-5.4-mini',
-      maxOutputTokens: 2200,
+    if (firstPass.ok && firstPass.options && firstPass.options.length === 3) {
+      return NextResponse.json({
+        options: firstPass.options,
+      } satisfies RepairPayload)
+    }
+
+    const retryPass = await generateRepairOptions({
+      reference,
+      verseText,
+      originalCardText,
+      keepText,
+      removeText,
+      directionText,
+      styleMode,
     })
 
-    if (!result.ok) {
-      return NextResponse.json(
-        {
-          error: result.error || 'Failed to generate repaired card options.',
-          raw: result.rawText || result.raw || '',
-        } satisfies RepairPayload,
-        { status: 500 }
-      )
+    if (retryPass.ok && retryPass.options && retryPass.options.length === 3) {
+      return NextResponse.json({
+        options: retryPass.options,
+      } satisfies RepairPayload)
     }
 
-    let options = parseOptions(result.rawText)
-
-    if (!options) {
-      const extracted = extractJsonArray(result.rawText)
-      if (extracted) {
-        options = parseOptions(extracted)
-      }
-    }
-
-    if (!options || options.length !== 3) {
-      return NextResponse.json(
-        {
-          error: 'Не удалось распарсить ровно 3 варианта ремонта.',
-          raw: result.rawText || '',
-        } satisfies RepairPayload,
-        { status: 500 }
-      )
-    }
-
-    if (!optionsHaveNormalLength(options)) {
-      return NextResponse.json(
-        {
-          error: 'Модель вернула слишком короткие или слишком длинные варианты.',
-          raw: result.rawText || '',
-        } satisfies RepairPayload,
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json({
-      options,
-    } satisfies RepairPayload)
+    return NextResponse.json(
+      {
+        error:
+          retryPass.error || firstPass.error || 'Не удалось сгенерировать варианты ремонта.',
+        raw: retryPass.raw || firstPass.raw || '',
+      } satisfies RepairPayload,
+      { status: 500 }
+    )
   } catch (error) {
     console.error('Repair builder API error:', error)
 
