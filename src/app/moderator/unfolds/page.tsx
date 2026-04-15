@@ -9,9 +9,13 @@ export const fetchCache = 'force-no-store'
 type UnfoldRow = {
   id: string
   verse_ref: string
+  book: string
+  chapter: number
+  verse: number
   source_mode: 'insights' | 'word' | 'tension' | 'why_this_phrase'
   source_title: string
   source_text: string
+  unfold_title: string | null
   unfold_text: string
   review_status: 'new' | 'reviewed' | 'promoted' | 'hidden'
   created_at: string
@@ -67,7 +71,7 @@ function modeLabel(mode: UnfoldRow['source_mode']) {
   return 'Инсайты'
 }
 
-function truncate(text: string, max = 220) {
+function truncate(text: string, max = 260) {
   const clean = text.replace(/\s+/g, ' ').trim()
   if (clean.length <= max) return clean
   return `${clean.slice(0, max).trim()}…`
@@ -76,6 +80,7 @@ function truncate(text: string, max = 220) {
 function formatDate(value: string) {
   try {
     return new Intl.DateTimeFormat('ru-RU', {
+      timeZone: 'America/New_York',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -87,13 +92,19 @@ function formatDate(value: string) {
   }
 }
 
+function slugifyBook(book: string) {
+  return book.trim().toLowerCase().replace(/\s+/g, '-')
+}
+
 async function loadUnfolds(): Promise<UnfoldRow[]> {
   const supabase = getSupabaseServerClient()
 
   const { data, error } = await supabase
     .schema('private')
     .from('unfold_events')
-    .select('id, verse_ref, source_mode, source_title, source_text, unfold_text, review_status, created_at')
+    .select(
+      'id, verse_ref, book, chapter, verse, source_mode, source_title, source_text, unfold_title, unfold_text, review_status, created_at'
+    )
     .order('created_at', { ascending: false })
     .limit(200)
 
@@ -116,7 +127,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
   try {
     items = await loadUnfolds()
   } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Не удалось загрузить unfold-события.'
+    loadError = error instanceof Error ? error.message : 'Не удалось загрузить unfold-статьи.'
   }
 
   const activeItems = items.filter((item) => item.review_status !== 'hidden')
@@ -129,25 +140,35 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8f4ea_0%,#f3ede0_45%,#f7f3ea_100%)] px-4 py-6 text-stone-900">
       <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-stone-500">
               Модератор
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">
-              Входящие unfold
+              Работа с Unfold
             </h1>
-            <p className="mt-2 text-sm text-stone-600">
-              Все unfold-события, сохранённые из reading experience.
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-600">
+              Здесь собраны длинные unfold-статьи. Это вспомогательный режим для чтения, выбора
+              сильного фрагмента и отправки новых кандидатов в обычный review-поток по стиху.
             </p>
           </div>
 
-          <Link
-            href="/moderator"
-            className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-          >
-            Домой
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/moderator"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Назад в модератор
+            </Link>
+
+            <Link
+              href="/"
+              className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+            >
+              Домой
+            </Link>
+          </div>
         </div>
 
         <div className="mb-5 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
@@ -175,7 +196,7 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
 
             <div className="rounded-[20px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Сохранённые
+                Уже использованы
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{promotedItems.length}</p>
             </div>
@@ -217,72 +238,81 @@ export default async function ModeratorUnfoldsPage({ searchParams }: PageProps) 
           </div>
         ) : visibleItems.length === 0 ? (
           <div className="rounded-[28px] border border-stone-300/70 bg-[#fffaf1] px-5 py-6 text-stone-600">
-            Нет unfold-событий для выбранного фильтра.
+            Нет unfold-статей для выбранного фильтра.
           </div>
         ) : (
           <div className="space-y-4">
-            {visibleItems.map((item) => (
-              <Link
-                key={item.id}
-                href={`/moderator/unfolds/${item.id}`}
-                className="block rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)] transition hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(94,72,37,0.14)] active:scale-[0.998]"
-              >
-                <article className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusPill(item.review_status)}`}>
-                      {statusLabel(item.review_status)}
-                    </span>
+            {visibleItems.map((item) => {
+              const reviewHref = `/moderator/review/${slugifyBook(item.book)}/${item.chapter}/${item.verse}`
 
-                    <span className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1 text-xs font-medium text-stone-700">
-                      {modeLabel(item.source_mode)}
-                    </span>
+              return (
+                <article
+                  key={item.id}
+                  className="rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]"
+                >
+                  <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusPill(item.review_status)}`}>
+                        {statusLabel(item.review_status)}
+                      </span>
 
-                    <span className="text-xs text-stone-500">{formatDate(item.created_at)}</span>
-                  </div>
+                      <span className="rounded-full border border-stone-300 bg-[#fffaf1] px-3 py-1 text-xs font-medium text-stone-700">
+                        {modeLabel(item.source_mode)}
+                      </span>
 
-                  <div className="mt-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                      Ссылка
-                    </p>
-                    <h2 className="mt-1 text-xl font-semibold text-stone-900">{item.verse_ref}</h2>
-                  </div>
+                      <span className="text-xs text-stone-500">{formatDate(item.created_at)}</span>
+                    </div>
 
-                  <div className="mt-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                      Исходный заголовок
-                    </p>
-                    <p className="mt-1 text-lg font-medium leading-7 text-stone-900">
-                      {item.source_title}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                    <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Исходный текст
+                    <div className="mt-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                        Стих
                       </p>
-                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                        {truncate(item.source_text, 240)}
+                      <h2 className="mt-1 text-2xl font-semibold tracking-tight text-stone-900">
+                        {item.verse_ref}
+                      </h2>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                        Исходная мысль
+                      </p>
+                      <p className="mt-1 text-lg font-medium leading-7 text-stone-900">
+                        {item.source_title}
                       </p>
                     </div>
 
-                    <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
+                    <div className="mt-4 rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                        Краткий unfold
+                        Краткий фрагмент unfold
                       </p>
-                      <p className="mt-2 text-[0.97rem] leading-7 text-stone-800">
-                        {truncate(item.unfold_text, 240)}
+                      <p className="mt-2 text-[0.98rem] leading-7 text-stone-800">
+                        {truncate(item.unfold_text, 320)}
                       </p>
                     </div>
-                  </div>
 
-                  <div className="mt-4 flex items-center justify-between gap-4">
-                    <p className="text-xs text-stone-500">ID: {item.id}</p>
-                    <span className="text-sm font-medium text-stone-700">Открыть →</span>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs text-stone-500">ID: {item.id}</p>
+
+                      <div className="flex flex-wrap gap-3">
+                        <Link
+                          href={reviewHref}
+                          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
+                        >
+                          Review этого стиха
+                        </Link>
+
+                        <Link
+                          href={`/moderator/unfolds/${item.id}`}
+                          className="rounded-full bg-stone-900 px-4 py-2 text-sm font-medium text-stone-50 transition hover:bg-stone-800"
+                        >
+                          Открыть статью
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 </article>
-              </Link>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
