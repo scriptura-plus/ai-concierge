@@ -43,7 +43,7 @@ function languageInstruction(targetLanguage: SupportedLanguage) {
 Write the full output in Russian.
 Every title and every card text must be fully in Russian.
 Do not use English in the final answer.
-`.trim();
+`;
   }
 
   if (targetLanguage === "es") {
@@ -51,7 +51,7 @@ Do not use English in the final answer.
 Write the full output in Spanish.
 Every title and every card text must be fully in Spanish.
 Do not use English in the final answer.
-`.trim();
+`;
   }
 
   if (targetLanguage === "fr") {
@@ -59,7 +59,7 @@ Do not use English in the final answer.
 Write the full output in French.
 Every title and every card text must be fully in French.
 Do not use English in the final answer.
-`.trim();
+`;
   }
 
   if (targetLanguage === "de") {
@@ -67,13 +67,13 @@ Do not use English in the final answer.
 Write the full output in German.
 Every title and every card text must be fully in German.
 Do not use English in the final answer.
-`.trim();
+`;
   }
 
   return `
 Write the full output in English.
 Every title and every card text must be fully in English.
-`.trim();
+`;
 }
 
 function pickLocalizedValue(
@@ -133,7 +133,7 @@ function pickLocalizedValue(
 function buildAvoidRepeatsBlock(savedRows: CuratedInsightRow[]) {
   if (!savedRows.length) {
     return `
-NO SAVED CARDS YET:
+NO SAVED EXPLORER CARDS YET:
 You are generating the full set from scratch.
 `.trim();
   }
@@ -166,7 +166,7 @@ TEXT: ${baseText}`;
     .join("\n\n");
 
   return `
-ALREADY SAVED CARDS:
+ALREADY SAVED EXPLORER CARDS:
 The following cards are already saved for this verse.
 
 ${lines}
@@ -193,21 +193,20 @@ FOCUS MODE:
 Pay special attention to this word or phrase:
 "${params.focusWord.trim()}"
 
-One or more cards may orbit around this focal point, but each card must still reveal a clearly different angle.
-Do not merely repeat the same point with different wording.
-`.trim()
+If helpful, let several cards orbit around this focal point from clearly different angles.
+`
     : `
 FOCUS MODE:
 No specific word or phrase was provided.
-Generate cards based on the verse as a whole.
-`.trim();
+Generate explorer cards based on the verse as a whole.
+`;
 
   const avoidRepeatsBlock = buildAvoidRepeatsBlock(params.savedRows);
 
   return `
-You are an elite generator of Bible verse cards for Scriptura+.
+You are an elite generator of Bible verse explorer cards.
 
-Your task is to produce ${params.count} distinct, non-obvious, high-value cards based on this Bible verse.
+Your task is to produce ${params.count} distinct, non-obvious, high-value explorer cards based on this Bible verse.
 
 REFERENCE:
 ${params.reference}
@@ -217,47 +216,88 @@ ${params.verseText}
 
 ${languageInstruction(params.targetLanguage)}
 
-CORE IDENTITY OF THE OUTPUT:
-These are not sermons.
-These are not devotional comments.
-These are not vague study notes.
-These are not rough brainstorming fragments.
+CORE PRINCIPLE:
+This is not commentary.
+This is not summary.
+This is not preaching.
+This is not a doctrinal note.
+This is not a confessional interpretation.
+This is not a polished mini-sermon.
+This is the opening stage of precise textual exploration.
 
-Each card must feel like a save-ready short insight:
-- one strong angle
-- one clear center of gravity
-- compact, elegant packaging
-- enough intellectual and stylistic force that a moderator often wants to save it immediately
-
-The card should still invite deeper unfolding, but it must already feel finished as a short form.
+WHAT AN EXPLORER CARD IS:
+An explorer card surfaces one promising angle of reading.
+It helps the reader notice one perspective, tension, wording feature, contrast, structural pattern, or implication worth unfolding further.
+It should feel like an entry point into deeper reading, not the final destination.
 
 CRITICAL ACCURACY RULES:
-- Base every card on the verse text provided above
-- Do not attribute words or phrases to the verse if they do not appear in the verse text
-- Do not blend in wording from nearby verses unless clearly marked as wider context
-- If a point depends on broader context, make that explicit
-- Stay anchored in this specific verse
+- Base every card on the verse text provided above.
+- Do not attribute words or phrases to the verse if they do not appear in the verse text.
+- Do not blend in wording from nearby verses unless clearly marked as wider context.
+- If a point depends on broader context, make that explicit.
+- Stay anchored in this specific verse.
+- Do not convert a textual feature into a theological doctrine.
+- Do not present one religious interpretation as the meaning of the verse.
+- If a phrasing can support multiple readings, do not declare one confessional reading as fact.
+
+ANTI-THEOLOGY / ANTI-CHURCH FILTER:
+The product must sound like a modern AI text-analysis tool for readers from many religions and backgrounds.
+Therefore:
+- Do not use church language.
+- Do not use confessional language.
+- Do not use sermon language.
+- Do not use devotional language.
+- Do not use denominational language.
+- Do not use theological jargon unless the verse itself explicitly discusses such a term, and even then keep it descriptive rather than doctrinal.
+- Do not write as a believer defending a doctrine.
+- Do not write as a critic attacking a doctrine.
+- Do not write as a pastor, priest, preacher, apologist, commentator, or catechist.
+
+FORBIDDEN STYLE / VOCABULARY:
+Avoid words and phrases equivalent to:
+- theology / богословие
+- doctrine / доктрина
+- dogma / догмат
+- trinity / троица
+- triune / триединый
+- hypostasis / ипостась
+- grace in church-jargon tone / благодать as church jargon
+- sacred mystery / священная тайна
+- revealed here as / явлено здесь как
+- the verse teaches that / стих учит
+- this proves that / это доказывает
+- divine truth / божественная истина
+- orthodox / catholic / protestant / evangelical framing
+- any church-coded phrasing that sounds confessional rather than analytical
+
+ALLOWED MODE:
+Use modern, neutral, analytical language.
+Sound like:
+- literary analysis
+- close reading
+- linguistic observation
+- rhetorical observation
+- historical-textual curiosity
+- conceptual analysis
 
 AUDIENCE:
-Thoughtful, scripture-literate adult readers who value precision, depth, freshness, and memorable phrasing.
+Thoughtful adult readers from different religions, confessions, and worldviews who value depth, neutrality, clarity, and precision.
 
 PRIMARY GOAL:
-Find a strong angle in the verse and express it with enough clarity, shape, and force that the card already feels worth saving.
+Generate cards that help the reader explore where to look next in the verse.
 
 QUALITY STANDARD:
-- Avoid obvious observations
-- Avoid generic spiritual language
-- Avoid clichés
-- Avoid repeating the same idea in different words
-- Each card must reveal a different angle, tension, contrast, pattern, or implication
-- Do not produce cards that could fit almost any verse
-- Do not sound like a sermon point
-- Do not sound like a study-note template
-- Do not sound like a polite ChatGPT explanation
-- Do not close the thought with a bland moral or generic takeaway
-- The card should feel alive, specific, and mentally gripping
-- The card should have at least a light wow-effect through precision, turn of thought, or elegant phrasing
-- Beauty should come from exactness and insight, not from decorative language
+- Avoid obvious observations.
+- Avoid generic spiritual language.
+- Avoid clichés.
+- Avoid churchy or devotional tone.
+- Avoid repeating the same idea in different words.
+- Each card must reveal a different angle, tension, contrast, pattern, or implication.
+- Do not produce cards that could fit almost any verse.
+- Do not sound like a finished sermon point.
+- Do not close the thought too neatly.
+- Leave strong forward motion toward Unfold.
+- The card should feel save-worthy, but still text-anchored and analytically honest.
 
 DIVERSITY RULE:
 Across the full set, vary the type of angle. Draw from different directions such as:
@@ -272,14 +312,6 @@ Across the full set, vary the type of angle. Draw from different directions such
 - a focus on one striking word or phrase
 - an angle based on what the verse does NOT say but the reader might expect
 
-A STRONG CARD USUALLY DOES AT LEAST ONE OF THESE THINGS:
-- shifts the reader's center of attention
-- exposes an unnoticed tension
-- reveals a hidden contrast
-- shows why one phrase carries more weight than it first seems
-- reframes an apparently obvious reading
-- notices a structural move that changes how the verse lands
-
 ${focusBlock}
 
 ${avoidRepeatsBlock}
@@ -288,37 +320,39 @@ STYLE:
 - Clear
 - Modern
 - Intelligent
-- Compact but dense
-- Elegant without sounding literary
-- Controlled rather than dramatic
-- Specific rather than abstract
-- Readable, but not flat
-
-ANTI-BLAND RULES:
-Avoid empty lead-ins and generic framing such as:
-- "This verse shows..."
-- "Here we see..."
-- "This reminds us..."
-- "The text teaches..."
-- "This opens a deeper meaning..."
-unless the sentence carries real, specific analytical movement.
-Do not write in a school-outline rhythm.
-Do not let two consecutive sentences do the same job.
+- Neutral
+- Precise
+- Concise but vivid
+- Exploratory rather than final
+- No religious clichés
+- No vague abstraction
+- No dramatic overstatement
+- No church tone
+- No theological vocabulary
 
 TITLE RULE:
-The title must capture the specific turn of the angle.
-It should feel sharp, memorable, and worth saving.
-Avoid vague abstractions, bland theological nouns, and titles that sound like section headers.
-Do not use titles that could fit dozens of unrelated verses.
+The title should name the angle clearly and attractively.
+It should feel like a doorway into a line of reading, not like a slogan, sermon title, or clickbait headline.
 
 TEXT RULE:
-- The text should be 4-5 sentences.
-- The whole card must hold one clear center of gravity.
-- The card must not feel like a note or an outline; it must feel like a complete short insight.
-- Sentence by sentence, the thought must move forward rather than repeat itself.
-- The card should contain at least one sentence that feels precise, vivid, or unexpectedly well-turned.
-- The last sentence should leave depth, pressure, or resonance — not a bland conclusion.
-- The card should be short enough to read quickly but strong enough to save immediately.
+The text should be 4-5 sentences.
+Sentence 1: name or frame the angle.
+Sentence 2: show what in the verse supports that angle.
+Sentence 3: explain why this angle matters for reading the verse.
+Sentence 4: deepen the observation with precision, tension, or implication.
+Sentence 5 if useful: leave a sense of further depth still to unfold.
+
+VERY IMPORTANT FINAL FILTER BEFORE OUTPUT:
+Reject any candidate that:
+- sounds doctrinal
+- sounds confessional
+- sounds churchy
+- sounds like preaching
+- uses theological jargon
+- turns a textual detail into a dogmatic claim
+- would alienate a reader from another religion by assuming one creed as true
+
+If a candidate violates that filter, rewrite it in neutral analytical language.
 
 OUTPUT RULES:
 - Return ONLY valid JSON
@@ -327,14 +361,14 @@ OUTPUT RULES:
 - No commentary outside JSON
 - Output must be a JSON array
 - Each item must have:
-  - "title": short, sharp, angle-oriented
-  - "text": 4-5 sentences, readable, elegant, and save-ready
+  - "title": short, clear, angle-oriented
+  - "text": 4-5 sentences, readable, precise, neutral, exploratory, and self-contained enough to stand alone while still inviting further unfolding
 
 Example:
 [
   {
     "title": "Knowledge as Relationship",
-    "text": "This verse may be defining knowledge in relational rather than merely informational terms. The wording does not point first to quantity of facts, but to a kind of recognition bound up with knowing God and Christ. That shifts the center of the verse from data to living connection. Eternal life is therefore tied not simply to what is understood, but to whom one is bound. The verse leaves the reader asking what kind of knowing can carry that much weight."
+    "text": "This verse may be defining knowledge in relational rather than merely informational terms. The wording does not point first to quantity of facts, but to a kind of recognition bound up with knowing God and Christ. That shifts the center of the verse away from data and toward connection. The force of the line lies in how it describes life through a mode of knowing, not a store of information. It also opens a deeper question about what kind of knowing the verse is really speaking about."
   }
 ]
 `.trim();
@@ -348,7 +382,7 @@ function buildRussianTranslationPrompt(items: InsightItem[]) {
   }));
 
   return `
-Translate the following Bible cards into natural Russian for moderator working-layer candidates.
+Translate the following Bible explorer cards into natural Russian for moderator working-layer candidates.
 
 CRITICAL RULES:
 - Preserve the exact same angle and structure of thought.
@@ -356,6 +390,8 @@ CRITICAL RULES:
 - Do not compress the meaning.
 - Keep the title sharp and readable.
 - Keep the text natural Russian, not robotic.
+- Keep the language modern, neutral, and analytical.
+- Avoid church vocabulary, confessional tone, and theological jargon.
 - Return ONLY valid JSON.
 - Output must be an array with the same number of items and the same indexes.
 
@@ -687,7 +723,7 @@ async function generateInsightsUntilFilled(params: {
     const result = await runModel({
       prompt,
       model: "gpt-5.4-mini",
-      maxOutputTokens: 3200,
+      maxOutputTokens: 3000,
     });
 
     if (!result.ok) {
