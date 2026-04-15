@@ -43,7 +43,7 @@ function languageInstruction(targetLanguage: SupportedLanguage) {
 Write the full output in Russian.
 Every title and every card text must be fully in Russian.
 Do not use English in the final answer.
-`;
+`.trim();
   }
 
   if (targetLanguage === "es") {
@@ -51,7 +51,7 @@ Do not use English in the final answer.
 Write the full output in Spanish.
 Every title and every card text must be fully in Spanish.
 Do not use English in the final answer.
-`;
+`.trim();
   }
 
   if (targetLanguage === "fr") {
@@ -59,7 +59,7 @@ Do not use English in the final answer.
 Write the full output in French.
 Every title and every card text must be fully in French.
 Do not use English in the final answer.
-`;
+`.trim();
   }
 
   if (targetLanguage === "de") {
@@ -67,13 +67,13 @@ Do not use English in the final answer.
 Write the full output in German.
 Every title and every card text must be fully in German.
 Do not use English in the final answer.
-`;
+`.trim();
   }
 
   return `
 Write the full output in English.
 Every title and every card text must be fully in English.
-`;
+`.trim();
 }
 
 function pickLocalizedValue(
@@ -193,18 +193,19 @@ FOCUS MODE:
 Pay special attention to this word or phrase:
 "${params.focusWord.trim()}"
 
-If helpful, let several cards orbit around this focal point from clearly different angles.
-`
+You may let one or more cards orbit around this focal point, but each card must still reveal a clearly different angle.
+Do not merely repeat the same point with different wording.
+`.trim()
     : `
 FOCUS MODE:
 No specific word or phrase was provided.
 Generate explorer cards based on the verse as a whole.
-`;
+`.trim();
 
   const avoidRepeatsBlock = buildAvoidRepeatsBlock(params.savedRows);
 
   return `
-You are an elite generator of Bible verse explorer cards.
+You are an elite generator of Bible verse explorer cards for Scriptura+.
 
 Your task is to produce ${params.count} distinct, non-obvious, high-value explorer cards based on this Bible verse.
 
@@ -216,17 +217,18 @@ ${params.verseText}
 
 ${languageInstruction(params.targetLanguage)}
 
-CORE PRINCIPLE:
-This is not commentary.
-This is not summary.
-This is not preaching.
-This is not a polished final insight.
-This is the opening stage of exploration.
+CORE IDENTITY OF THE OUTPUT:
+These cards belong to the first stage of exploration, but they must still sound strong, finished, and worth saving.
+They are not sermons.
+They are not devotional comments.
+They are not generic observations.
+They are not loose brainstorming notes.
+They are compact, high-quality reading angles that open the verse sharply and intelligently.
 
 WHAT AN EXPLORER CARD IS:
-An explorer card surfaces one promising angle of reading.
-It helps the reader notice one perspective, tension, wording feature, contrast, or implication worth unfolding further.
-It should feel like an entry point into deeper reading, not the final destination.
+An explorer card isolates one promising line of reading and gives it real shape.
+It helps the reader notice one tension, wording feature, contrast, structural turn, rhetorical move, unexpected implication, or hidden center of gravity in the verse.
+It should feel like a strong doorway into deeper reading, not like a vague setup paragraph.
 
 CRITICAL ACCURACY RULES:
 - Base every card on the verse text provided above
@@ -236,10 +238,10 @@ CRITICAL ACCURACY RULES:
 - Stay anchored in this specific verse
 
 AUDIENCE:
-Thoughtful, scripture-literate adult readers who value depth, precision, and fresh angles.
+Thoughtful, scripture-literate adult readers who value precision, density, and genuinely fresh angles.
 
 PRIMARY GOAL:
-Generate cards that help the reader explore where to look next in the verse.
+Generate cards that help the reader see exactly where to look next in the verse.
 
 QUALITY STANDARD:
 - Avoid obvious observations
@@ -248,9 +250,12 @@ QUALITY STANDARD:
 - Avoid repeating the same idea in different words
 - Each card must reveal a different angle, tension, contrast, pattern, or implication
 - Do not produce cards that could fit almost any verse
-- Do not sound like a finished sermon point
-- Do not close the thought too neatly
-- Leave strong forward motion toward Unfold
+- Do not sound like a sermon point
+- Do not sound like a study-note template
+- Do not sound like a polite ChatGPT explanation
+- Do not close the thought with a bland moral or a generic takeaway
+- The card should feel alive, specific, and mentally gripping
+- Each card should create forward motion toward Unfold
 
 DIVERSITY RULE:
 Across the full set, vary the type of angle. Draw from different directions such as:
@@ -265,6 +270,14 @@ Across the full set, vary the type of angle. Draw from different directions such
 - a focus on one striking word or phrase
 - an angle based on what the verse does NOT say but the reader might expect
 
+A STRONG CARD USUALLY DOES AT LEAST ONE OF THESE THINGS:
+- shifts the reader's center of attention
+- exposes an unnoticed tension
+- reveals a hidden contrast
+- shows why one phrase carries more weight than it first seems
+- reframes an apparently obvious reading
+- notices a structural move that changes how the verse lands
+
 ${focusBlock}
 
 ${avoidRepeatsBlock}
@@ -273,22 +286,35 @@ STYLE:
 - Clear
 - Modern
 - Intelligent
-- Concise but vivid
-- Exploratory rather than final
-- No religious clichés
-- No vague abstraction
-- No dramatic overstatement
+- Compact but dense
+- Exploratory rather than preachy
+- Controlled rather than dramatic
+- Specific rather than abstract
+- Readable, but not flat
+
+ANTI-BLAND RULES:
+Avoid empty lead-ins and generic framing such as:
+- "This verse shows..."
+- "Here we see..."
+- "This reminds us..."
+- "The text teaches..."
+- "This opens a deeper meaning..."
+unless the sentence carries real, specific analytical movement.
+Do not write in a school-outline rhythm.
+Do not let two consecutive sentences do the same job.
 
 TITLE RULE:
-The title should name the angle clearly and attractively.
-It should feel like a doorway into a line of reading, not like a slogan or a clickbait headline.
+The title must capture the specific turn of the angle.
+It should feel like a doorway into a real line of reading.
+Avoid vague abstractions, bland theological nouns, and titles that sound like section headers.
+Do not use titles that could fit dozens of unrelated verses.
 
 TEXT RULE:
-The text should be 3-4 sentences.
-Sentence 1: name or frame the angle.
-Sentence 2: show what in the verse supports that angle.
-Sentence 3: explain why this angle matters for reading the verse.
-Sentence 4 if needed: leave a sense of further depth still to unfold.
+- The text should be 3-4 sentences.
+- The whole card must hold one clear center of gravity.
+- Sentence by sentence, the thought must move forward rather than repeat itself.
+- The card should not feel like a template with slots filled in.
+- The last sentence should leave pressure, depth, or a next question — not a bland conclusion.
 
 OUTPUT RULES:
 - Return ONLY valid JSON
@@ -298,13 +324,13 @@ OUTPUT RULES:
 - Output must be a JSON array
 - Each item must have:
   - "title": short, clear, angle-oriented
-  - "text": 3-4 sentences, readable, exploratory, and self-contained enough to stand alone while still inviting further unfolding
+  - "text": 3-4 sentences, readable, exploratory, and strong enough to stand on its own while still inviting further unfolding
 
 Example:
 [
   {
     "title": "Knowledge as Relationship",
-    "text": "This verse may be defining knowledge in relational rather than merely informational terms. The wording does not point first to quantity of facts, but to a kind of recognition bound up with knowing God and Christ. That changes the center of the verse from data to living connection. It also opens a deeper question about what kind of knowing the verse is really talking about."
+    "text": "This verse may be defining knowledge in relational rather than merely informational terms. The wording does not point first to quantity of facts, but to a kind of recognition bound up with knowing God and Christ. That shifts the center of the verse from data to living connection. It also presses the reader to ask what sort of knowing the verse actually has in view."
   }
 ]
 `.trim();
