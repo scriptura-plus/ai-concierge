@@ -133,7 +133,7 @@ function pickLocalizedValue(
 function buildAvoidRepeatsBlock(savedRows: CuratedInsightRow[]) {
   if (!savedRows.length) {
     return `
-NO SAVED EXPLORER CARDS YET:
+NO SAVED CARDS YET:
 You are generating the full set from scratch.
 `.trim();
   }
@@ -166,7 +166,7 @@ TEXT: ${baseText}`;
     .join("\n\n");
 
   return `
-ALREADY SAVED EXPLORER CARDS:
+ALREADY SAVED CARDS:
 The following cards are already saved for this verse.
 
 ${lines}
@@ -193,21 +193,21 @@ FOCUS MODE:
 Pay special attention to this word or phrase:
 "${params.focusWord.trim()}"
 
-You may let one or more cards orbit around this focal point, but each card must still reveal a clearly different angle.
+One or more cards may orbit around this focal point, but each card must still reveal a clearly different angle.
 Do not merely repeat the same point with different wording.
 `.trim()
     : `
 FOCUS MODE:
 No specific word or phrase was provided.
-Generate explorer cards based on the verse as a whole.
+Generate cards based on the verse as a whole.
 `.trim();
 
   const avoidRepeatsBlock = buildAvoidRepeatsBlock(params.savedRows);
 
   return `
-You are an elite generator of Bible verse explorer cards for Scriptura+.
+You are an elite generator of Bible verse cards for Scriptura+.
 
-Your task is to produce ${params.count} distinct, non-obvious, high-value explorer cards based on this Bible verse.
+Your task is to produce ${params.count} distinct, non-obvious, high-value cards based on this Bible verse.
 
 REFERENCE:
 ${params.reference}
@@ -218,17 +218,18 @@ ${params.verseText}
 ${languageInstruction(params.targetLanguage)}
 
 CORE IDENTITY OF THE OUTPUT:
-These cards belong to the first stage of exploration, but they must still sound strong, finished, and worth saving.
-They are not sermons.
-They are not devotional comments.
-They are not generic observations.
-They are not loose brainstorming notes.
-They are compact, high-quality reading angles that open the verse sharply and intelligently.
+These are not sermons.
+These are not devotional comments.
+These are not vague study notes.
+These are not rough brainstorming fragments.
 
-WHAT AN EXPLORER CARD IS:
-An explorer card isolates one promising line of reading and gives it real shape.
-It helps the reader notice one tension, wording feature, contrast, structural turn, rhetorical move, unexpected implication, or hidden center of gravity in the verse.
-It should feel like a strong doorway into deeper reading, not like a vague setup paragraph.
+Each card must feel like a save-ready short insight:
+- one strong angle
+- one clear center of gravity
+- compact, elegant packaging
+- enough intellectual and stylistic force that a moderator often wants to save it immediately
+
+The card should still invite deeper unfolding, but it must already feel finished as a short form.
 
 CRITICAL ACCURACY RULES:
 - Base every card on the verse text provided above
@@ -238,10 +239,10 @@ CRITICAL ACCURACY RULES:
 - Stay anchored in this specific verse
 
 AUDIENCE:
-Thoughtful, scripture-literate adult readers who value precision, density, and genuinely fresh angles.
+Thoughtful, scripture-literate adult readers who value precision, depth, freshness, and memorable phrasing.
 
 PRIMARY GOAL:
-Generate cards that help the reader see exactly where to look next in the verse.
+Find a strong angle in the verse and express it with enough clarity, shape, and force that the card already feels worth saving.
 
 QUALITY STANDARD:
 - Avoid obvious observations
@@ -253,9 +254,10 @@ QUALITY STANDARD:
 - Do not sound like a sermon point
 - Do not sound like a study-note template
 - Do not sound like a polite ChatGPT explanation
-- Do not close the thought with a bland moral or a generic takeaway
+- Do not close the thought with a bland moral or generic takeaway
 - The card should feel alive, specific, and mentally gripping
-- Each card should create forward motion toward Unfold
+- The card should have at least a light wow-effect through precision, turn of thought, or elegant phrasing
+- Beauty should come from exactness and insight, not from decorative language
 
 DIVERSITY RULE:
 Across the full set, vary the type of angle. Draw from different directions such as:
@@ -287,7 +289,7 @@ STYLE:
 - Modern
 - Intelligent
 - Compact but dense
-- Exploratory rather than preachy
+- Elegant without sounding literary
 - Controlled rather than dramatic
 - Specific rather than abstract
 - Readable, but not flat
@@ -305,16 +307,18 @@ Do not let two consecutive sentences do the same job.
 
 TITLE RULE:
 The title must capture the specific turn of the angle.
-It should feel like a doorway into a real line of reading.
+It should feel sharp, memorable, and worth saving.
 Avoid vague abstractions, bland theological nouns, and titles that sound like section headers.
 Do not use titles that could fit dozens of unrelated verses.
 
 TEXT RULE:
-- The text should be 3-4 sentences.
+- The text should be 4-5 sentences.
 - The whole card must hold one clear center of gravity.
+- The card must not feel like a note or an outline; it must feel like a complete short insight.
 - Sentence by sentence, the thought must move forward rather than repeat itself.
-- The card should not feel like a template with slots filled in.
-- The last sentence should leave pressure, depth, or a next question — not a bland conclusion.
+- The card should contain at least one sentence that feels precise, vivid, or unexpectedly well-turned.
+- The last sentence should leave depth, pressure, or resonance — not a bland conclusion.
+- The card should be short enough to read quickly but strong enough to save immediately.
 
 OUTPUT RULES:
 - Return ONLY valid JSON
@@ -323,14 +327,14 @@ OUTPUT RULES:
 - No commentary outside JSON
 - Output must be a JSON array
 - Each item must have:
-  - "title": short, clear, angle-oriented
-  - "text": 3-4 sentences, readable, exploratory, and strong enough to stand on its own while still inviting further unfolding
+  - "title": short, sharp, angle-oriented
+  - "text": 4-5 sentences, readable, elegant, and save-ready
 
 Example:
 [
   {
     "title": "Knowledge as Relationship",
-    "text": "This verse may be defining knowledge in relational rather than merely informational terms. The wording does not point first to quantity of facts, but to a kind of recognition bound up with knowing God and Christ. That shifts the center of the verse from data to living connection. It also presses the reader to ask what sort of knowing the verse actually has in view."
+    "text": "This verse may be defining knowledge in relational rather than merely informational terms. The wording does not point first to quantity of facts, but to a kind of recognition bound up with knowing God and Christ. That shifts the center of the verse from data to living connection. Eternal life is therefore tied not simply to what is understood, but to whom one is bound. The verse leaves the reader asking what kind of knowing can carry that much weight."
   }
 ]
 `.trim();
@@ -344,7 +348,7 @@ function buildRussianTranslationPrompt(items: InsightItem[]) {
   }));
 
   return `
-Translate the following Bible explorer cards into natural Russian for moderator working-layer candidates.
+Translate the following Bible cards into natural Russian for moderator working-layer candidates.
 
 CRITICAL RULES:
 - Preserve the exact same angle and structure of thought.
@@ -683,7 +687,7 @@ async function generateInsightsUntilFilled(params: {
     const result = await runModel({
       prompt,
       model: "gpt-5.4-mini",
-      maxOutputTokens: 3000,
+      maxOutputTokens: 3200,
     });
 
     if (!result.ok) {
