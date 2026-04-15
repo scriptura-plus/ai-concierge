@@ -5,6 +5,7 @@ import { getVerseText } from '@/lib/bible/getVerseText'
 import { runModel } from '@/lib/ai/run-model'
 import WorkspaceClient from '@/app/moderator/workspace/[book]/[chapter]/[verse]/WorkspaceClient'
 import ActionSubmitButton from './ActionSubmitButton'
+import NewCandidatesList from './NewCandidatesList'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -417,6 +418,21 @@ export default async function ModeratorVerseReviewPage({
       ? 'border-red-300/70 bg-red-50 text-red-800'
       : 'border-emerald-300/70 bg-emerald-50 text-emerald-900'
 
+  const candidateItems = newCandidates.map((item) => ({
+    id: item.id,
+    title: item.title_ru,
+    text: item.text_ru,
+    status: statusLabel(item.candidate_status),
+    statusClassName: statusClasses(item.candidate_status),
+    sourceLabel: sourceLabel(item.source_type),
+    updatedLabel: formatDate(item.updated_at),
+    angleNote: item.angle_note,
+    repairHref: `${reviewHref}?prefill=1&source=candidate&id=${encodeURIComponent(item.id)}#workshop`,
+    promoteAction: `/api/moderator/candidates/${item.id}/promote`,
+    rejectAction: `/api/moderator/candidates/${item.id}/reject`,
+    returnTo: reviewHref,
+  }))
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#F7F5EF_0%,#F3F0E8_46%,#F6F3EC_100%)] text-stone-900">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -589,90 +605,16 @@ export default async function ModeratorVerseReviewPage({
                   Новые предложения
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-900">
-                  New Suggestions
+                  К рассмотрению
                 </h2>
               </div>
             </div>
 
-            {newCandidates.length === 0 ? (
-              <div className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4 text-sm leading-6 text-stone-700">
-                Сейчас нет новых кандидатов. Можно сразу работать ниже в мастерской.
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {newCandidates.map((item) => {
-                  const repairHref =
-                    `${reviewHref}?prefill=1&source=candidate&id=${encodeURIComponent(item.id)}#workshop`
-
-                  return (
-                    <article
-                      key={item.id}
-                      className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses(item.candidate_status)}`}
-                        >
-                          {statusLabel(item.candidate_status)}
-                        </span>
-
-                        <span className="rounded-full border border-stone-300 bg-white px-3 py-1 text-xs font-medium text-stone-700">
-                          {sourceLabel(item.source_type)}
-                        </span>
-
-                        <span className="text-xs text-stone-500">{formatDate(item.updated_at)}</span>
-                      </div>
-
-                      <h3 className="mt-3 text-xl font-semibold leading-tight text-stone-900">
-                        {item.title_ru}
-                      </h3>
-
-                      <div className="mt-3 whitespace-pre-wrap text-[0.98rem] leading-8 text-stone-800">
-                        {item.text_ru}
-                      </div>
-
-                      {item.angle_note ? (
-                        <div className="mt-4 rounded-[16px] border border-stone-300/50 bg-[#fdf9f1] px-4 py-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
-                            Angle note
-                          </p>
-                          <p className="mt-2 text-[0.95rem] leading-7 text-stone-800">
-                            {item.angle_note}
-                          </p>
-                        </div>
-                      ) : null}
-
-                      <div className="mt-4 flex flex-wrap gap-3">
-                        <form action={`/api/moderator/candidates/${item.id}/promote`} method="POST">
-                          <input type="hidden" name="returnTo" value={reviewHref} />
-                          <ActionSubmitButton
-                            idleLabel="Сохранить"
-                            pendingLabel="Сохраняем..."
-                            variant="primary"
-                          />
-                        </form>
-
-                        <form action={`/api/moderator/candidates/${item.id}/reject`} method="POST">
-                          <input type="hidden" name="returnTo" value={reviewHref} />
-                          <ActionSubmitButton
-                            idleLabel="Отклонить"
-                            pendingLabel="Отклоняем..."
-                            variant="danger"
-                          />
-                        </form>
-
-                        <Link
-                          href={repairHref}
-                          className="rounded-full border border-stone-300 bg-[#fffaf1] px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-[#f8efdc]"
-                        >
-                          Доработать
-                        </Link>
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            )}
+            <NewCandidatesList
+              reference={reference}
+              verseText={verseText}
+              items={candidateItems}
+            />
           </div>
         </section>
 
