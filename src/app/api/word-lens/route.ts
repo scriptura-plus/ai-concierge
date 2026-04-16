@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { runModel } from '@/lib/ai/run-model'
+import { getSupabaseServerClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -57,6 +58,19 @@ type CustomDigRequestBody = {
 }
 
 type RequestBody = MapRequestBody | DeepDiveRequestBody | CustomDigRequestBody
+
+type CandidateOption = {
+  title: string
+  text: string
+  angle_note: string
+}
+
+type GeneratedCandidateRow = {
+  id: string
+  title_ru: string | null
+  text_ru: string | null
+  candidate_status: string | null
+}
 
 const LANGUAGE_LABELS: Record<AppLanguage, string> = {
   en: 'English',
@@ -365,7 +379,7 @@ ${prompt}
 function extractFirstStringDeep(value: unknown, depth = 0): string | null {
   if (depth > 6) return null
 
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     const trimmed = value.trim()
     return trimmed.length > 0 ? trimmed : null
   }
@@ -378,7 +392,7 @@ function extractFirstStringDeep(value: unknown, depth = 0): string | null {
     return null
   }
 
-  if (value && typeof value === "object") {
+  if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>
 
     const priorityKeys = [
@@ -421,6 +435,298 @@ async function callModel(system: string, prompt: string) {
   throw new Error(
     `Model returned an unsupported response format: ${JSON.stringify(result).slice(0, 1200)}`
   )
+}
+
+function parseReference(reference: string): {
+  verse_ref: string
+  book: string
+  chapter: number
+  verse: number
+} | null {
+  const trimmed = reference.trim()
+  const match = trimmed.match(/^(.*)\s+(\d+):(\d+)$/)
+
+  if (!match) return null
+
+  const [, rawBook, rawChapter, rawVerse] = match
+  const book = rawBook.trim().toLowerCase()
+  const chapter = Number(rawChapter)
+  const verse = Number(rawVerse)
+
+  if (!book || !Number.isInteger(chapter) || !Number.isInteger(verse)) {
+    return null
+  }
+
+  return {
+    verse_ref: trimmed,
+    book,
+    chapter,
+    verse,
+  }
+}
+
+function normalizeTextForKey(value: string) {
+  return value.replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function buildCandidateSignature(title: string, text: string) {
+  return `${normalizeTextForKey(title)}|||${normalizeTextForKey(text)}`
+}
+
+function dedupeCandidateOptions(items: CandidateOption[]) {
+  const unique: CandidateOption[] = []
+  const seen = new Set<string>()
+
+  for (const item of items) {
+    const title = item.title.trim()
+    const text = item.text.trim()
+    const angle_note = item.angle_note.trim()
+
+    if (!title || !text || !angle_note) continue
+    if (text.length < 120) continue
+
+    const key = buildCandidateSignature(title, text)
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    unique.push({ title, text, angle_note })
+  }
+
+  return unique
+}
+
+async function loadExistingGeneratedCandidates(params: {
+  book: string
+  chapter: number
+  verse: number
+}) {
+  const supabase = getSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .schema('private')
+    .from('generated_candidates')
+    .select('id, title_ru, text_ru, candidate_status')
+    .eq('book', params.book.toLowerCase())
+    .eq('chapter', params.chapter)
+    .eq('verse', params.verse)
+    .neq('candidate_status', 'trashed')
+
+  if (error) {
+    throw new Error(`Failed to load generated candidates: ${error.message}`)
+  }
+
+  return (data ?? []) as GeneratedCandidateRow[]
+}
+
+function buildWordLensCandidatePrompt(params: {
+  reference: string
+  verseText: string
+  nodes: WordLensNode[]
+  sourceLanguage: AppLanguage
+}) {
+  return `
+Ты превращаешь результаты Word Lens в кандидаты карточек для moderator review в Scriptura+.
+
+ССЫЛКА:
+${params.reference}
+
+ТЕКСТ СТИХА:
+${params.verseText}
+
+ЯЗЫК ИСХОДНОЙ WORD LENS MAP:
+${params.sourceLanguage}
+
+WORD LENS NODES:
+${JSON.stringify(params.nodes, null, 2)}
+
+ЗАДАЧА:
+На основе этих смысловых узлов создай 3-5 сильных candidate-карточек на РУССКОМ языке.
+Это должны быть уже хорошие карточки для review, а не сырые заметки.
+
+ГЛАВНЫЙ ПРИНЦИП:
+- Каждая карточка должна рождаться из одного из смысловых узлов Word Lens.
+- Не делай общую проповедь по стиху.
+- Не смешивай всё в один расплывчатый комментарий.
+- Карточка должна держать один чёткий угол.
+- Лучше меньше, но сильнее.
+
+АНТИ-БОГОСЛОВСКИЙ ФИЛЬТР:
+- Не используй церковный язык.
+- Не используй конфессиональный язык.
+- Не используй проповеднический тон.
+- Не используй богословские термины.
+- Не навязывай доктринальных выводов.
+- Пиши как современный нейтральный аналитический AI-инструмент.
+
+ЗАПРЕЩЕНО:
+- богословие
+- доктрина
+- догмат
+- троица
+- триединый
+- ипостась
+- стих учит
+- это доказывает
+- божественная истина
+- церковные формулы
+- confession / doctrine / theology / sermon language
+
+СТАНДАРТ КАРТОЧКИ:
+- Заголовок короткий и сильный
+- Текст плотный, ясный, интересный
+- Не мини-статья
+- Не короткая заметка в 2 предложения
+- Обычно 5-7 предложений
+- Карточка должна быть save-worthy, а не просто "может быть"
+
+КАЖДАЯ КАРТОЧКА ДОЛЖНА:
+- быть привязана к одному Word Lens узлу
+- показывать, почему этот узел реально меняет чтение стиха
+- звучать как finished insight
+- быть написана по-русски
+
+ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON:
+[
+  {
+    "title": "Короткий сильный заголовок",
+    "text": "Плотная карточка на русском.",
+    "angle_note": "Word Lens: label"
+  }
+]
+`.trim()
+}
+
+function parseCandidateOptions(raw: string): CandidateOption[] | null {
+  try {
+    const parsed = JSON.parse(raw)
+
+    if (!Array.isArray(parsed)) return null
+
+    const cleaned = parsed
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => ({
+        title: String(item.title ?? '').trim(),
+        text: String(item.text ?? '').trim(),
+        angle_note: String(item.angle_note ?? '').trim(),
+      }))
+      .filter((item) => item.title && item.text && item.angle_note)
+
+    return cleaned.length ? cleaned.slice(0, 5) : null
+  } catch {
+    return null
+  }
+}
+
+async function buildRussianCandidatesFromNodes(params: {
+  reference: string
+  verseText: string
+  nodes: WordLensNode[]
+  sourceLanguage: AppLanguage
+}) {
+  const prompt = buildWordLensCandidatePrompt(params)
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 3000,
+  })
+
+  const rawText = extractFirstStringDeep(result)
+
+  if (!rawText) {
+    throw new Error('Word Lens candidate generator returned no usable text.')
+  }
+
+  let options = parseCandidateOptions(rawText)
+
+  if (!options) {
+    const extracted = extractJsonArray(rawText)
+    if (extracted) {
+      options = parseCandidateOptions(extracted)
+    }
+  }
+
+  if (!options || options.length === 0) {
+    throw new Error('Failed to parse Word Lens candidate cards.')
+  }
+
+  return dedupeCandidateOptions(options)
+}
+
+async function saveWordLensCandidates(params: {
+  reference: string
+  nodes: WordLensNode[]
+  sourceLanguage: AppLanguage
+}) {
+  const parsedRef = parseReference(params.reference)
+
+  if (!parsedRef) {
+    return { insertedCount: 0 }
+  }
+
+  const options = await buildRussianCandidatesFromNodes({
+    reference: params.reference,
+    verseText: params.reference ? '' : '',
+    nodes: params.nodes,
+    sourceLanguage: params.sourceLanguage,
+  }).catch(async () => {
+    return [] as CandidateOption[]
+  })
+
+  if (!options.length) {
+    return { insertedCount: 0 }
+  }
+
+  const existingRows = await loadExistingGeneratedCandidates({
+    book: parsedRef.book,
+    chapter: parsedRef.chapter,
+    verse: parsedRef.verse,
+  })
+
+  const existingKeys = new Set(
+    existingRows
+      .map((row) =>
+        row.title_ru?.trim() && row.text_ru?.trim()
+          ? buildCandidateSignature(row.title_ru, row.text_ru)
+          : null
+      )
+      .filter(Boolean) as string[]
+  )
+
+  const freshItems = options.filter((item) => {
+    const key = buildCandidateSignature(item.title, item.text)
+    return !existingKeys.has(key)
+  })
+
+  if (!freshItems.length) {
+    return { insertedCount: 0 }
+  }
+
+  const supabase = getSupabaseServerClient()
+
+  const insertPayload = freshItems.map((item) => ({
+    verse_ref: parsedRef.verse_ref,
+    book: parsedRef.book,
+    chapter: parsedRef.chapter,
+    verse: parsedRef.verse,
+    source_type: 'word_lens',
+    candidate_status: 'new',
+    title_ru: item.title,
+    text_ru: item.text,
+    angle_note: item.angle_note.slice(0, 500),
+    review_note: null,
+  }))
+
+  const { error } = await supabase
+    .schema('private')
+    .from('generated_candidates')
+    .insert(insertPayload)
+
+  if (error) {
+    throw new Error(`Failed to save Word Lens candidates: ${error.message}`)
+  }
+
+  return { insertedCount: insertPayload.length }
 }
 
 export async function POST(req: Request) {
@@ -469,11 +775,86 @@ export async function POST(req: Request) {
         )
       }
 
+      let insertedCandidateCount = 0
+      let candidateIntakeError: string | null = null
+
+      try {
+        const intake = await (async () => {
+          const parsedRef = parseReference(reference)
+          if (!parsedRef) return { insertedCount: 0 }
+
+          const options = await buildRussianCandidatesFromNodes({
+            reference,
+            verseText,
+            nodes,
+            sourceLanguage: targetLanguage,
+          })
+
+          if (!options.length) return { insertedCount: 0 }
+
+          const existingRows = await loadExistingGeneratedCandidates({
+            book: parsedRef.book,
+            chapter: parsedRef.chapter,
+            verse: parsedRef.verse,
+          })
+
+          const existingKeys = new Set(
+            existingRows
+              .map((row) =>
+                row.title_ru?.trim() && row.text_ru?.trim()
+                  ? buildCandidateSignature(row.title_ru, row.text_ru)
+                  : null
+              )
+              .filter(Boolean) as string[]
+          )
+
+          const freshItems = options.filter((item) => {
+            const key = buildCandidateSignature(item.title, item.text)
+            return !existingKeys.has(key)
+          })
+
+          if (!freshItems.length) return { insertedCount: 0 }
+
+          const supabase = getSupabaseServerClient()
+
+          const insertPayload = freshItems.map((item) => ({
+            verse_ref: parsedRef.verse_ref,
+            book: parsedRef.book,
+            chapter: parsedRef.chapter,
+            verse: parsedRef.verse,
+            source_type: 'word_lens',
+            candidate_status: 'new',
+            title_ru: item.title,
+            text_ru: item.text,
+            angle_note: item.angle_note.slice(0, 500),
+            review_note: null,
+          }))
+
+          const { error } = await supabase
+            .schema('private')
+            .from('generated_candidates')
+            .insert(insertPayload)
+
+          if (error) {
+            throw new Error(`Failed to save Word Lens candidates: ${error.message}`)
+          }
+
+          return { insertedCount: insertPayload.length }
+        })()
+
+        insertedCandidateCount = intake.insertedCount
+      } catch (error) {
+        candidateIntakeError =
+          error instanceof Error ? error.message : 'Word Lens candidate intake failed.'
+      }
+
       return NextResponse.json({
         reference,
         targetLanguage,
         lead,
         nodes,
+        insertedCandidateCount,
+        candidateIntakeError,
       })
     }
 
