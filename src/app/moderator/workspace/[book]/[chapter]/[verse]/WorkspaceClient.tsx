@@ -254,6 +254,32 @@ export default function WorkspaceClient({
     setSaveMessage('')
   }
 
+  function updateOptionTitle(index: number, value: string) {
+    setOptions((prev) =>
+      prev.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              title: value,
+            }
+          : item
+      )
+    )
+  }
+
+  function updateOptionText(index: number, value: string) {
+    setOptions((prev) =>
+      prev.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              text: value,
+            }
+          : item
+      )
+    )
+  }
+
   async function generateRepairOptions() {
     if (!canGenerate) {
       setError('Нужно вставить текст карточки и указать хотя бы что оставить, что убрать или куда повести мысль.')
@@ -398,7 +424,15 @@ export default function WorkspaceClient({
   }
 
   async function saveOption(option: RepairOption, index: number) {
-    if (!containsPreservedText(normalizedKeepText, option.text)) {
+    const normalizedTitle = normalizeText(option.title)
+    const normalizedText = normalizeText(option.text)
+
+    if (!normalizedTitle || !normalizedText) {
+      setSaveError('Нельзя сохранить пустой заголовок или пустой текст карточки.')
+      return
+    }
+
+    if (!containsPreservedText(normalizedKeepText, normalizedText)) {
       setSaveError('Эту карточку нельзя сохранить: указанный фрагмент не сохранён.')
       return
     }
@@ -419,8 +453,8 @@ export default function WorkspaceClient({
           book,
           chapter,
           verse,
-          titleRu: option.title,
-          textRu: option.text,
+          titleRu: normalizedTitle,
+          textRu: normalizedText,
           mode: 'insights',
           angleNote: normalizedKeepText || normalizedDirectionText || null,
           repairSourceType,
@@ -589,20 +623,35 @@ export default function WorkspaceClient({
 
                 return (
                   <article
-                    key={`${option.title}-${index}`}
+                    key={`${index}-${option.title}`}
                     className="rounded-[18px] border border-stone-300/60 bg-[#fffaf1] px-4 py-4"
                   >
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
                       Вариант {index + 1}
                     </p>
 
-                    <h3 className="mt-2 text-xl font-semibold leading-tight text-stone-900">
-                      {option.title}
-                    </h3>
+                    <label className="mt-3 block">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                        Заголовок
+                      </span>
+                      <input
+                        type="text"
+                        value={option.title}
+                        onChange={(e) => updateOptionTitle(index, e.target.value)}
+                        className="mt-2 w-full rounded-[14px] border border-stone-300 bg-white px-4 py-3 text-[1rem] font-semibold text-stone-900 outline-none transition focus:border-stone-500"
+                      />
+                    </label>
 
-                    <p className="mt-3 whitespace-pre-wrap text-[0.97rem] leading-7 text-stone-800">
-                      {option.text}
-                    </p>
+                    <label className="mt-4 block">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-500">
+                        Текст карточки
+                      </span>
+                      <textarea
+                        value={option.text}
+                        onChange={(e) => updateOptionText(index, e.target.value)}
+                        className="mt-2 h-64 w-full resize-none rounded-[18px] border border-stone-300 bg-white px-4 py-4 text-[0.98rem] leading-7 text-stone-800 outline-none transition focus:border-stone-500"
+                      />
+                    </label>
 
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       <button
