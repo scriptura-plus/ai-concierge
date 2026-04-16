@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { runModel } from '@/lib/ai/run-model'
 import { getVerseText, getWebBookId } from '@/lib/bible/getVerseText'
 import { getParagraphText } from '@/lib/bible/getParagraphText'
+import { getSupabaseServerClient } from '@/lib/supabase/server'
 
 type SupportedLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 
@@ -47,6 +48,8 @@ type ContextApiResponse = {
   reference: string
   verseText: string
   raw: string
+  insertedCandidateCount: number
+  candidateIntakeError: string | null
 }
 
 type BibleApiVerse = {
@@ -58,6 +61,19 @@ type BibleApiChapterResponse = {
   verses?: BibleApiVerse[]
 }
 
+type CandidateOption = {
+  title: string
+  text: string
+  angle_note: string
+}
+
+type GeneratedCandidateRow = {
+  id: string
+  title_ru: string | null
+  text_ru: string | null
+  candidate_status: string | null
+}
+
 function normalizeText(value: unknown): string {
   return String(value ?? '')
     .replace(/\s+/g, ' ')
@@ -67,6 +83,14 @@ function normalizeText(value: unknown): string {
 function extractJsonObject(raw: string): string | null {
   const start = raw.indexOf('{')
   const end = raw.lastIndexOf('}')
+
+  if (start === -1 || end === -1 || end <= start) return null
+  return raw.slice(start, end + 1)
+}
+
+function extractJsonArray(raw: string): string | null {
+  const start = raw.indexOf('[')
+  const end = raw.lastIndexOf(']')
 
   if (start === -1 || end === -1 || end <= start) return null
   return raw.slice(start, end + 1)
