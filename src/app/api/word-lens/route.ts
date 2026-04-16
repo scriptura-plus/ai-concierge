@@ -217,6 +217,17 @@ function safeParseJson<T>(raw: string): T | null {
   }
 }
 
+function extractJsonArray(raw: string): string | null {
+  const start = raw.indexOf('[')
+  const end = raw.lastIndexOf(']')
+
+  if (start === -1 || end === -1 || end <= start) {
+    return null
+  }
+
+  return raw.slice(start, end + 1)
+}
+
 function mapSystemPrompt(language: AppLanguage) {
   return `
 You are building a Bible study product's "Word Lens" mode.
@@ -653,82 +664,6 @@ async function buildRussianCandidatesFromNodes(params: {
   return dedupeCandidateOptions(options)
 }
 
-async function saveWordLensCandidates(params: {
-  reference: string
-  nodes: WordLensNode[]
-  sourceLanguage: AppLanguage
-}) {
-  const parsedRef = parseReference(params.reference)
-
-  if (!parsedRef) {
-    return { insertedCount: 0 }
-  }
-
-  const options = await buildRussianCandidatesFromNodes({
-    reference: params.reference,
-    verseText: params.reference ? '' : '',
-    nodes: params.nodes,
-    sourceLanguage: params.sourceLanguage,
-  }).catch(async () => {
-    return [] as CandidateOption[]
-  })
-
-  if (!options.length) {
-    return { insertedCount: 0 }
-  }
-
-  const existingRows = await loadExistingGeneratedCandidates({
-    book: parsedRef.book,
-    chapter: parsedRef.chapter,
-    verse: parsedRef.verse,
-  })
-
-  const existingKeys = new Set(
-    existingRows
-      .map((row) =>
-        row.title_ru?.trim() && row.text_ru?.trim()
-          ? buildCandidateSignature(row.title_ru, row.text_ru)
-          : null
-      )
-      .filter(Boolean) as string[]
-  )
-
-  const freshItems = options.filter((item) => {
-    const key = buildCandidateSignature(item.title, item.text)
-    return !existingKeys.has(key)
-  })
-
-  if (!freshItems.length) {
-    return { insertedCount: 0 }
-  }
-
-  const supabase = getSupabaseServerClient()
-
-  const insertPayload = freshItems.map((item) => ({
-    verse_ref: parsedRef.verse_ref,
-    book: parsedRef.book,
-    chapter: parsedRef.chapter,
-    verse: parsedRef.verse,
-    source_type: 'word_lens',
-    candidate_status: 'new',
-    title_ru: item.title,
-    text_ru: item.text,
-    angle_note: item.angle_note.slice(0, 500),
-    review_note: null,
-  }))
-
-  const { error } = await supabase
-    .schema('private')
-    .from('generated_candidates')
-    .insert(insertPayload)
-
-  if (error) {
-    throw new Error(`Failed to save Word Lens candidates: ${error.message}`)
-  }
-
-  return { insertedCount: insertPayload.length }
-}
-
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as RequestBody
@@ -779,10 +714,9 @@ export async function POST(req: Request) {
       let candidateIntakeError: string | null = null
 
       try {
-        const intake = await (async () => {
-          const parsedRef = parseReference(reference)
-          if (!parsedRef) return { insertedCount: 0 }
+        const parsedRef = parseReference(reference)
 
+        if (parsedRef) {
           const options = await buildRussianCandidatesFromNodes({
             reference,
             verseText,
@@ -790,59 +724,57 @@ export async function POST(req: Request) {
             sourceLanguage: targetLanguage,
           })
 
-          if (!options.length) return { insertedCount: 0 }
+          if (options.length > 0) {
+            const existingRows = await loadExistingGeneratedCandidates({
+              book: parsedRef.book,
+              chapter: parsedRef.chapter,
+              verse: parsedRef.verse,
+            })
 
-          const existingRows = await loadExistingGeneratedCandidates({
-            book: parsedRef.book,
-            chapter: parsedRef.chapter,
-            verse: parsedRef.verse,
-          })
+            const existingKeys = new Set(
+              existingRows
+                .map((row) =>
+                  row.title_ru?.trim() && row.text_ru?.trim()
+                    ? buildCandidateSignature(row.title_ru, row.text_ru)
+                    : null
+                )
+                .filter(Boolean) as string[]
+            )
 
-          const existingKeys = new Set(
-            existingRows
-              .map((row) =>
-                row.title_ru?.trim() && row.text_ru?.trim()
-                  ? buildCandidateSignature(row.title_ru, row.text_ru)
-                  : null
-              )
-              .filter(Boolean) as string[]
-          )
+            const freshItems = options.filter((item) => {
+              const key = buildCandidateSignature(item.title, item.text)
+              return !existingKeys.has(key)
+            })
 
-          const freshItems = options.filter((item) => {
-            const key = buildCandidateSignature(item.title, item.text)
-            return !existingKeys.has(key)
-          })
+            if (freshItems.length > 0) {
+              const supabase = getSupabaseServerClient()
 
-          if (!freshItems.length) return { insertedCount: 0 }
+              const insertPayload = freshItems.map((item) => ({
+                verse_ref: parsedRef.verse_ref,
+                book: parsedRef.book,
+                chapter: parsedRef.chapter,
+                verse: parsedRef.verse,
+                source_type: 'word_lens',
+                candidate_status: 'new',
+                title_ru: item.title,
+                text_ru: item.text,
+                angle_note: item.angle_note.slice(0, 500),
+                review_note: null,
+              }))
 
-          const supabase = getSupabaseServerClient()
+              const { error } = await supabase
+                .schema('private')
+                .from('generated_candidates')
+                .insert(insertPayload)
 
-          const insertPayload = freshItems.map((item) => ({
-            verse_ref: parsedRef.verse_ref,
-            book: parsedRef.book,
-            chapter: parsedRef.chapter,
-            verse: parsedRef.verse,
-            source_type: 'word_lens',
-            candidate_status: 'new',
-            title_ru: item.title,
-            text_ru: item.text,
-            angle_note: item.angle_note.slice(0, 500),
-            review_note: null,
-          }))
+              if (error) {
+                throw new Error(`Failed to save Word Lens candidates: ${error.message}`)
+              }
 
-          const { error } = await supabase
-            .schema('private')
-            .from('generated_candidates')
-            .insert(insertPayload)
-
-          if (error) {
-            throw new Error(`Failed to save Word Lens candidates: ${error.message}`)
+              insertedCandidateCount = insertPayload.length
+            }
           }
-
-          return { insertedCount: insertPayload.length }
-        })()
-
-        insertedCandidateCount = intake.insertedCount
+        }
       } catch (error) {
         candidateIntakeError =
           error instanceof Error ? error.message : 'Word Lens candidate intake failed.'
