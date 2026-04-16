@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { runModel } from '@/lib/ai/run-model'
 import { getParagraphText } from '@/lib/bible/getParagraphText'
 import { getVerseText } from '@/lib/bible/getVerseText'
+import { getSupabaseServerClient } from '@/lib/supabase/server'
 
 type SupportedLanguage = 'en' | 'ru' | 'es' | 'fr' | 'de'
 
@@ -27,6 +28,19 @@ type NarrowContextPayload = {
     highlights?: NarrowContextHighlight[]
   }
   directions?: NarrowContextDirection[]
+}
+
+type CandidateOption = {
+  title: string
+  text: string
+  angle_note: string
+}
+
+type GeneratedCandidateRow = {
+  id: string
+  title_ru: string | null
+  text_ru: string | null
+  candidate_status: string | null
 }
 
 function languageInstruction(targetLanguage: SupportedLanguage) {
@@ -420,9 +434,105 @@ If not, improve before outputting.
 `.trim()
 }
 
+function buildCandidatePrompt(params: {
+  reference: string
+  verseText: string
+  paragraphReference: string
+  paragraphText: string
+  directions: NarrowContextDirection[]
+  sourceLanguage: SupportedLanguage
+}) {
+  return `
+Ты превращаешь результаты Narrow Context в кандидаты карточек для moderator review в Scriptura+.
+
+ССЫЛКА:
+${params.reference}
+
+ТЕКСТ СТИХА:
+${params.verseText}
+
+АБЗАЦ:
+${params.paragraphReference}
+${params.paragraphText}
+
+ЯЗЫК ИСХОДНОГО NARROW CONTEXT:
+${params.sourceLanguage}
+
+NARROW CONTEXT DIRECTIONS:
+${JSON.stringify(params.directions, null, 2)}
+
+ЗАДАЧА:
+На основе этих paragraph-направлений создай 3-5 сильных candidate-карточек на РУССКОМ языке.
+Это должны быть уже хорошие карточки для review, а не сырые заметки.
+
+ГЛАВНЫЙ ПРИНЦИП:
+- Каждая карточка должна рождаться из одного paragraph-direction.
+- Не делай общую проповедь по стиху.
+- Не пересказывай весь абзац.
+- Не смешивай всё в один расплывчатый комментарий.
+- Карточка должна показывать, что становится видно именно из ближайшего абзаца.
+- Лучше меньше, но сильнее.
+
+АНТИ-БОГОСЛОВСКИЙ ФИЛЬТР:
+- Не используй церковный язык.
+- Не используй конфессиональный язык.
+- Не используй проповеднический тон.
+- Не используй богословские термины.
+- Не навязывай доктринальных выводов.
+- Пиши как современный нейтральный аналитический AI-инструмент.
+
+ЗАПРЕЩЕНО:
+- богословие
+- доктрина
+- догмат
+- троица
+- триединый
+- ипостась
+- стих учит
+- это доказывает
+- божественная истина
+- церковные формулы
+- confession / doctrine / theology / sermon language
+
+СТАНДАРТ КАРТОЧКИ:
+- Заголовок короткий и сильный
+- Текст плотный, ясный, интересный
+- Не мини-статья
+- Не короткая заметка в 2 предложения
+- Обычно 5-7 предложений
+- Карточка должна быть save-worthy, а не просто "может быть"
+
+КАЖДАЯ КАРТОЧКА ДОЛЖНА:
+- быть привязана к одному paragraph-direction
+- показывать, почему ближайший абзац реально уточняет стих
+- звучать как finished insight
+- быть написана по-русски
+
+ВЕРНИ ТОЛЬКО ВАЛИДНЫЙ JSON:
+[
+  {
+    "title": "Короткий сильный заголовок",
+    "text": "Плотная карточка на русском.",
+    "angle_note": "Narrow Context: title"
+  }
+]
+`.trim()
+}
+
 function extractJsonObject(raw: string): string | null {
   const start = raw.indexOf('{')
   const end = raw.lastIndexOf('}')
+
+  if (start === -1 || end === -1 || end <= start) {
+    return null
+  }
+
+  return raw.slice(start, end + 1)
+}
+
+function extractJsonArray(raw: string): string | null {
+  const start = raw.indexOf('[')
+  const end = raw.lastIndexOf(']')
 
   if (start === -1 || end === -1 || end <= start) {
     return null
@@ -450,6 +560,27 @@ function parsePayload(raw: string): NarrowContextPayload | null {
   }
 }
 
+function parseCandidateOptions(raw: string): CandidateOption[] | null {
+  try {
+    const parsed = JSON.parse(raw)
+
+    if (!Array.isArray(parsed)) return null
+
+    const cleaned = parsed
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => ({
+        title: normalizeText(item.title),
+        text: normalizeText(item.text),
+        angle_note: normalizeText(item.angle_note),
+      }))
+      .filter((item) => item.title && item.text && item.angle_note)
+
+    return cleaned.length ? cleaned.slice(0, 5) : null
+  } catch {
+    return null
+  }
+}
+
 function normalizeText(value: unknown): string {
   return String(value ?? '')
     .replace(/\s+/g, ' ')
@@ -469,6 +600,87 @@ function cleanHighlightKind(value: unknown): HighlightKind | null {
   }
 
   return null
+}
+
+function parseReference(reference: string): {
+  verse_ref: string
+  book: string
+  chapter: number
+  verse: number
+} | null {
+  const trimmed = reference.trim()
+  const match = trimmed.match(/^(.*)\s+(\d+):(\d+)$/)
+
+  if (!match) return null
+
+  const [, rawBook, rawChapter, rawVerse] = match
+  const book = normalizeText(rawBook).toLowerCase()
+  const chapter = Number(rawChapter)
+  const verse = Number(rawVerse)
+
+  if (!book || !Number.isInteger(chapter) || !Number.isInteger(verse)) {
+    return null
+  }
+
+  return {
+    verse_ref: trimmed,
+    book,
+    chapter,
+    verse,
+  }
+}
+
+function normalizeTextForKey(value: string) {
+  return value.replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function buildCandidateSignature(title: string, text: string) {
+  return `${normalizeTextForKey(title)}|||${normalizeTextForKey(text)}`
+}
+
+function dedupeCandidateOptions(items: CandidateOption[]) {
+  const unique: CandidateOption[] = []
+  const seen = new Set<string>()
+
+  for (const item of items) {
+    const title = item.title.trim()
+    const text = item.text.trim()
+    const angle_note = item.angle_note.trim()
+
+    if (!title || !text || !angle_note) continue
+    if (text.length < 120) continue
+
+    const key = buildCandidateSignature(title, text)
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    unique.push({ title, text, angle_note })
+  }
+
+  return unique
+}
+
+async function loadExistingGeneratedCandidates(params: {
+  book: string
+  chapter: number
+  verse: number
+}) {
+  const supabase = getSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .schema('private')
+    .from('generated_candidates')
+    .select('id, title_ru, text_ru, candidate_status')
+    .eq('book', params.book.toLowerCase())
+    .eq('chapter', params.chapter)
+    .eq('verse', params.verse)
+    .neq('candidate_status', 'trashed')
+
+  if (error) {
+    throw new Error(`Failed to load generated candidates: ${error.message}`)
+  }
+
+  return (data ?? []) as GeneratedCandidateRow[]
 }
 
 function validatePayload(
@@ -613,6 +825,44 @@ function buildFallbackDirections(): NarrowContextDirection[] {
   ]
 }
 
+async function buildRussianCandidatesFromDirections(params: {
+  reference: string
+  verseText: string
+  paragraphReference: string
+  paragraphText: string
+  directions: NarrowContextDirection[]
+  sourceLanguage: SupportedLanguage
+}) {
+  const prompt = buildCandidatePrompt(params)
+
+  const result = await runModel({
+    prompt,
+    model: 'gpt-5.4-mini',
+    maxOutputTokens: 2600,
+  })
+
+  const rawText = result.rawText || ''
+
+  if (!result.ok || !rawText) {
+    throw new Error('Narrow Context candidate generator failed.')
+  }
+
+  let options = parseCandidateOptions(rawText)
+
+  if (!options) {
+    const extracted = extractJsonArray(rawText)
+    if (extracted) {
+      options = parseCandidateOptions(extracted)
+    }
+  }
+
+  if (!options || options.length === 0) {
+    throw new Error('Failed to parse Narrow Context candidate cards.')
+  }
+
+  return dedupeCandidateOptions(options)
+}
+
 export async function POST(req: Request) {
   try {
     const {
@@ -667,6 +917,14 @@ export async function POST(req: Request) {
     }
 
     const reference = `${safeBook} ${safeChapter}:${safeVerse}`
+    const parsedRef = parseReference(reference)
+
+    if (!parsedRef) {
+      return NextResponse.json(
+        { error: 'Failed to parse reference.' },
+        { status: 500 }
+      )
+    }
 
     const localizedParagraphText = await translateParagraphText(
       paragraphResult.paragraph.text,
@@ -723,6 +981,76 @@ export async function POST(req: Request) {
       }
     }
 
+    let insertedCandidateCount = 0
+    let candidateIntakeError: string | null = null
+
+    try {
+      if (validated.directions.length > 0) {
+        const options = await buildRussianCandidatesFromDirections({
+          reference,
+          verseText,
+          paragraphReference: validated.paragraph.reference,
+          paragraphText: validated.paragraph.full_text,
+          directions: validated.directions,
+          sourceLanguage: safeLanguage,
+        })
+
+        if (options.length > 0) {
+          const existingRows = await loadExistingGeneratedCandidates({
+            book: parsedRef.book,
+            chapter: parsedRef.chapter,
+            verse: parsedRef.verse,
+          })
+
+          const existingKeys = new Set(
+            existingRows
+              .map((row) =>
+                row.title_ru?.trim() && row.text_ru?.trim()
+                  ? buildCandidateSignature(row.title_ru, row.text_ru)
+                  : null
+              )
+              .filter(Boolean) as string[]
+          )
+
+          const freshItems = options.filter((item) => {
+            const key = buildCandidateSignature(item.title, item.text)
+            return !existingKeys.has(key)
+          })
+
+          if (freshItems.length > 0) {
+            const supabase = getSupabaseServerClient()
+
+            const insertPayload = freshItems.map((item) => ({
+              verse_ref: parsedRef.verse_ref,
+              book: parsedRef.book,
+              chapter: parsedRef.chapter,
+              verse: parsedRef.verse,
+              source_type: 'narrow_context',
+              candidate_status: 'new',
+              title_ru: item.title,
+              text_ru: item.text,
+              angle_note: item.angle_note.slice(0, 500),
+              review_note: null,
+            }))
+
+            const { error } = await supabase
+              .schema('private')
+              .from('generated_candidates')
+              .insert(insertPayload)
+
+            if (error) {
+              throw new Error(`Failed to save Narrow Context candidates: ${error.message}`)
+            }
+
+            insertedCandidateCount = insertPayload.length
+          }
+        }
+      }
+    } catch (error) {
+      candidateIntakeError =
+        error instanceof Error ? error.message : 'Narrow Context candidate intake failed.'
+    }
+
     return NextResponse.json({
       reference,
       verseText,
@@ -731,6 +1059,8 @@ export async function POST(req: Request) {
       paragraph: validated.paragraph,
       directions: validated.directions,
       raw: rawText || '',
+      insertedCandidateCount,
+      candidateIntakeError,
     })
   } catch (error) {
     console.error('Narrow Context API error:', error)
