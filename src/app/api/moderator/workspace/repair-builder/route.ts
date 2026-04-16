@@ -195,7 +195,7 @@ function optionsHaveTargetLength(options: RepairOption[]) {
     const sentences = countSentences(option.text)
     const chars = countChars(option.text)
 
-    return sentences >= 6 && sentences <= 9 && chars >= 650 && chars <= 1800
+    return sentences >= 5 && sentences <= 9 && chars >= 520 && chars <= 1900
   })
 }
 
