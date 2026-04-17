@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server'
 
 type SupportedLanguage = 'en' | 'es' | 'fr' | 'de'
 type RepairSourceType = 'candidate' | 'reserve_insight' | 'featured_insight' | ''
+type InsightBucket = 'featured' | 'reserve'
 
 type TranslationPayload = {
   title: string
@@ -121,6 +122,30 @@ function buildSafeAngleNote(params: {
   return `${sourceLabel}: ${params.titleRu}`.slice(0, 500)
 }
 
+async function decideBucket(params: {
+  book: string
+  chapter: number
+  verse: number
+}): Promise<InsightBucket> {
+  const supabase = getSupabaseServerClient()
+
+  const { count, error } = await supabase
+    .schema('private')
+    .from('curated_insights')
+    .select('id', { count: 'exact', head: true })
+    .eq('book', params.book)
+    .eq('chapter', params.chapter)
+    .eq('verse', params.verse)
+    .eq('status', 'saved')
+    .eq('bucket', 'featured')
+
+  if (error) {
+    throw new Error(`Failed to count featured cards: ${error.message}`)
+  }
+
+  return (count ?? 0) >= 12 ? 'reserve' : 'featured'
+}
+
 async function resolveRepairSource(params: {
   repairSourceType: RepairSourceType
   repairSourceId: string
@@ -205,11 +230,12 @@ export async function POST(req: Request) {
       )
     }
 
-    const [en, es, fr, de] = await Promise.all([
+    const [en, es, fr, de, bucket] = await Promise.all([
       translateCard(titleRu, textRu, 'en'),
       translateCard(titleRu, textRu, 'es'),
       translateCard(titleRu, textRu, 'fr'),
       translateCard(titleRu, textRu, 'de'),
+      decideBucket({ book, chapter, verse }),
     ])
 
     const safeAngleNote = buildSafeAngleNote({
@@ -247,7 +273,7 @@ export async function POST(req: Request) {
       status: 'saved',
       unfold_count: 0,
       promoted_from_unfold: false,
-      bucket: 'featured',
+      bucket,
       source_language: 'ru',
     }
 
@@ -278,6 +304,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       savedId,
+      bucket,
     })
   } catch (error) {
     console.error('Workspace save card API error:', error)
