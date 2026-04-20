@@ -20,8 +20,23 @@ type InsightRow = {
 
 function withFlash(path: string, message: string, req: Request) {
   const url = new URL(path, req.url)
-  url.searchParams.set('flash', message)
+  url.searchParams.set('flash', 'error')
+  url.searchParams.set('message', message)
   return NextResponse.redirect(url, { status: 303 })
+}
+
+function withSuccess(path: string, message: string, req: Request) {
+  const url = new URL(path, req.url)
+  url.searchParams.set('flash', 'success')
+  url.searchParams.set('message', message)
+  return NextResponse.redirect(url, { status: 303 })
+}
+
+function getBookVariants(bookValue: string) {
+  const raw = String(bookValue ?? '').trim().toLowerCase()
+  const spaced = raw.replace(/-/g, ' ').trim()
+  const collapsed = raw.replace(/[\s-]/g, '')
+  return Array.from(new Set([raw, spaced, collapsed])).filter(Boolean)
 }
 
 export async function POST(req: Request, context: RouteContext) {
@@ -44,12 +59,13 @@ export async function POST(req: Request, context: RouteContext) {
     }
 
     const currentRow = current as InsightRow
+    const bookVariants = getBookVariants(currentRow.book)
 
     const { count: featuredCount, error: countError } = await supabase
       .schema('private')
       .from('curated_insights')
       .select('id', { count: 'exact', head: true })
-      .eq('book', currentRow.book)
+      .in('book', bookVariants)
       .eq('chapter', currentRow.chapter)
       .eq('verse', currentRow.verse)
       .eq('status', 'saved')
@@ -67,11 +83,11 @@ export async function POST(req: Request, context: RouteContext) {
       )
     }
 
-    const { data: lastFeatured } = await supabase
+    const { data: lastFeatured, error: lastFeaturedError } = await supabase
       .schema('private')
       .from('curated_insights')
       .select('display_order')
-      .eq('book', currentRow.book)
+      .in('book', bookVariants)
       .eq('chapter', currentRow.chapter)
       .eq('verse', currentRow.verse)
       .eq('status', 'saved')
@@ -79,6 +95,10 @@ export async function POST(req: Request, context: RouteContext) {
       .order('display_order', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    if (lastFeaturedError) {
+      return withFlash(returnTo, 'Не удалось определить позицию активной карточки.', req)
+    }
 
     const nextOrder = Number(lastFeatured?.display_order ?? 0) + 10
 
@@ -98,7 +118,7 @@ export async function POST(req: Request, context: RouteContext) {
     revalidatePath('/moderator')
     revalidatePath(returnTo)
 
-    return withFlash(returnTo, 'Карточка возвращена в активные.', req)
+    return withSuccess(returnTo, 'Карточка возвращена в активные.', req)
   } catch {
     return withFlash(returnTo, 'Не удалось вернуть карточку в активные.', req)
   }
