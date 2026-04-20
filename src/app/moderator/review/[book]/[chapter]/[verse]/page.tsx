@@ -414,6 +414,10 @@ export default async function ModeratorVerseReviewPage({
       ? 'border-red-300/70 bg-red-50 text-red-800'
       : 'border-emerald-300/70 bg-emerald-50 text-emerald-900'
 
+  const counterCardClass =
+    'min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)] transition'
+  const counterLinkClass = `${counterCardClass} hover:bg-[#f8efdc] active:scale-[0.99]`
+
   const candidateItems = newCandidates.map((item) => ({
     id: item.id,
     title: item.title_ru,
@@ -482,28 +486,28 @@ export default async function ModeratorVerseReviewPage({
 
         <section className="mb-6">
           <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-4">
-            <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+            <div className={counterCardClass}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
                 Активные
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{featuredSaved.length}/12</p>
             </div>
 
-            <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+            <Link href="#candidates" className={counterLinkClass}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
                 К рассмотрению
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{newCandidates.length}</p>
-            </div>
+            </Link>
 
-            <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+            <Link href="#reserve" className={counterLinkClass}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
                 В запасе
               </p>
               <p className="mt-2 text-3xl font-semibold text-stone-900">{reserveSaved.length}</p>
-            </div>
+            </Link>
 
-            <div className="min-w-[180px] rounded-[22px] border border-stone-300/70 bg-[#fffaf1] px-4 py-4 shadow-[0_8px_20px_rgba(94,72,37,0.08)]">
+            <div className={counterCardClass}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
                 Всего по стиху
               </p>
@@ -590,7 +594,10 @@ export default async function ModeratorVerseReviewPage({
           </div>
         </section>
 
-        <section className="mb-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
+        <section
+          id="candidates"
+          className="mb-6 scroll-mt-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]"
+        >
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
             <div className="mb-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
@@ -609,7 +616,10 @@ export default async function ModeratorVerseReviewPage({
           </div>
         </section>
 
-        <section className="mb-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]">
+        <section
+          id="reserve"
+          className="mb-6 scroll-mt-6 rounded-[28px] border border-stone-300/70 bg-[linear-gradient(180deg,#f6ecd6_0%,#efe2bf_100%)] p-5 shadow-[0_16px_34px_rgba(94,72,37,0.10)]"
+        >
           <div className="rounded-[22px] border border-stone-400/20 bg-[radial-gradient(circle_at_top,#fbf5e8_0%,#f2e7cf_55%,#ead9b6_100%)] px-5 py-5 shadow-inner">
             <div className="mb-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">
