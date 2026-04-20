@@ -45,6 +45,28 @@ export async function POST(req: Request, context: RouteContext) {
 
     const currentRow = current as InsightRow
 
+    const { count: featuredCount, error: countError } = await supabase
+      .schema('private')
+      .from('curated_insights')
+      .select('id', { count: 'exact', head: true })
+      .eq('book', currentRow.book)
+      .eq('chapter', currentRow.chapter)
+      .eq('verse', currentRow.verse)
+      .eq('status', 'saved')
+      .eq('bucket', 'featured')
+
+    if (countError) {
+      return withFlash(returnTo, 'Не удалось проверить лимит активных карточек.', req)
+    }
+
+    if ((featuredCount ?? 0) >= 12) {
+      return withFlash(
+        returnTo,
+        'В активных уже 12 карточек. Сначала отправьте одну в запас.',
+        req
+      )
+    }
+
     const { data: lastFeatured } = await supabase
       .schema('private')
       .from('curated_insights')
